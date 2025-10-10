@@ -13,7 +13,6 @@ export class AllExceptionFilter implements ExceptionFilter {
     let message = exception instanceof HttpException ? exception.message : `Internal server error`;
     let errors: Record<string, unknown>[] = [];
 
-    // Handle validation errors
     if (exception instanceof BadRequestException) {
       const exceptionResponse = exception.getResponse();
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
@@ -27,8 +26,6 @@ export class AllExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Log the error for debugging
-    console.error('Exception caught:', exception);
 
     response
       .status(status)

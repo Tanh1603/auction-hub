@@ -45,6 +45,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resendVerificationEmail(@Body() body: ResendVerificationEmailRequestDto) {
     await this.authService.resendVerificationEmail(body);
+    
+    return {
+      message: 'Verification email sent successfully',
+    };
   }
 
   @Post('verify-email')
