@@ -1,19 +1,19 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterRequestDto, RegisterResponseDto } from './dto/register.dto';
-import { LoginRequestDto, LoginResponseDto, UserDto } from './dto/login.dto';
+import { LoginRequestDto, LoginResponseDto } from './dto/login.dto';
 import { ForgotPasswordRequestDto } from './dto/forgot-password.dto';
-import { ResetPasswordRequestDto } from './dto/reset-password.dto';
 import { VerifyEmailRequestDto } from './dto/verify-email.dto';
-import * as bcrypt from 'bcrypt';
+import { SupabaseService } from '../supabase/supabase.service';
+import { ResendVerificationEmailRequestDto } from './dto/resend-verification-email.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private supabaseService: SupabaseService) {}
 
-  async register(data: RegisterRequestDto): Promise<RegisterResponseDto> {
+  async register(request: RegisterRequestDto): Promise<RegisterResponseDto> {
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: request.email },
     });
 
 
@@ -21,21 +21,35 @@ export class AuthService {
       throw new BadRequestException('User with this email already exists');
     }
 
-    const passwordHash = await bcrypt.hash(data.password, 10);
+      const { error } = await this.supabaseService.auth.signUp({
+        email: request.email,
+        password: request.password,
+        options: {
+          data: {
+            full_name: request.full_name,
+            phone_number: request.phone_number,
+            identity_number: request.identity_number,
+            user_type: request.user_type,
+          },
+          emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+        },
+      });
+
+    if (error) {
+      throw new BadRequestException('Failed to create user in Supabase. ' + error.message);
+    }
 
 
     const user = await this.prisma.user.create({
       data: {
-        email: data.email,
-        passwordHash,
-        phoneNumber: data.phone_number,
-        fullName: data.full_name || '',
-        identityNumber: data.identity_number,
-        userType: data.user_type || 'individual',
-        taxId: data.tax_id,
+        email: request.email,
+        phoneNumber: request.phone_number,
+        fullName: request.full_name || '',
+        identityNumber: request.identity_number,
+        userType: request.user_type || 'individual',
+        taxId: request.tax_id,
       },
     });
-    // TODO: Send verification email
 
     return {
       user_id: user.id,
@@ -44,54 +58,42 @@ export class AuthService {
     };
   }
 
-  async login(data: LoginRequestDto): Promise<LoginResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: data.email },
+  async login(request: LoginRequestDto): Promise<LoginResponseDto> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: request.email },
+    });
+    
+    if (!existingUser) {
+      throw new BadRequestException('User not found');
+    }
+
+    const {data, error } = await this.supabaseService.auth.signInWithPassword({
+      email: request.email,
+      password: request.password,
     });
 
-    if (!user) {
-      throw new BadRequestException('Invalid email or password');
+    if (error) {
+      throw new BadRequestException('Failed to login. ' + error.message);
     }
-
-    if (user.isBanned) {
-      throw new BadRequestException('Account is banned');
-    }
-
-    const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
-    
-    if (!isPasswordValid) {
-      throw new BadRequestException('Invalid email or password');
-    }
-
-    const accessToken = 'token123';
-    const refreshToken = 'tokenabc';
-
-    const userDto: UserDto = {
-      id: user.id,
-      email: user.email,
-      phone_number: user.phoneNumber || '',
-      full_name: user.fullName,
-      identity_number: user.identityNumber || '',
-      user_type: user.userType,
-      avatar_url: user.avatarUrl || '',
-      is_verified: user.isVerified,
-      rating_score: Number(user.ratingScore),
-      total_ratings: user.totalRatings,
-      created_at: user.createdAt.toISOString(),
-    };
 
     return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      expires_in: 3600,
-      user: userDto,
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_in: data.session.expires_in,
+      user: existingUser,
     };
   }
 
-  async forgotPassword(data: ForgotPasswordRequestDto): Promise<void> {
+  async forgotPassword(request: ForgotPasswordRequestDto): Promise<void> {
     const user = await this.prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: request.email },
     });
+      const { error } = await this.supabaseService.auth.resetPasswordForEmail(request.email, {
+          redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
+        });
+      if (error) {
+      throw new BadRequestException('Failed to send reset password email. ' + error.message);
+    }
 
     if (!user) {
       throw new BadRequestException('User not found');
@@ -99,24 +101,31 @@ export class AuthService {
 
   }
 
-  async resetPassword(data: ResetPasswordRequestDto): Promise<void> {
-    // TODO: Reset password
-    console.log('Reset password for token:', data.token);
+  async resendVerificationEmail(request: ResendVerificationEmailRequestDto): Promise<void> {
+    const { error } = await this.supabaseService.auth.resend({
+      type: 'signup',
+      email: request.email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`
+      }
+    })
+
+    if (error) {
+      throw new BadRequestException('Failed to resend verification email. ' + error.message);
+    }
   }
 
-  async verifyEmail(data: VerifyEmailRequestDto): Promise<void> {
-    // TODO: Verify token and get user
-    // For now, just mock the implementation
-    
-    // TODO: Update user email verification status
-    // await this.prisma.user.update({
-    //   where: { id: userId },
-    //   data: { 
-    //     isVerified: true,
-    //     emailVerifiedAt: new Date(),
-    //   },
-    // });
-    
-    console.log('Verify email for token:', data.token);
+  async verifyEmail(request: VerifyEmailRequestDto): Promise<void> {
+    const { error } = await this.supabaseService.auth.verifyOtp({
+      email: request.email,
+      type: 'email',
+      token: request.token,
+    });
+
+    if (error) {
+      throw new BadRequestException('Failed to verify email. ' + error.message);
+    }
   }
+
+
 }

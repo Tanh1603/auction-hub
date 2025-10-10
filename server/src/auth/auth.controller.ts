@@ -13,9 +13,9 @@ import {
   ForgotPasswordRequestSchema 
 } from './dto/forgot-password.dto';
 import { 
-  ResetPasswordRequestDto, 
-  ResetPasswordRequestSchema 
-} from './dto/reset-password.dto';
+  ResendVerificationEmailRequestDto, 
+  ResendVerificationEmailRequestSchema 
+} from './dto/resend-verification-email.dto';
 import { 
   VerifyEmailRequestDto, 
   VerifyEmailRequestSchema 
@@ -28,10 +28,8 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() body: RegisterRequestDto) {
-    console.log('Register request:', body);
     const validatedData = RegisterRequestSchema.parse(body);
     const result = await this.authService.register(validatedData);
-    console.log('Register result:', result);
     return {
       message: 'Registration successful',
       data: result,
@@ -61,15 +59,11 @@ export class AuthController {
     };
   }
 
-  @Post('reset-password')
+  @Post('resend-verification-email')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() body: ResetPasswordRequestDto) {
-    const validatedData = ResetPasswordRequestSchema.parse(body);
-    await this.authService.resetPassword(validatedData);
-    
-    return {
-      message: 'Password has been reset successfully',
-    };
+  async resendVerificationEmail(@Body() body: ResendVerificationEmailRequestDto) {
+    const validatedData = ResendVerificationEmailRequestSchema.parse(body);
+    await this.authService.resendVerificationEmail(validatedData);
   }
 
   @Post('verify-email')
