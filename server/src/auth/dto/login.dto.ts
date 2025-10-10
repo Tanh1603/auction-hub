@@ -1,12 +1,14 @@
-import { z } from 'zod';
+import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
 import { User } from '@prisma/client';
 
-export const LoginRequestSchema = z.object({
-  email: z.email('Invalid email format'),
-  password: z.string().min(1, 'Password is required'),
-});
+export class LoginRequestDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
 
-export type LoginRequestDto = z.infer<typeof LoginRequestSchema>;
+  @IsString()
+  @IsNotEmpty({ message: 'Password is required' })
+  password: string;
+}
 
 
 export class LoginResponseDto {

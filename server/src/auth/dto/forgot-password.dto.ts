@@ -1,8 +1,7 @@
-import { z } from 'zod';
+import { IsEmail } from 'class-validator';
 
-export const ForgotPasswordRequestSchema = z.object({
-  email: z.email('Invalid email format'),
-});
-
-export type ForgotPasswordRequestDto = z.infer<typeof ForgotPasswordRequestSchema>;
+export class ForgotPasswordRequestDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
+}
 

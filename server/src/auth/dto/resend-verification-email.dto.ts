@@ -1,8 +1,7 @@
-import { z } from 'zod';
+import { IsEmail } from 'class-validator';
 
-export const ResendVerificationEmailRequestSchema = z.object({
-  email: z.email('Invalid email format'),
-});
-
-export type ResendVerificationEmailRequestDto = z.infer<typeof ResendVerificationEmailRequestSchema>;
+export class ResendVerificationEmailRequestDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
+}
 

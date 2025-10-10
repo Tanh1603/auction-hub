@@ -1,16 +1,38 @@
-import { z } from 'zod';
+import { IsEmail, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
 
-export const RegisterRequestSchema = z.object({
-  email: z.email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  phone_number: z.string().optional(),
-  full_name: z.string().optional(),
-  identity_number: z.string().optional(),
-  user_type: z.enum(['individual', 'business']).optional(),
-  tax_id: z.string().nullable().optional(),
-});
+enum UserType {
+  INDIVIDUAL = 'individual',
+  BUSINESS = 'business',
+}
 
-export type RegisterRequestDto = z.infer<typeof RegisterRequestSchema>;
+export class RegisterRequestDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters' })
+  password: string;
+
+  @IsOptional()
+  @IsString()
+  phone_number?: string;
+
+  @IsOptional()
+  @IsString()
+  full_name?: string;
+
+  @IsOptional()
+  @IsString()
+  identity_number?: string;
+
+  @IsOptional()
+  @IsEnum(UserType, { message: 'User type must be either individual or business' })
+  user_type?: UserType;
+
+  @IsOptional()
+  @IsString()
+  tax_id?: string | null;
+}
 
 export class RegisterResponseDto {
   user_id: string;

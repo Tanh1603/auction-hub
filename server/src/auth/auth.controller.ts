@@ -1,25 +1,10 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { 
-  RegisterRequestDto, 
-  RegisterRequestSchema,
-} from './dto/register.dto';
-import { 
-  LoginRequestDto, 
-  LoginRequestSchema,
-} from './dto/login.dto';
-import { 
-  ForgotPasswordRequestDto, 
-  ForgotPasswordRequestSchema 
-} from './dto/forgot-password.dto';
-import { 
-  ResendVerificationEmailRequestDto, 
-  ResendVerificationEmailRequestSchema 
-} from './dto/resend-verification-email.dto';
-import { 
-  VerifyEmailRequestDto, 
-  VerifyEmailRequestSchema 
-} from './dto/verify-email.dto';
+import { RegisterRequestDto } from './dto/register.dto';
+import { LoginRequestDto } from './dto/login.dto';
+import { ForgotPasswordRequestDto } from './dto/forgot-password.dto';
+import { ResendVerificationEmailRequestDto } from './dto/resend-verification-email.dto';
+import { VerifyEmailRequestDto } from './dto/verify-email.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -28,8 +13,7 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() body: RegisterRequestDto) {
-    const validatedData = RegisterRequestSchema.parse(body);
-    const result = await this.authService.register(validatedData);
+    const result = await this.authService.register(body);
     return {
       message: 'Registration successful',
       data: result,
@@ -39,8 +23,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: LoginRequestDto) {
-    const validatedData = LoginRequestSchema.parse(body);
-    const result = await this.authService.login(validatedData);
+    const result = await this.authService.login(body);
     
     return {
       message: 'Login successful',
@@ -51,8 +34,7 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() body: ForgotPasswordRequestDto) {
-    const validatedData = ForgotPasswordRequestSchema.parse(body);
-    await this.authService.forgotPassword(validatedData);
+    await this.authService.forgotPassword(body);
     
     return {
       message: 'Password reset code has been sent to your email',
@@ -62,15 +44,13 @@ export class AuthController {
   @Post('resend-verification-email')
   @HttpCode(HttpStatus.OK)
   async resendVerificationEmail(@Body() body: ResendVerificationEmailRequestDto) {
-    const validatedData = ResendVerificationEmailRequestSchema.parse(body);
-    await this.authService.resendVerificationEmail(validatedData);
+    await this.authService.resendVerificationEmail(body);
   }
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body() body: VerifyEmailRequestDto) {
-    const validatedData = VerifyEmailRequestSchema.parse(body);
-    await this.authService.verifyEmail(validatedData);
+    await this.authService.verifyEmail(body);
     
     return {
       message: 'Email verified successfully',

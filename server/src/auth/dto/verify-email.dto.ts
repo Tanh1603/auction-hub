@@ -1,9 +1,11 @@
-import { z } from 'zod';
+import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
 
-export const VerifyEmailRequestSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
-  email: z.email('Invalid email format'),
-});
+export class VerifyEmailRequestDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Token is required' })
+  token: string;
 
-export type VerifyEmailRequestDto = z.infer<typeof VerifyEmailRequestSchema>;
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
+}
 
