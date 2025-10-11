@@ -1,10 +1,12 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterRequestDto } from './dto/register.dto';
 import { LoginRequestDto } from './dto/login.dto';
 import { ForgotPasswordRequestDto } from './dto/forgot-password.dto';
 import { ResendVerificationEmailRequestDto } from './dto/resend-verification-email.dto';
 import { VerifyEmailRequestDto } from './dto/verify-email.dto';
+import { CurrentUser, CurrentUserData } from '../common/decorators/current-user.decorator';
+import { AuthGuard } from '../common/guards/auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -58,6 +60,16 @@ export class AuthController {
     
     return {
       message: 'Email verified successfully',
+    };
+  }
+
+  @Get()
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async getUserInfo(@CurrentUser() user: CurrentUserData) {
+    return {
+      message: 'User information fetched successfully',
+      data: user,
     };
   }
 }
