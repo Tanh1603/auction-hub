@@ -5,6 +5,7 @@ dist
 tmp
 out-tsc
 
+GEMINI.md
 # dependencies
 node_modules
 

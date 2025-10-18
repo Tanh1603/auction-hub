@@ -18,6 +18,123 @@ enum UserType {
   business
 }
 
+// Bidding domain
+// Register to bid
+enum BidRegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model RegisterToBid {
+  id        String                @id @default(uuid()) @db.Uuid
+  userId    String                @map("user_id") @db.Uuid
+  itemId    String                @map("item_id") @db.Uuid
+  // TODO: update to handle multiple document types, and efficient document handlings
+  documents String[]
+  status    BidRegistrationStatus @default(PENDING)
+  createdAt DateTime              @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime              @updatedAt @map("updated_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id])
+  item Item @relation(fields: [itemId], references: [id])
+
+  @@unique([userId, itemId], name: "uq_registerToBid_user_item")
+  @@map("register_to_bids")
+}
+
+//Item
+
+model Organizer {
+  id            String    @id @default(uuid()) @db.Uuid
+  externalId    String?   @unique
+  name          String
+  stpApprovalNo String?
+  sessions      Session[]
+}
+
+model Auctioneer {
+  id         String    @id @default(uuid()) @db.Uuid
+  externalId String?   @unique
+  name       String
+  licenseNo  String?
+  sessions   Session[]
+}
+
+model Item {
+  id              String          @id @default(uuid()) @db.Uuid
+  externalId      String?         @unique
+  code            String?         @unique
+  slug            String?         @unique
+  displayName     String
+  assetType       String?
+  ownerAgency     String?
+  location        String?
+  descriptionHtml String?
+  lots            Lot[]
+  RegisterToBid   RegisterToBid[]
+}
+
+model Lot {
+  id                  String    @id @default(uuid()) @db.Uuid
+  itemId              String
+  item                Item      @relation(fields: [itemId], references: [id])
+  externalItemId      String?
+  startingPrice       Decimal?  @db.Decimal(18, 2)
+  reservePrice        Decimal?  @db.Decimal(18, 2)
+  estimateLow         Decimal?  @db.Decimal(18, 2)
+  estimateHigh        Decimal?  @db.Decimal(18, 2)
+  hasMaxBidSteps      Boolean?
+  maxBidSteps         Int?
+  status              String?
+  sessions            Session[]
+  currentHighestBid   Decimal?  @db.Decimal(18, 2)
+  currentBidderUserId String?   @db.Uuid
+  totalBidsCount      Int       @default(0)
+  bids                Bid[]
+}
+
+model Session {
+  id                     String      @id @default(uuid()) @db.Uuid
+  lotId                  String
+  lot                    Lot         @relation(fields: [lotId], references: [id])
+  organizerId            String?
+  organizer              Organizer?  @relation(fields: [organizerId], references: [id])
+  auctioneerId           String?
+  auctioneer             Auctioneer? @relation(fields: [auctioneerId], references: [id])
+  mode                   String
+  startsAt               DateTime?
+  endsAt                 DateTime?
+  registrationOpenAt     DateTime?
+  registrationCloseAt    DateTime?
+  depositAmountRequired  Decimal?    @db.Decimal(18, 2)
+  depositDeadline        DateTime?
+  checkinWindowBeforeMin Int?
+  checkinWindowAfterMin  Int?
+  roomUrl                String?
+  autobidEnabled         Boolean?
+  approvalId             String?
+
+  @@index([lotId])
+}
+
+// Bid
+model Bid {
+  id        String   @id @default(uuid()) @db.Uuid
+  lotId     String
+  lot       Lot      @relation(fields: [lotId], references: [id])
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Decimal  @db.Decimal(18, 2)
+  isAutobid Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([lotId, userId, amount])
+  @@index([lotId, createdAt])
+}
+
+// User Domain
+
 model User {
   id              String    @id @default(uuid()) @db.Uuid
   email           String    @unique @db.VarChar(255)
@@ -37,6 +154,9 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamp
+
+  registerToBids RegisterToBid[]
+  bid            Bid[]
 
   @@map("users")
 }
