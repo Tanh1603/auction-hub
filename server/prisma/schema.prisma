@@ -19,6 +19,27 @@ enum UserType {
   business
 }
 
+enum PaymentType {
+  deposit
+  participation_fee
+  winning_payment
+  refund
+}
+
+enum PaymentStatus {
+  pending
+  processing
+  completed
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  bank_transfer
+  e_wallet
+  cash
+}
+
 model User {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email           String    @unique @db.VarChar(255)
@@ -46,6 +67,7 @@ model User {
   contractsAsSeller     Contract[]           @relation("ContractSeller")
   contractsAsBuyer      Contract[]           @relation("ContractBuyer")
   contractsCreated      Contract[]           @relation("ContractCreator")
+  payments Payment[]
 
   @@map("users")
 }
@@ -270,4 +292,28 @@ enum ContractStatus {
   completed
 
   @@map("contract_status")
+}
+
+model Payment {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  auctionId      String?        @map("auction_id") @db.Uuid
+  registrationId String?        @map("registration_id") @db.Uuid
+  paymentType    PaymentType    @map("payment_type")
+  amount         Decimal        @db.Decimal(20, 2)
+  currency       String         @default("VND") @db.VarChar(3)
+  status         PaymentStatus  @default(pending)
+  paymentMethod  PaymentMethod? @map("payment_method")
+  transactionId  String?        @map("transaction_id") @db.VarChar(100)
+  bankCode       String?        @map("bank_code") @db.VarChar(50)
+  paymentDetails Json?          @map("payment_details")
+  paidAt         DateTime?      @map("paid_at") @db.Timestamp
+  refundedAt     DateTime?      @map("refunded_at") @db.Timestamp
+  refundReason   String?        @map("refund_reason") @db.Text
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("payments")
 }
