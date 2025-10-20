@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsEnum, IsUUID, IsDecimal, IsPositive } from 'class-validator';
+import { IsNotEmpty, IsEnum, IsUUID, IsNumber, IsPositive } from 'class-validator';
 
 export enum PaymentType {
     deposit = 'deposit',
@@ -27,7 +27,7 @@ export class PaymentCreateRequestDto {
   paymentType: PaymentType;
 
   @IsNotEmpty({ message: 'Amount is required' })
-  @IsDecimal()
+  @IsNumber()
   @IsPositive({ message: 'Amount must be greater than 0' })
   amount: number;
 

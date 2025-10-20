@@ -15,7 +15,7 @@ export class BankInfoDto {
   transfer_content: string;
 }
 
-export class PaymentDto {
+export class Payment {
   @IsUUID()
   payment_id: string;
 
