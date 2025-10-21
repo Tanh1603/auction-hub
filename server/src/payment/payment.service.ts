@@ -2,8 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentCreateRequestDto } from './dto/PaymentCreateRequest.dto';
 import { Payment } from './dto/Payment.dto';
-import { PaymentMethodsResponseDto } from './dto/PaymentMethod.dto';
 import { PaymentVerificationDto } from './dto/PaymentVerification.dto';
+import { PaymentStatus } from '@prisma/client';
 import Stripe from 'stripe';
 import * as QRCode from 'qrcode';
 
@@ -18,7 +18,7 @@ export class PaymentService {
         });
     }
 
-    async createPayment(paymentRequest: PaymentCreateRequestDto): Promise<Payment> {
+    async createPayment(userId: string, paymentRequest: PaymentCreateRequestDto): Promise<Payment> {
         try {
             // TODO: Validate registration and auction id with database
             const session = await this.stripe.checkout.sessions.create({
@@ -43,6 +43,7 @@ export class PaymentService {
                     auctionId: paymentRequest.auctionId,
                     registrationId: paymentRequest.registrationId,
                     paymentType: paymentRequest.paymentType,
+                    userId: userId,
                 },
             });
 
@@ -56,6 +57,42 @@ export class PaymentService {
             const paymentDeadline = new Date();
             paymentDeadline.setHours(paymentDeadline.getHours() + 24);
 
+            const bankInfo = {
+                bank_name: 'Stripe',
+                account_number: 'Stripe',
+                account_name: 'Auction Hub',
+                transfer_content: `Payment for ${paymentRequest.paymentType}`,
+            };
+
+            // Map Stripe payment status to our PaymentStatus enum
+            const statusMapping: Record<string, PaymentStatus> = {
+                'unpaid': PaymentStatus.pending,
+                'paid': PaymentStatus.completed,
+                'no_payment_required': PaymentStatus.completed,
+            };
+            const paymentStatus = statusMapping[session.payment_status] || PaymentStatus.pending;
+
+            await this.prisma.payment.create({
+                data: {
+                    userId: userId,
+                    auctionId: paymentRequest.auctionId,
+                    registrationId: paymentRequest.registrationId,
+                    paymentType: paymentRequest.paymentType,
+                    amount: paymentRequest.amount,
+                    currency: 'USD',
+                    status: paymentStatus,
+                    paymentMethod: paymentRequest.paymentMethod,
+                    transactionId: session.id,
+                    paymentDetails: {
+                        payment_url: session.url,
+                        qr_code: qrCodeDataUrl,
+                        bank_info: bankInfo,
+                        payment_deadline: paymentDeadline.toISOString(),
+                        stripe_session_id: session.id,
+                    },
+                },
+            });
+
             const payment: Payment = {
                 payment_id: session.id,
                 amount: paymentRequest.amount,
@@ -63,17 +100,9 @@ export class PaymentService {
                 status: session.payment_status || 'unpaid',
                 payment_url: session.url,
                 qr_code: qrCodeDataUrl,
-                bank_info: {
-                    bank_name: 'Stripe',
-                    account_number: 'Stripe',
-                    account_name: 'Auction Hub',
-                    transfer_content: `Payment for ${paymentRequest.paymentType}`,
-                },
+                bank_info: bankInfo,
                 payment_deadline: paymentDeadline.toISOString(),
             };
-
-            // TODO: Save to db
-            // await this.prisma.payment.create({ data: { ... } });
 
             return payment;
         } catch (error) {
