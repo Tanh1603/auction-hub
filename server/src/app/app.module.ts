@@ -7,7 +7,6 @@ import { AuctionModule } from '../auctions/auction.module';
 import { ContractModule } from '../contracts/contract.module';
 import { PaymentModule } from '../payment/payment.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
-
 @Module({
   imports: [PrismaModule, AuthModule, AuctionModule, ContractModule, PaymentModule, CloudinaryModule],
   controllers: [AppController],
