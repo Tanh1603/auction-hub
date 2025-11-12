@@ -29,7 +29,7 @@ export class PdfGeneratorService {
   generateContractPdf(contract: ContractWithRelations): PDFKit.PDFDocument {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-    // 🧩 Register fonts
+    // Register fonts
     const projectRoot = path.join(__dirname, '..', '..');
     const fontPath = path.join(projectRoot, 'server', 'src', 'assets', 'font', 'Inter', 'static');
 
@@ -45,7 +45,7 @@ export class PdfGeneratorService {
       boldFont = 'Inter-Bold';
       semiBoldFont = 'Inter-SemiBold';
     } catch (e) {
-      console.warn('⚠️ Inter fonts not found — using Helvetica fallback.');
+      console.warn('Inter fonts not found — using Helvetica fallback.');
     }
 
     const drawSeparator = (yOffset = 10) => {
@@ -60,7 +60,7 @@ export class PdfGeneratorService {
       doc.moveDown(1);
     };
 
-    // 🧾 Header Section
+    // Header Section
     doc
       .font(boldFont)
       .fontSize(22)
@@ -80,7 +80,7 @@ export class PdfGeneratorService {
       )
       .moveDown(1.5);
 
-    // 🏷 Auction Information
+    // Auction Information
     doc.fontSize(14).font(semiBoldFont).text('THÔNG TIN PHIÊN ĐẤU GIÁ');
     drawSeparator();
 
@@ -93,7 +93,7 @@ export class PdfGeneratorService {
       .text(`Địa chỉ tài sản: ${contract.auction.assetAddress}`)
       .moveDown(1.5);
 
-    // 👥 Contract Parties (two-column layout)
+    // Contract Parties (two-column layout)
     doc.fontSize(14).font(semiBoldFont).text('THÔNG TIN CÁC BÊN THAM GIA');
     drawSeparator();
 
@@ -101,7 +101,7 @@ export class PdfGeneratorService {
     const leftX = 50;
     const rightX = 310;
 
-    // Left column — Seller
+    // Left column - Seller
     doc.fontSize(12).font(semiBoldFont).text('BÊN BÁN (CHỦ SỞ HỮU):', leftX, startY);
     doc
       .fontSize(11)
@@ -110,7 +110,7 @@ export class PdfGeneratorService {
       .text(`Email: ${contract.seller.email}`, leftX, doc.y)
       .text(`SĐT: ${contract.seller.phoneNumber || 'Không có'}`, leftX, doc.y);
 
-    // Right column — Buyer
+    // Right column - Buyer
     doc.fontSize(12).font(semiBoldFont).text('BÊN MUA (NGƯỜI TRÚNG THẦU):', rightX, startY);
     doc
       .fontSize(11)
@@ -121,7 +121,7 @@ export class PdfGeneratorService {
 
     doc.moveDown(1.5);
 
-    // 💰📜 Contract Information (two-column layout)
+    // Contract Information (two-column layout)
     doc.x = leftX; // Reset X position to left margin
     doc.fontSize(14).font(semiBoldFont).text('THÔNG TIN HỢP ĐỒNG');
     drawSeparator();
@@ -155,7 +155,7 @@ export class PdfGeneratorService {
     doc.moveDown(4);
     doc.x = leftX; // Reset X position to left margin
 
-    // 📄 Terms & Conditions
+    // Terms & Conditions
     doc.fontSize(14).font(semiBoldFont).text('ĐIỀU KHOẢN VÀ ĐIỀU KIỆN');
     drawSeparator();
 
@@ -175,7 +175,7 @@ export class PdfGeneratorService {
 
     doc.moveDown(2);
 
-    // ✍️ Signature section
+    // Signature section
     const signatureY = doc.y + 25;
 
     doc
@@ -198,7 +198,7 @@ export class PdfGeneratorService {
   generateContractPdfEnglish(contract: ContractWithRelations): PDFKit.PDFDocument {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-    // 🧩 Register fonts
+    // Register fonts
     const projectRoot = path.join(__dirname, '..', '..');
     const fontPath = path.join(projectRoot, 'server', 'src', 'assets', 'font', 'Inter', 'static');
 
@@ -214,7 +214,7 @@ export class PdfGeneratorService {
       boldFont = 'Inter-Bold';
       semiBoldFont = 'Inter-SemiBold';
     } catch (e) {
-      // Silently fallback to Helvetica
+      console.warn('Inter fonts not found - using Helvetica fallback.');
     }
 
     const drawSeparator = (yOffset = 10) => {
@@ -229,7 +229,7 @@ export class PdfGeneratorService {
       doc.moveDown(1);
     };
 
-    // 🧾 Header Section
+    // Header Section
     doc
       .font(boldFont)
       .fontSize(22)
@@ -249,7 +249,7 @@ export class PdfGeneratorService {
       )
       .moveDown(1.5);
 
-    // 🏷 Auction Information
+    // Auction Information
     doc.fontSize(14).font(semiBoldFont).text('AUCTION INFORMATION');
     drawSeparator();
 
@@ -262,7 +262,7 @@ export class PdfGeneratorService {
       .text(`Asset Address: ${contract.auction.assetAddress}`)
       .moveDown(1.5);
 
-    // 👥 Contract Parties (two-column layout)
+    // Contract Parties (two-column layout)
     doc.fontSize(14).font(semiBoldFont).text('CONTRACT PARTIES');
     drawSeparator();
 
@@ -270,7 +270,7 @@ export class PdfGeneratorService {
     const leftX = 50;
     const rightX = 310;
 
-    // Left column — Seller
+    // Left column - Seller
     doc.fontSize(12).font(semiBoldFont).text('SELLER (PROPERTY OWNER):', leftX, startY);
     doc
       .fontSize(11)
@@ -279,7 +279,7 @@ export class PdfGeneratorService {
       .text(`Email: ${contract.seller.email}`, leftX, doc.y)
       .text(`Phone: ${contract.seller.phoneNumber || 'N/A'}`, leftX, doc.y);
 
-    // Right column — Buyer
+    // Right column - Buyer
     doc.fontSize(12).font(semiBoldFont).text('BUYER (WINNING BIDDER):', rightX, startY);
     doc
       .fontSize(11)
@@ -290,7 +290,7 @@ export class PdfGeneratorService {
 
     doc.moveDown(1.5);
 
-    // 💰📜 Contract Information (two-column layout)
+    // Contract Information (two-column layout)
     doc.x = leftX; // Reset X position to left margin
     doc.fontSize(14).font(semiBoldFont).text('CONTRACT INFORMATION');
     drawSeparator();
@@ -324,7 +324,7 @@ export class PdfGeneratorService {
     doc.moveDown(4);
     doc.x = leftX; // Reset X position to left margin
 
-    // 📄 Terms & Conditions
+    // Terms & Conditions
     doc.fontSize(14).font(semiBoldFont).text('TERMS AND CONDITIONS');
     drawSeparator();
 
@@ -344,7 +344,7 @@ export class PdfGeneratorService {
 
     doc.moveDown(2);
 
-    // ✍️ Signature section
+    // Signature section
     const signatureY = doc.y + 25;
 
     doc
