@@ -2,7 +2,9 @@ import { AuctionStatus } from '../../../../generated';
 
 export class EvaluationResultDto {
   auctionId: string;
-  recommendedStatus: AuctionStatus;
+  currentStatus: AuctionStatus; // Current auction status
+  recommendedStatus: AuctionStatus; // Recommended status after evaluation
+  isAlreadyFinalized: boolean; // Whether auction is in a final state
   meetsReservePrice: boolean;
   hasMinimumParticipants: boolean;
   hasValidBids: boolean;

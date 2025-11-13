@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: auction-hub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auction-hub
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d auction-hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: ./server/dockerfile
+    container_name: auction-hub-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./server/.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://user:password@postgres:5432/auction-hub
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    command: >
+      sh -c "npx prisma generate --schema=server/prisma/schema.prisma && npx prisma db push --schema=server/prisma/schema.prisma && node server/prisma/comprehensive-seed.js && node dist/server/main.js"
+
+    # No need for extra command, Dockerfile runs seed automatically
+
+volumes:
+  postgres_data:

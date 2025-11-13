@@ -6,12 +6,10 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
 } from '@nestjs/common';
 import { ManualBidService } from './manual-bid.service';
 import { CreateManualBidDto } from './dto/create-manual-bid.dto';
 import { DenyBidDto } from './dto/deny-bid.dto';
-import { AuthGuard } from '../../../common/guards/auth.guard';
 import {
   CurrentUser,
   CurrentUserData,
@@ -23,7 +21,6 @@ export class ManualBidController {
   constructor(private readonly manualBidService: ManualBidService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
   async create(
     @Body() dto: CreateManualBidDto,
     @CurrentUser() user: CurrentUserData
@@ -32,7 +29,6 @@ export class ManualBidController {
   }
 
   @Post('deny')
-  @UseGuards(AuthGuard)
   async denyBid(
     @Body() dto: DenyBidDto,
     @CurrentUser() user: CurrentUserData

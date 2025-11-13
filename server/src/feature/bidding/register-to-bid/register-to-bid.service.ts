@@ -9,6 +9,12 @@ import {
 } from '@nestjs/common';
 import { CreateRegisterToBidDto } from './dto/create-register-to-bid.dto';
 import { WithdrawRegistrationDto } from './dto/withdraw-registration.dto';
+import { ApproveRegistrationDto } from './dto/approve-registration.dto';
+import { RejectRegistrationDto } from './dto/reject-registration.dto';
+import {
+  ListRegistrationsQueryDto,
+  RegistrationStatus,
+} from './dto/list-registrations-query.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CurrentUserData } from '../../../common/decorators/current-user.decorator';
 import type { AuctionParticipant } from '../../../../generated';
@@ -83,6 +89,38 @@ export class RegisterToBidService {
             throw new ConflictException('User already confirmed');
           }
 
+          // already withdrawn - allow re-applying (check this BEFORE pending review)
+          if (existing.withdrawnAt) {
+            this.logger.log(
+              `User ${currentUser.id} re-registering after withdrawal for auction ${dto.auctionId}`
+            );
+            const updated = await tx.auctionParticipant.update({
+              where: { id: existing.id },
+              data: {
+                withdrawnAt: null,
+                withdrawalReason: null,
+                submittedAt: new Date(),
+              },
+            });
+            return this.toDto(updated);
+          }
+
+          // already rejected and re-submit (check this BEFORE pending review)
+          if (existing.rejectedAt) {
+            this.logger.log(
+              `User ${currentUser.id} re-applying after rejection for auction ${dto.auctionId}`
+            );
+            const updated = await tx.auctionParticipant.update({
+              where: { id: existing.id },
+              data: {
+                rejectedAt: null,
+                rejectedReason: null,
+                submittedAt: new Date(),
+              },
+            });
+            return this.toDto(updated);
+          }
+
           // pending submission - update document and resubmit
           if (
             existing.registeredAt &&
@@ -101,7 +139,8 @@ export class RegisterToBidService {
           if (
             existing.submittedAt &&
             !existing.confirmedAt &&
-            !existing.rejectedAt
+            !existing.rejectedAt &&
+            !existing.withdrawnAt
           ) {
             this.logger.warn(
               'User is pending for admin review, not allowing changes'
@@ -109,38 +148,6 @@ export class RegisterToBidService {
             throw new ConflictException(
               'Your registration is under review. Please wait for decision'
             );
-          }
-
-          // already rejected and re-submit
-          if (existing.rejectedAt) {
-            this.logger.log(
-              `User ${currentUser.id} re-applying after rejection for auction ${dto.auctionId}`
-            );
-            const updated = await tx.auctionParticipant.update({
-              where: { id: existing.id },
-              data: {
-                rejectedAt: null,
-                rejectedReason: null,
-                submittedAt: new Date(),
-              },
-            });
-            return this.toDto(updated);
-          }
-
-          // already withdrawn - allow re-applying
-          if (existing.withdrawnAt) {
-            this.logger.log(
-              `User ${currentUser.id} re-registering after withdrawal for auction ${dto.auctionId}`
-            );
-            const updated = await tx.auctionParticipant.update({
-              where: { id: existing.id },
-              data: {
-                withdrawnAt: null,
-                withdrawalReason: null,
-                submittedAt: new Date(),
-              },
-            });
-            return this.toDto(updated);
           }
 
           // fallback: return current participant state
@@ -280,7 +287,224 @@ export class RegisterToBidService {
     return registrations.map((r) => this.toDto(r));
   }
 
-  //TODO: implement admin accepting register / get registration status of a auction, or a day to bulk accepting - automation
+  /**
+   * Approve a registration (admin/auctioneer only)
+   * Sets confirmedAt timestamp, allowing user to participate in auction
+   */
+  async approveRegistration(dto: ApproveRegistrationDto) {
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        // 1. Get the participant record
+        const participant = await tx.auctionParticipant.findUnique({
+          where: { id: dto.participantId },
+          include: { user: true, auction: true },
+        });
+
+        if (!participant) {
+          throw new NotFoundException('Registration not found');
+        }
+
+        // 2. Validate state - must be in PENDING_REVIEW state
+        if (!participant.submittedAt) {
+          throw new BadRequestException(
+            'Registration has not been submitted yet'
+          );
+        }
+
+        if (participant.confirmedAt) {
+          throw new ConflictException('Registration already confirmed');
+        }
+
+        if (participant.withdrawnAt) {
+          throw new BadRequestException(
+            'Cannot confirm a withdrawn registration'
+          );
+        }
+
+        // 3. Update to confirmed state
+        this.logger.log(
+          `Approving registration ${dto.participantId} for user ${participant.userId}`
+        );
+        const updated = await tx.auctionParticipant.update({
+          where: { id: dto.participantId },
+          data: {
+            confirmedAt: new Date(),
+            rejectedAt: null,
+            rejectedReason: null,
+          },
+        });
+
+        return this.toDto(updated);
+      });
+
+      return result;
+    } catch (err) {
+      this.logger.error(
+        `Failed to approve registration ${dto.participantId}`,
+        (err as Error)?.stack
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * Reject a registration (admin/auctioneer only)
+   * Sets rejectedAt timestamp and reason
+   * Users can re-apply after rejection
+   */
+  async rejectRegistration(dto: RejectRegistrationDto) {
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        // 1. Get the participant record
+        const participant = await tx.auctionParticipant.findUnique({
+          where: { id: dto.participantId },
+          include: { user: true, auction: true },
+        });
+
+        if (!participant) {
+          throw new NotFoundException('Registration not found');
+        }
+
+        // 2. Validate state - must be in PENDING_REVIEW state
+        if (!participant.submittedAt) {
+          throw new BadRequestException(
+            'Registration has not been submitted yet'
+          );
+        }
+
+        if (participant.confirmedAt) {
+          throw new ConflictException(
+            'Cannot reject an already confirmed registration'
+          );
+        }
+
+        if (participant.withdrawnAt) {
+          throw new BadRequestException(
+            'Cannot reject a withdrawn registration'
+          );
+        }
+
+        // 3. Update to rejected state
+        this.logger.log(
+          `Rejecting registration ${dto.participantId} for user ${participant.userId}`
+        );
+        const updated = await tx.auctionParticipant.update({
+          where: { id: dto.participantId },
+          data: {
+            rejectedAt: new Date(),
+            rejectedReason: dto.rejectionReason || 'Not specified',
+            confirmedAt: null,
+          },
+        });
+
+        return this.toDto(updated);
+      });
+
+      return result;
+    } catch (err) {
+      this.logger.error(
+        `Failed to reject registration ${dto.participantId}`,
+        (err as Error)?.stack
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * List all registrations with pagination and filtering (admin/auctioneer only)
+   * Supports filtering by status and auction
+   */
+  async listRegistrations(query: ListRegistrationsQueryDto) {
+    const { page = 1, limit = 10, status, auctionId } = query;
+    const skip = (page - 1) * limit;
+
+    try {
+      // Build where clause based on filters
+      const where: any = {};
+
+      if (auctionId) {
+        where.auctionId = auctionId;
+      }
+
+      // Apply status filter
+      if (status && status !== RegistrationStatus.ALL) {
+        switch (status) {
+          case RegistrationStatus.PENDING_REVIEW:
+            where.submittedAt = { not: null };
+            where.confirmedAt = null;
+            where.rejectedAt = null;
+            where.withdrawnAt = null;
+            break;
+          case RegistrationStatus.CONFIRMED:
+            where.confirmedAt = { not: null };
+            break;
+          case RegistrationStatus.REJECTED:
+            where.rejectedAt = { not: null };
+            break;
+          case RegistrationStatus.WITHDRAWN:
+            where.withdrawnAt = { not: null };
+            break;
+        }
+      }
+
+      // Get total count for pagination
+      const totalItems = await this.prisma.auctionParticipant.count({ where });
+
+      // Get paginated results with user and auction info
+      const registrations = await this.prisma.auctionParticipant.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              email: true,
+              fullName: true,
+              phoneNumber: true,
+            },
+          },
+          auction: {
+            select: {
+              name: true,
+              code: true,
+            },
+          },
+        },
+        orderBy: [
+          { submittedAt: 'desc' },
+          { registeredAt: 'desc' },
+        ],
+        skip,
+        take: limit,
+      });
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        data: registrations.map((r) => ({
+          ...this.toDto(r),
+          user: {
+            email: r.user.email,
+            fullName: r.user.fullName,
+            phoneNumber: r.user.phoneNumber,
+          },
+          auction: {
+            name: r.auction.name,
+            code: r.auction.code,
+          },
+        })),
+        pagination: {
+          currentPage: page,
+          pageSize: limit,
+          totalItems,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    } catch (err) {
+      this.logger.error('Failed to list registrations', (err as Error)?.stack);
+      throw err;
+    }
+  }
 
   /**
    * Get current state of registration based on timestamps

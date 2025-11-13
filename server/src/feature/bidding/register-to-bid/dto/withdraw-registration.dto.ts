@@ -1,5 +1,6 @@
 import { IsUUID, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class WithdrawRegistrationDto {
   @ApiProperty({
@@ -20,5 +21,6 @@ export class WithdrawRegistrationDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @Transform(({ value, obj }) => value || obj.reason)
   withdrawalReason?: string;
 }

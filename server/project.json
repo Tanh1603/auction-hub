@@ -69,6 +69,13 @@
         }
       }
     },
+    "docker-start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker-compose up -d --build",
+        "cwd": "{workspaceRoot}"
+      }
+    },
     "test": {
       "options": {
         "passWithNoTests": true

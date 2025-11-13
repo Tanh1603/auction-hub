@@ -9,39 +9,50 @@ import { ResendVerificationEmailRequestDto } from './dto/resend-verification-ema
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private supabaseService: SupabaseService) {}
+  constructor(
+    private prisma: PrismaService,
+    private supabaseService: SupabaseService
+  ) {}
 
   async register(request: RegisterRequestDto): Promise<RegisterResponseDto> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
 
-
     if (existingUser) {
       throw new BadRequestException('User with this email already exists');
     }
 
-      const { error } = await this.supabaseService.auth.signUp({
-        email: request.email,
-        password: request.password,
-        options: {
-          data: {
-            full_name: request.full_name,
-            phone_number: request.phone_number,
-            identity_number: request.identity_number,
-            user_type: request.user_type,
-          },
-          emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+    const { data, error } = await this.supabaseService.auth.signUp({
+      email: request.email,
+      password: request.password,
+      options: {
+        data: {
+          full_name: request.full_name,
+          phone_number: request.phone_number,
+          identity_number: request.identity_number,
+          user_type: request.user_type,
         },
-      });
+        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+      },
+    });
 
     if (error) {
-      throw new BadRequestException('Failed to create user in Supabase. ' + error.message);
+      throw new BadRequestException(
+        'Failed to create user in Supabase. ' + error.message
+      );
     }
 
+    if (!data.user) {
+      throw new BadRequestException(
+        'Failed to create user in Supabase - no user data returned'
+      );
+    }
 
+    // Use the actual Supabase user ID as the primary key
     const user = await this.prisma.user.create({
       data: {
+        id: data.user.id, // This is the KEY FIX - use Supabase user ID
         email: request.email,
         phoneNumber: request.phone_number,
         fullName: request.full_name || '',
@@ -62,12 +73,12 @@ export class AuthService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
-    
+
     if (!existingUser) {
       throw new BadRequestException('User not found');
     }
 
-    const {data, error } = await this.supabaseService.auth.signInWithPassword({
+    const { data, error } = await this.supabaseService.auth.signInWithPassword({
       email: request.email,
       password: request.password,
     });
@@ -88,30 +99,38 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
-      const { error } = await this.supabaseService.auth.resetPasswordForEmail(request.email, {
-          redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
-        });
-      if (error) {
-      throw new BadRequestException('Failed to send reset password email. ' + error.message);
+    const { error } = await this.supabaseService.auth.resetPasswordForEmail(
+      request.email,
+      {
+        redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
+      }
+    );
+    if (error) {
+      throw new BadRequestException(
+        'Failed to send reset password email. ' + error.message
+      );
     }
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
-
   }
 
-  async resendVerificationEmail(request: ResendVerificationEmailRequestDto): Promise<void> {
+  async resendVerificationEmail(
+    request: ResendVerificationEmailRequestDto
+  ): Promise<void> {
     const { error } = await this.supabaseService.auth.resend({
       type: 'signup',
       email: request.email,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`
-      }
-    })
+        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+      },
+    });
 
     if (error) {
-      throw new BadRequestException('Failed to resend verification email. ' + error.message);
+      throw new BadRequestException(
+        'Failed to resend verification email. ' + error.message
+      );
     }
   }
 
@@ -126,6 +145,4 @@ export class AuthService {
       throw new BadRequestException('Failed to verify email. ' + error.message);
     }
   }
-
-
 }

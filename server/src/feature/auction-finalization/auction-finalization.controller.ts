@@ -4,12 +4,10 @@ import {
   Post,
   Body,
   Param,
-  UseGuards,
 } from '@nestjs/common';
 import { AuctionFinalizationService } from './auction-finalization.service';
 import { FinalizeAuctionDto } from './dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from './dto/override-auction-status.dto';
-import { AuthGuard } from '../../common/guards/auth.guard';
 import {
   CurrentUser,
   CurrentUserData,
@@ -26,7 +24,6 @@ export class AuctionFinalizationController {
    * GET /auction-finalization/evaluate/:auctionId
    */
   @Get('evaluate/:auctionId')
-  @UseGuards(AuthGuard)
   async evaluateAuction(
     @Param('auctionId') auctionId: string,
     @CurrentUser() user: CurrentUserData
@@ -39,7 +36,6 @@ export class AuctionFinalizationController {
    * POST /auction-finalization/finalize
    */
   @Post('finalize')
-  @UseGuards(AuthGuard)
   async finalizeAuction(
     @Body() dto: FinalizeAuctionDto,
     @CurrentUser() user: CurrentUserData
@@ -56,7 +52,6 @@ export class AuctionFinalizationController {
    * - Manual intervention for edge cases
    */
   @Post('override')
-  @UseGuards(AuthGuard)
   async overrideAuctionStatus(
     @Body() dto: OverrideAuctionStatusDto,
     @CurrentUser() user: CurrentUserData
@@ -69,7 +64,6 @@ export class AuctionFinalizationController {
    * GET /auction-finalization/results/:auctionId
    */
   @Get('results/:auctionId')
-  @UseGuards(AuthGuard)
   async getAuctionResults(
     @Param('auctionId') auctionId: string,
     @CurrentUser() user: CurrentUserData
@@ -83,7 +77,6 @@ export class AuctionFinalizationController {
    * Only auction owner can view
    */
   @Get('audit-logs/:auctionId')
-  @UseGuards(AuthGuard)
   async getAuctionAuditLogs(
     @Param('auctionId') auctionId: string,
     @CurrentUser() user: CurrentUserData

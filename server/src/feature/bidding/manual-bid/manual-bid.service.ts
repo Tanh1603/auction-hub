@@ -189,7 +189,16 @@ export class ManualBidService {
         }
       }
 
-      // Create the bid record (for audit trail)
+      // Mark all previous bids as non-winning
+      await tx.auctionBid.updateMany({
+        where: {
+          auctionId: freshAuction.id,
+          isWinningBid: true,
+        },
+        data: { isWinningBid: false },
+      });
+
+      // Create the bid record (for audit trail) as winning bid
       const savedBid = await tx.auctionBid.create({
         data: {
           auctionId: freshAuction.id,
@@ -197,6 +206,7 @@ export class ManualBidService {
           amount: bidAmount,
           bidAt: new Date(),
           bidType: 'manual',
+          isWinningBid: true,
         },
       });
 
@@ -208,6 +218,7 @@ export class ManualBidService {
         amount: bidAmount.toString(),
         bidAt: savedBid.bidAt,
         bidType: savedBid.bidType,
+        isWinningBid: true,
       } as ManualBidResponseDto;
     });
 
@@ -220,6 +231,7 @@ export class ManualBidService {
       amount: result.amount,
       bidAt: result.bidAt,
       bidType: result.bidType,
+      isWinningBid: result.isWinningBid,
     });
 
     return result;

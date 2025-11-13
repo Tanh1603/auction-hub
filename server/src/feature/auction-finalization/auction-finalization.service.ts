@@ -61,6 +61,20 @@ export class AuctionFinalizationService {
     const issues: string[] = [];
     let recommendedStatus: AuctionStatus;
 
+    // Check if auction is already finalized
+    const finalStatuses: AuctionStatus[] = [
+      AuctionStatus.success,
+      AuctionStatus.no_bid,
+      AuctionStatus.cancelled,
+    ];
+    const isAlreadyFinalized = finalStatuses.includes(auction.status);
+
+    if (isAlreadyFinalized) {
+      issues.push(
+        `Auction has already been finalized with status: ${auction.status}`
+      );
+    }
+
     // Rule 1: Check if auction has ended
     const now = new Date();
     if (now < auction.auctionEndAt) {
@@ -144,11 +158,18 @@ export class AuctionFinalizationService {
       issues.push('Auction failed: reserve price not met');
     }
 
-    const canFinalize = now >= auction.auctionEndAt && issues.length === 0;
+    // Can only finalize if:
+    // 1. Auction has ended
+    // 2. No issues found
+    // 3. Auction is NOT already finalized
+    const canFinalize =
+      now >= auction.auctionEndAt && issues.length === 0 && !isAlreadyFinalized;
 
     return {
       auctionId: auction.id,
+      currentStatus: auction.status,
       recommendedStatus,
+      isAlreadyFinalized,
       meetsReservePrice,
       hasMinimumParticipants,
       hasValidBids,

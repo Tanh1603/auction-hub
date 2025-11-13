@@ -8,4 +8,5 @@ export class ManualBidResponseDto {
   amount: string;
   bidAt: Date;
   bidType: BidType;
+  isWinningBid: boolean;
 }
