@@ -5,7 +5,7 @@
 - Server running on `http://localhost:3000` (or your configured port)
 - PostgreSQL database connected
 - Postman installed
-- **Prisma Studio running** to get UUIDs for requests
+- **Prisma Studio running** to get UUIDs for requests and verify register emails
 
 ## ⚠️ IMPORTANT: Setup Required Before Testing
 
