@@ -10,6 +10,7 @@ import { BiddingModule } from '../feature/bidding/bidding.module';
 import { CommonModule } from '../common/common.module';
 import { AuctionFinalizationModule } from '../feature/auction-finalization/auction-finalization.module';
 import { AuthGuard } from '../common/guards/auth.guard';
+import { PaymentModule } from '../payment/payment.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AuthGuard } from '../common/guards/auth.guard';
     AuctionModule,
     BiddingModule,
     AuctionFinalizationModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [

@@ -52,6 +52,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/nodemailer": "^7.0.3",
     "@types/passport-jwt": "^4.0.1",
+    "@types/qrcode": "^1.5.5",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -61,6 +62,7 @@
     "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "qrcode": "^1.5.4",
     "react": "19.0.0",
     "react-day-picker": "^9.11.0",
     "react-dom": "19.0.0",
@@ -69,7 +71,8 @@
     "recharts": "^2.15.4",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "stripe": "^19.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.14.5",

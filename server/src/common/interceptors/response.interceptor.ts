@@ -33,18 +33,19 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
           return data;
         }
 
-        // Skip wrapping if response already has the standard wrapper structure
-        if (
-          data &&
-          typeof data === 'object' &&
-          'success' in data &&
-          'timestamp' in data
-        ) {
+        // If data is already in the expected response format, return it as-is
+        if (data && typeof data === 'object' && 'success' in data && 'timestamp' in data) {
           return {
             ...data,
             path: data.path || path,
           };
         }
+
+        // If data has a 'data' property, use that as the response data
+        // Otherwise, use the entire data object as the response data
+        const responseData = data && typeof data === 'object' && 'data' in data 
+          ? data.data 
+          : data;
 
         return {
           success: true,

@@ -23,6 +23,26 @@ export class AuthService {
       throw new BadRequestException('User with this email already exists');
     }
 
+    if (request.phone_number) {
+      const existingPhoneNumber = await this.prisma.user.findUnique({
+        where: { phoneNumber: request.phone_number },
+      });
+
+      if (existingPhoneNumber) {
+        throw new BadRequestException('User with this phone number already exists');
+      }
+    }
+
+    if (request.identity_number) {
+      const existingIdentityNumber = await this.prisma.user.findUnique({
+        where: { identityNumber: request.identity_number },
+      });
+
+      if (existingIdentityNumber) {
+        throw new BadRequestException('User with this identity number already exists');
+      }
+    }
+
     const { data, error } = await this.supabaseService.auth.signUp({
       email: request.email,
       password: request.password,
@@ -36,7 +56,6 @@ export class AuthService {
         emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
       },
     });
-
     if (error) {
       throw new BadRequestException(
         'Failed to create user in Supabase. ' + error.message
