@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../../generated';
+import { DecimalUtils } from '../../common/utils/decimal.utils';
 
 @WebSocketGateway({
   cors: {
@@ -18,7 +19,9 @@ import { Prisma } from '../../../generated';
   },
   namespace: '/bidding',
 })
-export class BiddingGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class BiddingGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -75,13 +78,13 @@ export class BiddingGateway implements OnGatewayConnection, OnGatewayDisconnect 
         data: {
           auctionId,
           message: 'Successfully joined auction',
-        }
+        },
       };
     } catch (error) {
       this.logger.error(`Error joining auction ${auctionId}:`, error);
       return {
         event: 'error',
-        data: { message: 'Failed to join auction' }
+        data: { message: 'Failed to join auction' },
       };
     }
   }
@@ -166,11 +169,14 @@ export class BiddingGateway implements OnGatewayConnection, OnGatewayDisconnect 
       // Get winning bid (highest valid bid)
       const winningBid = auction.bids[0] || null;
 
-      // Calculate next minimum bid
+      // Calculate next minimum bid using Decimal arithmetic for precision
       let nextMinimumBid = auction.startingPrice;
       if (winningBid) {
-        const nextBid = parseFloat(winningBid.amount.toString()) + parseFloat(auction.bidIncrement.toString());
-        nextMinimumBid = new Prisma.Decimal(nextBid);
+        // ✅ FIX: Use Decimal.plus() to maintain precision
+        nextMinimumBid = DecimalUtils.add(
+          winningBid.amount,
+          auction.bidIncrement
+        );
       }
 
       return {
@@ -180,22 +186,26 @@ export class BiddingGateway implements OnGatewayConnection, OnGatewayDisconnect 
         status: auction.status,
         startingPrice: parseFloat(auction.startingPrice.toString()),
         bidIncrement: parseFloat(auction.bidIncrement.toString()),
-        reservePrice: auction.reservePrice ? parseFloat(auction.reservePrice.toString()) : null,
+        reservePrice: auction.reservePrice
+          ? parseFloat(auction.reservePrice.toString())
+          : null,
         auctionStartAt: auction.auctionStartAt,
         auctionEndAt: auction.auctionEndAt,
         timeRemaining: Math.max(0, timeRemaining),
         hasStarted,
         hasEnded,
         isActive: auction.isActive,
-        currentWinningBid: winningBid ? {
-          bidId: winningBid.id,
-          amount: parseFloat(winningBid.amount.toString()),
-          bidAt: winningBid.bidAt,
-          participantId: winningBid.participantId,
-          bidderName: winningBid.participant.user.fullName,
-          isWinningBid: winningBid.isWinningBid,
-        } : null,
-        nextMinimumBid,
+        currentWinningBid: winningBid
+          ? {
+              bidId: winningBid.id,
+              amount: parseFloat(winningBid.amount.toString()),
+              bidAt: winningBid.bidAt,
+              participantId: winningBid.participantId,
+              bidderName: winningBid.participant.user.fullName,
+              isWinningBid: winningBid.isWinningBid,
+            }
+          : null,
+        nextMinimumBid: DecimalUtils.toNumber(nextMinimumBid), // Convert to number for JSON
         totalBids: auction.bids.length,
         totalParticipants: auction.participants.length,
         bidHistory: auction.bids.slice(0, 5).map((bid) => ({
@@ -230,9 +240,13 @@ export class BiddingGateway implements OnGatewayConnection, OnGatewayDisconnect 
         }
 
         // Check if there are any clients in this auction room
-        const room = this.server.sockets.adapter.rooms.get(`auction:${auctionId}`);
+        const room = this.server.sockets.adapter.rooms.get(
+          `auction:${auctionId}`
+        );
         if (!room || room.size === 0) {
-          this.logger.log(`No clients in auction ${auctionId}, stopping updates`);
+          this.logger.log(
+            `No clients in auction ${auctionId}, stopping updates`
+          );
           this.stopAuctionUpdates(auctionId);
           return;
         }
@@ -262,9 +276,11 @@ export class BiddingGateway implements OnGatewayConnection, OnGatewayDisconnect 
             totalBids: auctionState.totalBids,
           },
         });
-
       } catch (error) {
-        this.logger.error(`Error in auction update loop for ${auctionId}:`, error);
+        this.logger.error(
+          `Error in auction update loop for ${auctionId}:`,
+          error
+        );
       }
     }, 1000); // Update every second
 

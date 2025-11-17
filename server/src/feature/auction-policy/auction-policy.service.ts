@@ -1,8 +1,19 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateAuctionPolicyDto, AssetOwnershipDto } from './dto/create-auction-policy.dto';
+import {
+  CreateAuctionPolicyDto,
+  AssetOwnershipDto,
+} from './dto/create-auction-policy.dto';
 import { UpdateAuctionPolicyDto } from './dto/update-auction-policy.dto';
 import { PolicyCalculationService } from './policy-calculation.service';
+import { JSONUtils } from '../../common/utils/json.utils';
 
 /**
  * Auction Policy Service
@@ -14,98 +25,112 @@ export class AuctionPolicyService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly policyCalc: PolicyCalculationService,
+    private readonly policyCalc: PolicyCalculationService
   ) {}
 
   /**
    * Create a new auction policy with configurations
    */
   async create(dto: CreateAuctionPolicyDto) {
-    try {
-      // If this policy is marked as default, unset existing defaults
-      if (dto.isDefault) {
-        await this.prisma.auctionPolicy.updateMany({
-          where: {
-            assetOwnership: dto.assetOwnership,
-            isDefault: true,
-          },
+    // ✅ FIX: Wrap in transaction for atomicity
+    return await this.prisma.$transaction(async (tx) => {
+      try {
+        // If this policy is marked as default, unset existing defaults
+        if (dto.isDefault) {
+          await tx.auctionPolicy.updateMany({
+            where: {
+              assetOwnership: dto.assetOwnership,
+              isDefault: true,
+            },
+            data: {
+              isDefault: false,
+            },
+          });
+        }
+
+        // Generate unique ID using crypto UUID
+        const policyId = this.generatePolicyId();
+
+        // Create policy with nested configurations
+        const policy = await tx.auctionPolicy.create({
           data: {
-            isDefault: false,
+            id: policyId,
+            name: dto.name,
+            description: dto.description,
+            assetOwnership: dto.assetOwnership,
+            isActive: dto.isActive ?? true,
+            isDefault: dto.isDefault ?? false,
+
+            // Commission configuration
+            ...(dto.commissionConfig && {
+              commissionConfig: {
+                create: {
+                  id: `commission_${policyId}`,
+                  assetCategory: dto.commissionConfig.assetCategory,
+                  tiers: JSON.stringify(dto.commissionConfig.tiers),
+                  minCommission:
+                    dto.commissionConfig.minCommission ?? 1_000_000,
+                  maxCommission:
+                    dto.commissionConfig.maxCommission ?? 400_000_000,
+                },
+              },
+            }),
+
+            // Dossier fee configuration
+            ...(dto.dossierConfig && {
+              dossierConfig: {
+                create: {
+                  id: `dossier_${policyId}`,
+                  feeTiers: JSON.stringify(dto.dossierConfig.feeTiers),
+                },
+              },
+            }),
+
+            // Deposit configuration
+            ...(dto.depositConfig && {
+              depositConfig: {
+                create: {
+                  id: `deposit_${policyId}`,
+                  depositType: dto.depositConfig.depositType,
+                  assetCategory: dto.depositConfig.assetCategory,
+                  minPercentage: dto.depositConfig.minPercentage,
+                  maxPercentage: dto.depositConfig.maxPercentage,
+                  fixedAmount: dto.depositConfig.fixedAmount,
+                  minDepositAmount: dto.depositConfig.minDepositAmount,
+                  maxDepositAmount: dto.depositConfig.maxDepositAmount,
+                  depositDeadlineHours:
+                    dto.depositConfig.depositDeadlineHours ?? 24,
+                  requiresDocuments:
+                    dto.depositConfig.requiresDocuments ?? true,
+                  requiredDocumentTypes: dto.depositConfig.requiredDocumentTypes
+                    ? JSON.stringify(dto.depositConfig.requiredDocumentTypes)
+                    : null,
+                  refundDeadlineDays: dto.depositConfig.refundDeadlineDays ?? 3,
+                },
+              },
+            }),
+          },
+          include: {
+            commissionConfig: true,
+            dossierConfig: true,
+            depositConfig: true,
           },
         });
+
+        this.logger.log(`Created auction policy: ${policy.id}`);
+        return this.formatPolicyResponse(policy);
+      } catch (error) {
+        this.logger.error('Failed to create auction policy', error);
+        throw error;
       }
+    }); // Transaction end - all or nothing
+  }
 
-      // Generate unique ID
-      const policyId = `policy_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-
-      // Create policy with nested configurations
-      const policy = await this.prisma.auctionPolicy.create({
-        data: {
-          id: policyId,
-          name: dto.name,
-          description: dto.description,
-          assetOwnership: dto.assetOwnership,
-          isActive: dto.isActive ?? true,
-          isDefault: dto.isDefault ?? false,
-
-          // Commission configuration
-          ...(dto.commissionConfig && {
-            commissionConfig: {
-              create: {
-                id: `commission_${policyId}`,
-                assetCategory: dto.commissionConfig.assetCategory,
-                tiers: JSON.stringify(dto.commissionConfig.tiers),
-                minCommission: dto.commissionConfig.minCommission ?? 1_000_000,
-                maxCommission: dto.commissionConfig.maxCommission ?? 400_000_000,
-              },
-            },
-          }),
-
-          // Dossier fee configuration
-          ...(dto.dossierConfig && {
-            dossierConfig: {
-              create: {
-                id: `dossier_${policyId}`,
-                feeTiers: JSON.stringify(dto.dossierConfig.feeTiers),
-              },
-            },
-          }),
-
-          // Deposit configuration
-          ...(dto.depositConfig && {
-            depositConfig: {
-              create: {
-                id: `deposit_${policyId}`,
-                depositType: dto.depositConfig.depositType,
-                assetCategory: dto.depositConfig.assetCategory,
-                minPercentage: dto.depositConfig.minPercentage,
-                maxPercentage: dto.depositConfig.maxPercentage,
-                fixedAmount: dto.depositConfig.fixedAmount,
-                minDepositAmount: dto.depositConfig.minDepositAmount,
-                maxDepositAmount: dto.depositConfig.maxDepositAmount,
-                depositDeadlineHours: dto.depositConfig.depositDeadlineHours ?? 24,
-                requiresDocuments: dto.depositConfig.requiresDocuments ?? true,
-                requiredDocumentTypes: dto.depositConfig.requiredDocumentTypes
-                  ? JSON.stringify(dto.depositConfig.requiredDocumentTypes)
-                  : null,
-                refundDeadlineDays: dto.depositConfig.refundDeadlineDays ?? 3,
-              },
-            },
-          }),
-        },
-        include: {
-          commissionConfig: true,
-          dossierConfig: true,
-          depositConfig: true,
-        },
-      });
-
-      this.logger.log(`Created auction policy: ${policy.id}`);
-      return this.formatPolicyResponse(policy);
-    } catch (error) {
-      this.logger.error('Failed to create auction policy', error);
-      throw error;
-    }
+  /**
+   * Generate unique policy ID using crypto UUID
+   */
+  private generatePolicyId(): string {
+    return `policy_${randomUUID()}`;
   }
 
   /**
@@ -118,9 +143,13 @@ export class AuctionPolicyService {
   }) {
     const policies = await this.prisma.auctionPolicy.findMany({
       where: {
-        ...(filters?.assetOwnership && { assetOwnership: filters.assetOwnership }),
+        ...(filters?.assetOwnership && {
+          assetOwnership: filters.assetOwnership,
+        }),
         ...(filters?.isActive !== undefined && { isActive: filters.isActive }),
-        ...(filters?.isDefault !== undefined && { isDefault: filters.isDefault }),
+        ...(filters?.isDefault !== undefined && {
+          isDefault: filters.isDefault,
+        }),
       },
       include: {
         commissionConfig: true,
@@ -130,13 +159,10 @@ export class AuctionPolicyService {
           select: { auctions: true },
         },
       },
-      orderBy: [
-        { isDefault: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return policies.map(policy => this.formatPolicyResponse(policy));
+    return policies.map((policy) => this.formatPolicyResponse(policy));
   }
 
   /**
@@ -180,7 +206,9 @@ export class AuctionPolicyService {
     });
 
     if (!policy) {
-      throw new NotFoundException(`No default policy found for ${assetOwnership} assets`);
+      throw new NotFoundException(
+        `No default policy found for ${assetOwnership} assets`
+      );
     }
 
     return this.formatPolicyResponse(policy);
@@ -190,127 +218,140 @@ export class AuctionPolicyService {
    * Update an existing auction policy
    */
   async update(id: string, dto: UpdateAuctionPolicyDto) {
-    try {
-      // Check if policy exists
-      const existing = await this.prisma.auctionPolicy.findUnique({
-        where: { id },
-      });
+    // ✅ FIX: Wrap in transaction
+    return await this.prisma.$transaction(async (tx) => {
+      try {
+        // Check if policy exists
+        const existing = await tx.auctionPolicy.findUnique({
+          where: { id },
+        });
 
-      if (!existing) {
-        throw new NotFoundException(`Auction policy with ID ${id} not found`);
-      }
+        if (!existing) {
+          throw new NotFoundException(`Auction policy with ID ${id} not found`);
+        }
 
-      // If setting as default, unset other defaults
-      if (dto.isDefault) {
-        await this.prisma.auctionPolicy.updateMany({
-          where: {
-            assetOwnership: existing.assetOwnership,
-            isDefault: true,
-            id: { not: id },
-          },
+        // If setting as default, unset other defaults
+        if (dto.isDefault) {
+          await tx.auctionPolicy.updateMany({
+            where: {
+              assetOwnership: existing.assetOwnership,
+              isDefault: true,
+              id: { not: id },
+            },
+            data: {
+              isDefault: false,
+            },
+          });
+        }
+
+        // Update policy and configurations
+        const updated = await tx.auctionPolicy.update({
+          where: { id },
           data: {
-            isDefault: false,
+            ...(dto.name && { name: dto.name }),
+            ...(dto.description !== undefined && {
+              description: dto.description,
+            }),
+            ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+            ...(dto.isDefault !== undefined && { isDefault: dto.isDefault }),
+
+            // Update commission config if provided
+            ...(dto.commissionConfig && {
+              commissionConfig: {
+                upsert: {
+                  create: {
+                    id: `commission_${id}`,
+                    assetCategory: dto.commissionConfig.assetCategory,
+                    tiers: JSON.stringify(dto.commissionConfig.tiers),
+                    minCommission:
+                      dto.commissionConfig.minCommission ?? 1_000_000,
+                    maxCommission:
+                      dto.commissionConfig.maxCommission ?? 400_000_000,
+                  },
+                  update: {
+                    assetCategory: dto.commissionConfig.assetCategory,
+                    tiers: JSON.stringify(dto.commissionConfig.tiers),
+                    minCommission: dto.commissionConfig.minCommission,
+                    maxCommission: dto.commissionConfig.maxCommission,
+                  },
+                },
+              },
+            }),
+
+            // Update dossier config if provided
+            ...(dto.dossierConfig && {
+              dossierConfig: {
+                upsert: {
+                  create: {
+                    id: `dossier_${id}`,
+                    feeTiers: JSON.stringify(dto.dossierConfig.feeTiers),
+                  },
+                  update: {
+                    feeTiers: JSON.stringify(dto.dossierConfig.feeTiers),
+                  },
+                },
+              },
+            }),
+
+            // Update deposit config if provided
+            ...(dto.depositConfig && {
+              depositConfig: {
+                upsert: {
+                  create: {
+                    id: `deposit_${id}`,
+                    depositType: dto.depositConfig.depositType,
+                    assetCategory: dto.depositConfig.assetCategory,
+                    minPercentage: dto.depositConfig.minPercentage,
+                    maxPercentage: dto.depositConfig.maxPercentage,
+                    fixedAmount: dto.depositConfig.fixedAmount,
+                    minDepositAmount: dto.depositConfig.minDepositAmount,
+                    maxDepositAmount: dto.depositConfig.maxDepositAmount,
+                    depositDeadlineHours:
+                      dto.depositConfig.depositDeadlineHours ?? 24,
+                    requiresDocuments:
+                      dto.depositConfig.requiresDocuments ?? true,
+                    requiredDocumentTypes: dto.depositConfig
+                      .requiredDocumentTypes
+                      ? JSON.stringify(dto.depositConfig.requiredDocumentTypes)
+                      : null,
+                    refundDeadlineDays:
+                      dto.depositConfig.refundDeadlineDays ?? 3,
+                  },
+                  update: {
+                    depositType: dto.depositConfig.depositType,
+                    assetCategory: dto.depositConfig.assetCategory,
+                    minPercentage: dto.depositConfig.minPercentage,
+                    maxPercentage: dto.depositConfig.maxPercentage,
+                    fixedAmount: dto.depositConfig.fixedAmount,
+                    minDepositAmount: dto.depositConfig.minDepositAmount,
+                    maxDepositAmount: dto.depositConfig.maxDepositAmount,
+                    depositDeadlineHours:
+                      dto.depositConfig.depositDeadlineHours,
+                    requiresDocuments: dto.depositConfig.requiresDocuments,
+                    requiredDocumentTypes: dto.depositConfig
+                      .requiredDocumentTypes
+                      ? JSON.stringify(dto.depositConfig.requiredDocumentTypes)
+                      : undefined,
+                    refundDeadlineDays: dto.depositConfig.refundDeadlineDays,
+                  },
+                },
+              },
+            }),
+          },
+          include: {
+            commissionConfig: true,
+            dossierConfig: true,
+            depositConfig: true,
           },
         });
+
+        this.logger.log(`Updated auction policy: ${id}`);
+        return this.formatPolicyResponse(updated);
+      } catch (error) {
+        this.logger.error(`Failed to update auction policy ${id}`, error);
+        throw error;
       }
-
-      // Update policy and configurations
-      const updated = await this.prisma.auctionPolicy.update({
-        where: { id },
-        data: {
-          ...(dto.name && { name: dto.name }),
-          ...(dto.description !== undefined && { description: dto.description }),
-          ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-          ...(dto.isDefault !== undefined && { isDefault: dto.isDefault }),
-
-          // Update commission config if provided
-          ...(dto.commissionConfig && {
-            commissionConfig: {
-              upsert: {
-                create: {
-                  id: `commission_${id}`,
-                  assetCategory: dto.commissionConfig.assetCategory,
-                  tiers: JSON.stringify(dto.commissionConfig.tiers),
-                  minCommission: dto.commissionConfig.minCommission ?? 1_000_000,
-                  maxCommission: dto.commissionConfig.maxCommission ?? 400_000_000,
-                },
-                update: {
-                  assetCategory: dto.commissionConfig.assetCategory,
-                  tiers: JSON.stringify(dto.commissionConfig.tiers),
-                  minCommission: dto.commissionConfig.minCommission,
-                  maxCommission: dto.commissionConfig.maxCommission,
-                },
-              },
-            },
-          }),
-
-          // Update dossier config if provided
-          ...(dto.dossierConfig && {
-            dossierConfig: {
-              upsert: {
-                create: {
-                  id: `dossier_${id}`,
-                  feeTiers: JSON.stringify(dto.dossierConfig.feeTiers),
-                },
-                update: {
-                  feeTiers: JSON.stringify(dto.dossierConfig.feeTiers),
-                },
-              },
-            },
-          }),
-
-          // Update deposit config if provided
-          ...(dto.depositConfig && {
-            depositConfig: {
-              upsert: {
-                create: {
-                  id: `deposit_${id}`,
-                  depositType: dto.depositConfig.depositType,
-                  assetCategory: dto.depositConfig.assetCategory,
-                  minPercentage: dto.depositConfig.minPercentage,
-                  maxPercentage: dto.depositConfig.maxPercentage,
-                  fixedAmount: dto.depositConfig.fixedAmount,
-                  minDepositAmount: dto.depositConfig.minDepositAmount,
-                  maxDepositAmount: dto.depositConfig.maxDepositAmount,
-                  depositDeadlineHours: dto.depositConfig.depositDeadlineHours ?? 24,
-                  requiresDocuments: dto.depositConfig.requiresDocuments ?? true,
-                  requiredDocumentTypes: dto.depositConfig.requiredDocumentTypes
-                    ? JSON.stringify(dto.depositConfig.requiredDocumentTypes)
-                    : null,
-                  refundDeadlineDays: dto.depositConfig.refundDeadlineDays ?? 3,
-                },
-                update: {
-                  depositType: dto.depositConfig.depositType,
-                  assetCategory: dto.depositConfig.assetCategory,
-                  minPercentage: dto.depositConfig.minPercentage,
-                  maxPercentage: dto.depositConfig.maxPercentage,
-                  fixedAmount: dto.depositConfig.fixedAmount,
-                  minDepositAmount: dto.depositConfig.minDepositAmount,
-                  maxDepositAmount: dto.depositConfig.maxDepositAmount,
-                  depositDeadlineHours: dto.depositConfig.depositDeadlineHours,
-                  requiresDocuments: dto.depositConfig.requiresDocuments,
-                  requiredDocumentTypes: dto.depositConfig.requiredDocumentTypes
-                    ? JSON.stringify(dto.depositConfig.requiredDocumentTypes)
-                    : undefined,
-                  refundDeadlineDays: dto.depositConfig.refundDeadlineDays,
-                },
-              },
-            },
-          }),
-        },
-        include: {
-          commissionConfig: true,
-          dossierConfig: true,
-          depositConfig: true,
-        },
-      });
-
-      this.logger.log(`Updated auction policy: ${id}`);
-      return this.formatPolicyResponse(updated);
-    } catch (error) {
-      this.logger.error(`Failed to update auction policy ${id}`, error);
-      throw error;
-    }
+    }); // Transaction end
   }
 
   /**
@@ -318,40 +359,43 @@ export class AuctionPolicyService {
    * Only allowed if no auctions are using it
    */
   async remove(id: string) {
-    try {
-      const policy = await this.prisma.auctionPolicy.findUnique({
-        where: { id },
-        include: {
-          _count: {
-            select: { auctions: true },
+    // ✅ FIX: Wrap in transaction
+    return await this.prisma.$transaction(async (tx) => {
+      try {
+        const policy = await tx.auctionPolicy.findUnique({
+          where: { id },
+          include: {
+            _count: {
+              select: { auctions: true },
+            },
           },
-        },
-      });
+        });
 
-      if (!policy) {
-        throw new NotFoundException(`Auction policy with ID ${id} not found`);
+        if (!policy) {
+          throw new NotFoundException(`Auction policy with ID ${id} not found`);
+        }
+
+        if (policy._count.auctions > 0) {
+          throw new ConflictException(
+            `Cannot delete policy ${id}. It is being used by ${policy._count.auctions} auction(s)`
+          );
+        }
+
+        // Delete configurations first
+        await tx.commissionPolicyConfig.deleteMany({ where: { policyId: id } });
+        await tx.dossierFeePolicyConfig.deleteMany({ where: { policyId: id } });
+        await tx.depositPolicyConfig.deleteMany({ where: { policyId: id } });
+
+        // Delete policy
+        await tx.auctionPolicy.delete({ where: { id } });
+
+        this.logger.log(`Deleted auction policy: ${id}`);
+        return { message: 'Policy deleted successfully', id };
+      } catch (error) {
+        this.logger.error(`Failed to delete auction policy ${id}`, error);
+        throw error;
       }
-
-      if (policy._count.auctions > 0) {
-        throw new ConflictException(
-          `Cannot delete policy ${id}. It is being used by ${policy._count.auctions} auction(s)`,
-        );
-      }
-
-      // Delete configurations first
-      await this.prisma.commissionPolicyConfig.deleteMany({ where: { policyId: id } });
-      await this.prisma.dossierFeePolicyConfig.deleteMany({ where: { policyId: id } });
-      await this.prisma.depositPolicyConfig.deleteMany({ where: { policyId: id } });
-
-      // Delete policy
-      await this.prisma.auctionPolicy.delete({ where: { id } });
-
-      this.logger.log(`Deleted auction policy: ${id}`);
-      return { message: 'Policy deleted successfully', id };
-    } catch (error) {
-      this.logger.error(`Failed to delete auction policy ${id}`, error);
-      throw error;
-    }
+    }); // Transaction end
   }
 
   /**
@@ -373,16 +417,28 @@ export class AuctionPolicyService {
         ? {
             id: policy.commissionConfig.id,
             assetCategory: policy.commissionConfig.assetCategory,
-            tiers: JSON.parse(policy.commissionConfig.tiers as string),
-            minCommission: parseFloat(policy.commissionConfig.minCommission.toString()),
-            maxCommission: parseFloat(policy.commissionConfig.maxCommission.toString()),
+            // ✅ FIX: Use safe JSON parsing with fallback
+            tiers: JSONUtils.parseArray(
+              policy.commissionConfig.tiers as string,
+              'commission tiers'
+            ),
+            minCommission: parseFloat(
+              policy.commissionConfig.minCommission.toString()
+            ),
+            maxCommission: parseFloat(
+              policy.commissionConfig.maxCommission.toString()
+            ),
           }
         : null,
 
       dossierConfig: policy.dossierConfig
         ? {
             id: policy.dossierConfig.id,
-            feeTiers: JSON.parse(policy.dossierConfig.feeTiers as string),
+            // ✅ FIX: Use safe JSON parsing with fallback
+            feeTiers: JSONUtils.parseArray(
+              policy.dossierConfig.feeTiers as string,
+              'dossier fee tiers'
+            ),
           }
         : null,
 
@@ -408,9 +464,11 @@ export class AuctionPolicyService {
               : undefined,
             depositDeadlineHours: policy.depositConfig.depositDeadlineHours,
             requiresDocuments: policy.depositConfig.requiresDocuments,
-            requiredDocumentTypes: policy.depositConfig.requiredDocumentTypes
-              ? JSON.parse(policy.depositConfig.requiredDocumentTypes as string)
-              : null,
+            // ✅ FIX: Use safe JSON parsing with fallback (returns empty array if null/invalid)
+            requiredDocumentTypes: JSONUtils.parseArray(
+              policy.depositConfig.requiredDocumentTypes as string,
+              'required document types'
+            ),
             refundDeadlineDays: policy.depositConfig.refundDeadlineDays,
           }
         : null,
