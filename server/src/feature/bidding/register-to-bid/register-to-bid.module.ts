@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { RegisterToBidService } from './register-to-bid.service';
 import { PrismaModule } from '../../../prisma/prisma.module';
 import { PaymentModule } from '../../../payment/payment.module';
-import { EmailModule } from '../../../common/services/email.module';
+import { EmailModule } from '../../../common/email/email.module';
 import {
   UserRegistrationService,
   AdminApprovalService,

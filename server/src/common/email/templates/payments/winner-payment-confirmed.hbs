@@ -1,0 +1,35 @@
+{{> header icon="✅" title="Payment Confirmed - Contract Ready" subtitle="Final steps to complete your purchase"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  {{> badge type="success" icon="✅" text="PAYMENT VERIFIED"}}
+
+  <p>Excellent! Your payment for auction <strong>{{auctionCode}}</strong> has been successfully verified.</p>
+
+  {{#> details-box title="💰 Payment Summary"}}
+    <p><strong>Total Amount Paid:</strong> <span class="amount-highlight">{{totalPaid}} VND</span></p>
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+  {{/details-box}}
+
+  {{#if contractReady}}
+  <h3>📄 Contract Ready for Signature</h3>
+  <p>Your contract is now ready for review and signature.</p>
+
+  {{> button url="#" text="Review Contract"}}
+
+  <h3>📞 Next Steps</h3>
+  <ol>
+    <li>Review the contract carefully</li>
+    <li>Sign the contract electronically</li>
+    <li>Await seller's signature</li>
+    <li>Auctioneer will finalize the contract</li>
+    <li>Property handover arrangements will be made</li>
+  </ol>
+
+  <p><strong>Timeline:</strong> Final contract should be ready within 3-5 business days after both parties have signed.</p>
+  {{/if}}
+
+  {{> footer message="Thank you for your prompt payment!"}}
+</div>

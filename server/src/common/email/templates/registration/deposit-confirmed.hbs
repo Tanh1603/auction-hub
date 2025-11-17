@@ -1,0 +1,27 @@
+{{> header icon="✅" title="Deposit Payment Confirmed" subtitle="Your payment has been received"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  {{> badge type="success" icon="✅" text="PAYMENT RECEIVED"}}
+
+  <p>Your deposit payment for auction <strong>{{auctionCode}}</strong> has been successfully verified!</p>
+
+  {{#> details-box title="💰 Payment Summary"}}
+    <p><strong>Amount Paid:</strong> <span class="amount-highlight">{{depositAmount}} VND</span></p>
+    <p><strong>Payment Date:</strong> {{formatDate paidAt}}</p>
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+  {{/details-box}}
+
+  {{#if awaitingApproval}}
+  <h3>📞 Next Step</h3>
+  <p>Your registration is now awaiting final approval from the auctioneer. You will be notified via email once approved and you can start bidding!</p>
+  <p><strong>Estimated approval time:</strong> Within 24-48 hours</p>
+  {{else}}
+  <h3>🎉 You're All Set!</h3>
+  <p>Your registration is complete and you can now participate in the auction!</p>
+  {{/if}}
+
+  {{> footer message="Thank you for your payment!"}}
+</div>

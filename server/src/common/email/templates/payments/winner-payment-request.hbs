@@ -1,0 +1,41 @@
+{{> header icon="🎉" title="Congratulations - Payment Required" subtitle="You won the auction!"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  {{> badge type="success" icon="🏆" text="WINNING BIDDER"}}
+
+  <p>Congratulations! You are the winning bidder for auction <strong>{{auctionCode}}</strong>!</p>
+
+  {{#> details-box title="💰 Payment Breakdown" backgroundColor="#fef5e7" borderColor="#f39c12"}}
+    <p><strong>Winning Bid Amount:</strong> {{winningAmount}} VND</p>
+    <p><strong>Deposit Already Paid:</strong> -{{depositAlreadyPaid}} VND</p>
+    <p><strong>Dossier Fee:</strong> +{{dossierFee}} VND</p>
+    <hr>
+    <p><strong>Total Amount Due:</strong> <span class="amount-warning">{{totalDue}} VND</span></p>
+    <p><strong>Payment Deadline:</strong> <span style="color: #e74c3c; font-weight: bold;">{{formatDate paymentDeadline}}</span></p>
+  {{/details-box}}
+
+  {{#> details-box title="📋 Auction Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+  {{/details-box}}
+
+  <h3>⚠️ Important Instructions</h3>
+  <ul>
+    <li>Payment must be completed within <strong>7 days</strong> of auction end</li>
+    <li>Contract will be ready for signature after payment confirmation</li>
+    <li>Failure to pay by deadline will result in <strong>deposit forfeiture</strong></li>
+    <li>Property may be offered to the second-highest bidder</li>
+  </ul>
+
+  <h3>📞 Next Steps</h3>
+  <ol>
+    <li>Complete payment using the button below</li>
+    <li>Wait for payment verification (usually within 24 hours)</li>
+    <li>Review and sign the contract</li>
+    <li>Finalize property handover</li>
+  </ol>
+
+  {{> footer message=(concat "Payment deadline: " (formatDate paymentDeadline))}}
+</div>
