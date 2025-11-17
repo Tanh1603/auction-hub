@@ -293,7 +293,6 @@ enum ContractStatus {
 
   @@map("contract_status")
 }
-
 model Payment {
   id             String         @id @default(uuid()) @db.Uuid
   userId         String         @map("user_id") @db.Uuid
