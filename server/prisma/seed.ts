@@ -132,6 +132,20 @@ const prisma = new PrismaClient();
 async function main() {
   await prisma.$connect();
 
+  // Check if data already exists
+  const existingUserCount = await prisma.user.count();
+  const existingAuctionCount = await prisma.auction.count();
+
+  if (existingUserCount > 0 || existingAuctionCount > 0) {
+    console.log('✅ Database already contains data:');
+    console.log(`   👥 Users: ${existingUserCount}`);
+    console.log(`   🏛️ Auctions: ${existingAuctionCount}`);
+    console.log('⏭️  Skipping seed to preserve existing data');
+    console.log('💡 To reseed, manually clear the database first');
+    return;
+  }
+
+  console.log('🧹 Database is empty, proceeding with seed...');
   console.log('🧹 Xóa dữ liệu cũ...');
   await prisma.$transaction([
     prisma.auctionRelation.deleteMany(),
@@ -193,7 +207,7 @@ async function main() {
     select: { id: true, code: true },
   });
 
-  const auctionMap = Object.fromEntries(auctions.map(a => [a.code, a.id]));
+  const auctionMap = Object.fromEntries(auctions.map((a) => [a.code, a.id]));
 
   const imagesData = data.data.flatMap((item: any) =>
     (item.auctionImages ?? []).map((img: any, i: number) => ({
@@ -211,8 +225,10 @@ async function main() {
     }))
   );
 
-  if (imagesData.length) await prisma.auctionImage.createMany({ data: imagesData });
-  if (attachmentsData.length) await prisma.auctionAttachment.createMany({ data: attachmentsData });
+  if (imagesData.length)
+    await prisma.auctionImage.createMany({ data: imagesData });
+  if (attachmentsData.length)
+    await prisma.auctionAttachment.createMany({ data: attachmentsData });
 
   console.log('🔗 Tạo quan hệ related auctions...');
   const relations: { auctionId: string; relatedAuctionId: string }[] = [];
@@ -231,7 +247,8 @@ async function main() {
     }
   }
 
-  if (relations.length) await prisma.auctionRelation.createMany({ data: relations });
+  if (relations.length)
+    await prisma.auctionRelation.createMany({ data: relations });
 
   console.log('✅ Seed hoàn tất!');
 }

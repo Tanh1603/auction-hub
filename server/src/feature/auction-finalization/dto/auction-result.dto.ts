@@ -43,4 +43,18 @@ export class AuctionResultDto {
     autoEvaluated: boolean;
     evaluatedAt: Date;
   };
+
+  // Financial summary
+  financialSummary?: {
+    finalSalePrice: number;
+    startingPrice: number;
+    commissionFee: number;
+    dossierFee: number;
+    depositAmount: number;
+    totalAuctionCosts: number;
+    totalFeesToSeller: number;
+    netAmountToSeller: number;
+    calculationDetails?: any;
+    calculatedAt?: Date;
+  };
 }

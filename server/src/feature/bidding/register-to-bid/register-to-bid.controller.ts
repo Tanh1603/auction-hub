@@ -15,13 +15,24 @@ import { WithdrawRegistrationDto } from './dto/withdraw-registration.dto';
 import { ApproveRegistrationDto } from './dto/approve-registration.dto';
 import { RejectRegistrationDto } from './dto/reject-registration.dto';
 import { ListRegistrationsQueryDto } from './dto/list-registrations-query.dto';
+import { VerifyDocumentsDto } from './dto/verify-documents.dto';
+import { RejectDocumentsDto } from './dto/reject-documents.dto';
+import { SubmitDepositDto } from './dto/submit-deposit.dto';
+import { VerifyDepositPaymentDto } from './dto/verify-deposit-payment.dto';
+import { FinalApprovalDto } from './dto/final-approval.dto';
+import { CheckInDto } from './dto/check-in.dto';
 import {
   CurrentUser,
   CurrentUserData,
 } from '../../../common/decorators/current-user.decorator';
 import { AuctionParticipantResponseDto } from './dto/auction-participant-response.dto';
 import { PaginatedRegistrationsResponseDto } from './dto/paginated-registrations-response.dto';
-import { ApiOperation, ApiResponse, ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiTags,
+} from '@nestjs/swagger';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '../../../common/enums/roles.enum';
@@ -70,7 +81,10 @@ export class RegisterToBidController {
     description: 'Registration withdrawn successfully',
     type: AuctionParticipantResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Auction or registration not found' })
+  @ApiResponse({
+    status: 404,
+    description: 'Auction or registration not found',
+  })
   @ApiResponse({
     status: 403,
     description: 'Cannot withdraw after auction started or after check-in',
@@ -186,5 +200,175 @@ export class RegisterToBidController {
     @Body() dto: RejectRegistrationDto
   ): Promise<AuctionParticipantResponseDto> {
     return this.svc.rejectRegistration(dto);
+  }
+
+  @Post('admin/verify-documents')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify submitted documents (Tier 1 Approval)',
+    description:
+      'Admin/Auctioneer verifies the documents submitted by the bidder. After verification, bidder can proceed to pay deposit.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Documents verified successfully',
+    type: AuctionParticipantResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Registration not found' })
+  @ApiResponse({ status: 400, description: 'Documents not submitted yet' })
+  @ApiBearerAuth()
+  async verifyDocuments(
+    @Body() dto: VerifyDocumentsDto,
+    @CurrentUser() user: CurrentUserData
+  ): Promise<AuctionParticipantResponseDto> {
+    return this.svc.verifyDocuments(dto.registrationId, user.id);
+  }
+
+  @Post('admin/reject-documents')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reject submitted documents (Tier 1 Rejection)',
+    description:
+      'Admin/Auctioneer rejects the documents with a reason. Bidder can re-submit documents.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Documents rejected successfully',
+    type: AuctionParticipantResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Registration not found' })
+  @ApiBearerAuth()
+  async rejectDocuments(
+    @Body() dto: RejectDocumentsDto
+  ): Promise<AuctionParticipantResponseDto> {
+    return this.svc.rejectDocuments(dto.registrationId, dto.reason);
+  }
+
+  @Post('submit-deposit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Submit deposit payment (Tier 2)',
+    description:
+      'Bidder initiates deposit payment after documents are verified. Creates Stripe payment session and returns payment URL/QR code.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Deposit payment initiated successfully. Returns payment URL and details.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Documents not verified or invalid amount',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Registration not found',
+  })
+  @ApiBearerAuth()
+  async submitDeposit(
+    @Body() dto: SubmitDepositDto,
+    @CurrentUser() user: CurrentUserData
+  ) {
+    return this.svc.submitDeposit(
+      dto.registrationId,
+      dto.auctionId,
+      dto.amount,
+      user.id
+    );
+  }
+
+  @Post('verify-deposit-payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify deposit payment completion',
+    description:
+      'Verify that the Stripe payment has been completed and update the registration accordingly.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment verified and registration updated',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Payment not completed or invalid',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Registration or payment not found',
+  })
+  @ApiBearerAuth()
+  async verifyDepositPayment(
+    @Body() dto: VerifyDepositPaymentDto,
+    @CurrentUser() user: CurrentUserData
+  ) {
+    return this.svc.verifyDepositPayment(
+      dto.sessionId,
+      dto.registrationId,
+      user.id
+    );
+  }
+
+  @Post('admin/final-approval')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Give final approval (After Tier 1 & 2)',
+    description:
+      'Admin/Auctioneer gives final approval after both documents are verified and deposit is paid.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Registration finally approved',
+    type: AuctionParticipantResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Documents not verified or deposit not paid',
+  })
+  @ApiResponse({ status: 404, description: 'Registration not found' })
+  @ApiBearerAuth()
+  async finalApproval(
+    @Body() dto: FinalApprovalDto,
+    @CurrentUser() user: CurrentUserData
+  ): Promise<AuctionParticipantResponseDto> {
+    return this.svc.approveRegistrationFinal(dto.registrationId, user.id);
+  }
+
+  @Post('check-in')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Check in for auction',
+    description:
+      'Participant checks in before or at the start of auction to confirm attendance and enable bidding. Check-in window opens 24 hours before auction starts.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully checked in',
+    type: AuctionParticipantResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Registration not confirmed, check-in window not open, or auction ended',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Auction or registration not found',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Already checked in',
+  })
+  @ApiBearerAuth()
+  async checkIn(
+    @Body() dto: CheckInDto,
+    @CurrentUser() user: CurrentUserData
+  ): Promise<AuctionParticipantResponseDto> {
+    return this.svc.checkIn(dto.auctionId, user.id);
   }
 }

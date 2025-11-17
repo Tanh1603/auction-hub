@@ -4,10 +4,12 @@ import {
   Injectable,
   UnauthorizedException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { PrismaService } from '../../prisma/prisma.service';
 import * as jwt from 'jsonwebtoken';
 
 export interface JwtPayload {
@@ -21,6 +23,10 @@ export interface JwtPayload {
   exp?: number;
 }
 
+export interface AuthenticatedUser extends JwtPayload {
+  role: string; // This will be populated from local DB
+}
+
 export const IS_PUBLIC_KEY = 'isPublic';
 
 @Injectable()
@@ -29,7 +35,8 @@ export class AuthGuard implements CanActivate {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly reflector: Reflector
+    private readonly reflector: Reflector,
+    private readonly prisma: PrismaService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -72,15 +79,22 @@ export class AuthGuard implements CanActivate {
       const testUserId = testUserIdFromHeader || testUserIdFromEnv;
 
       if (testUserId) {
-        this.logger.warn(
-          `⚠️  TEST MODE - Using test user ID: ${testUserId}`
-        );
+        this.logger.warn(`⚠️  TEST MODE - Using test user ID: ${testUserId}`);
+
+        // Try to get real user data from database in test mode
+        const localUser = await this.prisma.user.findUnique({
+          where: { id: testUserId },
+          select: { role: true, email: true, fullName: true },
+        });
+
         request['user'] = {
           sub: testUserId,
-          email: 'test@example.com',
-          full_name: 'Test User',
+          email: localUser?.email || 'test@example.com',
+          full_name: localUser?.fullName || 'Test User',
           avatar_url: '',
-          role: this.configService.get<string>('TEST_USER_ROLE', 'user'),
+          role:
+            localUser?.role ||
+            this.configService.get<string>('TEST_USER_ROLE', 'bidder'),
         };
         return true;
       }
@@ -125,8 +139,30 @@ export class AuthGuard implements CanActivate {
         algorithms: ['HS256'],
       }) as JwtPayload;
 
-      request['user'] = payload;
-      this.logger.debug(`JWT verified for user: ${payload.sub}`);
+      // 🔥 KEY FIX: Query local database for user role
+      const localUser = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { role: true, email: true, fullName: true },
+      });
+
+      if (!localUser) {
+        throw new UnauthorizedException(
+          'User not found in system. Please complete registration.'
+        );
+      }
+
+      // Combine JWT payload with local database role
+      const authenticatedUser: AuthenticatedUser = {
+        ...payload,
+        role: localUser.role, // ✅ Role from local database
+        email: localUser.email,
+        full_name: localUser.fullName,
+      };
+
+      request['user'] = authenticatedUser;
+      this.logger.debug(
+        `JWT verified for user: ${payload.sub}, role: ${localUser.role}`
+      );
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new UnauthorizedException('Token has expired');

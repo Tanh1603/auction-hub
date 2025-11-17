@@ -222,17 +222,9 @@ export class ManualBidService {
       } as ManualBidResponseDto;
     });
 
-    // Emit WebSocket event for new bid
-    this.biddingGateway.emitNewBid(result.auctionId, {
-      bidId: result.bidId,
-      auctionId: result.auctionId,
-      participantId: result.participantId,
-      userId: result.userId,
-      amount: result.amount,
-      bidAt: result.bidAt,
-      bidType: result.bidType,
-      isWinningBid: result.isWinningBid,
-    });
+    // Emit WebSocket event for new bid with full auction state
+    // This will broadcast the updated winning bid and auction state to all connected clients
+    await this.biddingGateway.emitNewBidWithState(result.auctionId);
 
     return result;
   }

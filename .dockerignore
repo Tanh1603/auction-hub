@@ -1,86 +1,96 @@
 # Dependencies
-node_modules
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+node_modules/
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
 
-# Coverage directory used by tools like istanbul
-coverage
-
-# nyc test coverage
-.nyc_output
-
-# Logs
-logs
-*.log
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# dotenv environment variables file
+# Environment files (will be passed via docker-compose)
+.env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Dist folder
-dist
-server/dist/
-server/generated/
-
-# IDE files
-.vscode
-.idea
-*.swp
-*.swo
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+.env.*.local
+.env.development
+.env.test
+.env.production
 
 # Git
-.git
+.git/
 .gitignore
+.gitattributes
 
-# Docker
-.dockerignore
-docker-compose*.yml
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# Tests
-**/*.test.ts
-**/*.spec.ts
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+*.spec.ts
+*.test.ts
 **/test/**
-**/tests/**
 **/__tests__/**
+**/__mocks__/**
+server-e2e/
 
-# Development files
-.prettierrc
-.eslintrc*
-jest.config.*
+# Documentation
+*.md
+docs/
+DOCS_CLEANUP_SUMMARY.md
+DOCUMENTATION_INDEX.md
+FIXED_AUTH_IMPLEMENTATION.md
+GLOBAL_AUTH_IMPLEMENTATION.md
+PAYMENT_INTEGRATION_SIMPLIFIED.md
+POSTMAN_API_TESTING_GUIDE.md
+README.md
+REALTIME_BIDDING_SUMMARY.md
+REGISTRATION_MANAGEMENT_IMPLEMENTATION.md
+ROLE_BASED_ACCESS_CONTROL.md
+SYSTEM_ARCHITECTURE.md
+TODO_IMPLEMENTATION_GUIDE.md
+WEBSOCKET_BIDDING_GUIDE.md
+API_DOCUMENTATION/
 
-# Build artifacts
-.nx
-.next
+# Chat logs and temporary files
+*.txt
+afternoon*.txt
+morning*.txt
+night*.txt
+*.log
 
-# Frontend (commented out as per requirements)
-client/
-libs/
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+DOCKER.md
 
-# Prisma migrations and seed files
-server/prisma/migrations/
+# NX
+.nx/
+tmp/
+
+# Prisma
+server/prisma/migrations/*.sql
 server/prisma/*.json
+server/prisma/run-seeds-docker.sh
+server/prisma/DOCKER_SEED_GUIDE.md
 server/prisma/seed.ts
+server/prisma/extended-scenarios-seed.js
+
+# Generated (will be regenerated in build)
+server/generated/
+
+# Client application (not needed for backend)
+client/
+
+# Libraries (not needed in production build)
+libs/

@@ -1,17 +1,16 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { AuctionFinalizationService } from './auction-finalization.service';
 import { FinalizeAuctionDto } from './dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from './dto/override-auction-status.dto';
+import { InitiateWinnerPaymentDto } from './dto/initiate-winner-payment.dto';
+import { VerifyWinnerPaymentDto } from './dto/verify-winner-payment.dto';
 import {
   CurrentUser,
   CurrentUserData,
 } from '../../common/decorators/current-user.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/enums/roles.enum';
 
 @Controller('auction-finalization')
 export class AuctionFinalizationController {
@@ -24,6 +23,8 @@ export class AuctionFinalizationController {
    * GET /auction-finalization/evaluate/:auctionId
    */
   @Get('evaluate/:auctionId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
   async evaluateAuction(
     @Param('auctionId') auctionId: string,
     @CurrentUser() user: CurrentUserData
@@ -36,6 +37,8 @@ export class AuctionFinalizationController {
    * POST /auction-finalization/finalize
    */
   @Post('finalize')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
   async finalizeAuction(
     @Body() dto: FinalizeAuctionDto,
     @CurrentUser() user: CurrentUserData
@@ -52,6 +55,8 @@ export class AuctionFinalizationController {
    * - Manual intervention for edge cases
    */
   @Post('override')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async overrideAuctionStatus(
     @Body() dto: OverrideAuctionStatusDto,
     @CurrentUser() user: CurrentUserData
@@ -68,7 +73,10 @@ export class AuctionFinalizationController {
     @Param('auctionId') auctionId: string,
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.auctionFinalizationService.getAuctionResults(auctionId, user.id);
+    return this.auctionFinalizationService.getAuctionResults(
+      auctionId,
+      user.id
+    );
   }
 
   /**
@@ -77,10 +85,63 @@ export class AuctionFinalizationController {
    * Only auction owner can view
    */
   @Get('audit-logs/:auctionId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
   async getAuctionAuditLogs(
     @Param('auctionId') auctionId: string,
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.auctionFinalizationService.getAuctionAuditLogs(auctionId, user.id);
+    return this.auctionFinalizationService.getAuctionAuditLogs(
+      auctionId,
+      user.id
+    );
+  }
+
+  /**
+   * Get winner payment requirements
+   * GET /auction-finalization/winner-payment-requirements/:auctionId
+   */
+  @Get('winner-payment-requirements/:auctionId')
+  async getWinnerPaymentRequirements(
+    @Param('auctionId') auctionId: string,
+    @CurrentUser() user: CurrentUserData
+  ) {
+    return this.auctionFinalizationService.getWinnerPaymentRequirements(
+      auctionId
+    );
+  }
+
+  /**
+   * Initiate winner payment (creates Stripe payment session)
+   * POST /auction-finalization/submit-winner-payment
+   */
+  @Post('submit-winner-payment')
+  async initiateWinnerPayment(
+    @Body() dto: InitiateWinnerPaymentDto,
+    @CurrentUser() user: CurrentUserData
+  ) {
+    return this.auctionFinalizationService.initiateWinnerPayment(
+      dto.auctionId,
+      user.id
+    );
+  }
+
+  /**
+   * Verify winner payment completion
+   * POST /auction-finalization/verify-winner-payment
+   * Can be called by:
+   * - Winner: To verify their own payment
+   * - Admin/Auctioneer: To verify payment on behalf of winner
+   */
+  @Post('verify-winner-payment')
+  async verifyWinnerPayment(
+    @Body() dto: VerifyWinnerPaymentDto,
+    @CurrentUser() user: CurrentUserData
+  ) {
+    return this.auctionFinalizationService.verifyWinnerPayment(
+      dto.sessionId,
+      dto.auctionId,
+      user.id
+    );
   }
 }

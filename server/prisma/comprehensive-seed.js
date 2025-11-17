@@ -23,6 +23,7 @@ const sampleUsers = [
     email: 'auctioneer@company.com',
     fullName: 'Nguyễn Văn An',
     userType: 'business',
+    role: 'auctioneer',
     phoneNumber: '+84901234567',
     identityNumber: 'DN001234567',
     taxId: '0123456789',
@@ -34,6 +35,7 @@ const sampleUsers = [
     email: 'bidder1@gmail.com',
     fullName: 'Trần Thị Bình',
     userType: 'individual',
+    role: 'bidder',
     phoneNumber: '+84912345678',
     identityNumber: '123456789012',
     isVerified: true,
@@ -44,6 +46,7 @@ const sampleUsers = [
     email: 'bidder2@gmail.com',
     fullName: 'Lê Văn Cường',
     userType: 'individual',
+    role: 'bidder',
     phoneNumber: '+84923456789',
     identityNumber: '234567890123',
     isVerified: true,
@@ -54,6 +57,7 @@ const sampleUsers = [
     email: 'bidder3@gmail.com',
     fullName: 'Phạm Thị Dung',
     userType: 'business',
+    role: 'bidder',
     phoneNumber: '+84934567890',
     identityNumber: 'DN987654321',
     taxId: '9876543210',
@@ -65,6 +69,7 @@ const sampleUsers = [
     email: 'bidder4@gmail.com',
     fullName: 'Hoàng Văn Em',
     userType: 'individual',
+    role: 'bidder',
     phoneNumber: '+84945678901',
     identityNumber: '345678901234',
     isVerified: true,
@@ -75,6 +80,7 @@ const sampleUsers = [
     email: 'admin@auction.com',
     fullName: 'Quản trị viên',
     userType: 'business',
+    role: 'admin',
     phoneNumber: '+84956789012',
     identityNumber: 'AD001234567',
     isVerified: true,
@@ -277,19 +283,41 @@ async function main() {
     await prisma.$connect();
     console.log('📦 Connected to database');
 
-    // Clean existing data
-    console.log('🧹 Cleaning existing data...');
+    // Check if data already exists
+    const existingUserCount = await prisma.user.count();
+    const existingAuctionCount = await prisma.auction.count();
+
+    if (existingUserCount > 0 || existingAuctionCount > 0) {
+      console.log('✅ Database already contains data:');
+      console.log(`   👥 Users: ${existingUserCount}`);
+      console.log(`   🏛️ Auctions: ${existingAuctionCount}`);
+      console.log('⏭️  Skipping seed to preserve existing data');
+      console.log('💡 To reseed, manually clear the database first');
+      return; // Exit early - don't proceed to cleaning or seeding
+    }
+
+    // Clean existing data (only runs if database is empty)
+    console.log('🧹 Database is empty, proceeding with seed...');
+    console.log('🧹 Cleaning any leftover data...');
     await prisma.$transaction([
+      // Delete in correct order to respect foreign key constraints
+      prisma.payment.deleteMany(), // Delete payments first (references users)
       prisma.contract.deleteMany(),
       prisma.auctionAuditLog.deleteMany(),
       prisma.autoBidSetting.deleteMany(),
       prisma.auctionBid.deleteMany(),
       prisma.auctionParticipant.deleteMany(),
+      prisma.auctionFinancialSummary.deleteMany(),
+      prisma.auctionCost.deleteMany(),
       prisma.auctionRelation.deleteMany(),
       prisma.auctionAttachment.deleteMany(),
       prisma.auctionImage.deleteMany(),
+      prisma.depositPolicyConfig.deleteMany(),
+      prisma.dossierFeePolicyConfig.deleteMany(),
+      prisma.commissionPolicyConfig.deleteMany(),
       prisma.auction.deleteMany(),
-      prisma.user.deleteMany(),
+      prisma.auctionPolicy.deleteMany(),
+      prisma.user.deleteMany(), // Delete users last
     ]);
 
     // Create users
@@ -311,6 +339,150 @@ async function main() {
       );
     }
 
+    // Create Auction Policies
+    console.log('📋 Creating auction policies...');
+
+    // Default State-Owned Policy
+    const stateOwnedPolicy = await prisma.auctionPolicy.create({
+      data: {
+        name: 'Chính sách đấu giá tài sản nhà nước',
+        description:
+          'Chính sách mặc định cho đấu giá tài sản nhà nước theo quy định',
+        assetOwnership: 'state_owned',
+        isActive: true,
+        isDefault: true,
+        commissionConfig: {
+          create: {
+            assetCategory: 'general',
+            tiers: JSON.stringify([
+              { from: 0, to: 50000000, rate: 0.05, baseAmount: 0 },
+              {
+                from: 50000000,
+                to: 100000000,
+                rate: 0.04,
+                baseAmount: 2500000,
+              },
+              {
+                from: 100000000,
+                to: 500000000,
+                rate: 0.03,
+                baseAmount: 4500000,
+              },
+              {
+                from: 500000000,
+                to: 1000000000,
+                rate: 0.02,
+                baseAmount: 16500000,
+              },
+              { from: 1000000000, to: null, rate: 0.01, baseAmount: 26500000 },
+            ]),
+            minCommission: 1000000,
+            maxCommission: 400000000,
+          },
+        },
+        dossierConfig: {
+          create: {
+            feeTiers: JSON.stringify([
+              { startPriceFrom: 0, startPriceTo: 200000000, maxFee: 100000 },
+              {
+                startPriceFrom: 200000000,
+                startPriceTo: 500000000,
+                maxFee: 300000,
+              },
+              {
+                startPriceFrom: 500000000,
+                startPriceTo: 1000000000,
+                maxFee: 500000,
+              },
+              {
+                startPriceFrom: 1000000000,
+                startPriceTo: null,
+                maxFee: 1000000,
+              },
+            ]),
+          },
+        },
+        depositConfig: {
+          create: {
+            depositType: 'percentage',
+            assetCategory: 'general',
+            minPercentage: 5,
+            maxPercentage: 20,
+            depositDeadlineHours: 24,
+            requiresDocuments: true,
+            requiredDocumentTypes: JSON.stringify([
+              'identity_card',
+              'financial_proof',
+            ]),
+            refundDeadlineDays: 3,
+          },
+        },
+      },
+      include: {
+        commissionConfig: true,
+        dossierConfig: true,
+        depositConfig: true,
+      },
+    });
+    console.log(`  ✓ Created state-owned policy`);
+
+    // Private Asset Policy
+    const privatePolicy = await prisma.auctionPolicy.create({
+      data: {
+        name: 'Chính sách đấu giá tài sản tư nhân',
+        description: 'Chính sách linh hoạt cho đấu giá tài sản tư nhân',
+        assetOwnership: 'private',
+        isActive: true,
+        isDefault: false,
+        commissionConfig: {
+          create: {
+            assetCategory: 'general',
+            tiers: JSON.stringify([
+              { from: 0, to: 100000000, rate: 0.03, baseAmount: 0 },
+              {
+                from: 100000000,
+                to: 500000000,
+                rate: 0.02,
+                baseAmount: 3000000,
+              },
+              { from: 500000000, to: null, rate: 0.015, baseAmount: 11000000 },
+            ]),
+            minCommission: 500000,
+            maxCommission: 300000000,
+          },
+        },
+        dossierConfig: {
+          create: {
+            feeTiers: JSON.stringify([
+              { startPriceFrom: 0, startPriceTo: 500000000, maxFee: 200000 },
+              { startPriceFrom: 500000000, startPriceTo: null, maxFee: 500000 },
+            ]),
+          },
+        },
+        depositConfig: {
+          create: {
+            depositType: 'percentage',
+            assetCategory: 'general',
+            minPercentage: 10,
+            maxPercentage: 20,
+            depositDeadlineHours: 48,
+            requiresDocuments: true,
+            requiredDocumentTypes: JSON.stringify([
+              'identity_card',
+              'financial_proof',
+            ]),
+            refundDeadlineDays: 5,
+          },
+        },
+      },
+      include: {
+        commissionConfig: true,
+        dossierConfig: true,
+        depositConfig: true,
+      },
+    });
+    console.log(`  ✓ Created private policy`);
+
     // Create auctions
     console.log('🏛️ Creating auctions...');
     const auctions = {};
@@ -319,6 +491,7 @@ async function main() {
         data: {
           ...auctionData,
           propertyOwner: users.auctioneer.id,
+          auctionPolicyId: stateOwnedPolicy.id, // Link to policy
         },
       });
       auctions[auctionData.code] = auction;
@@ -354,26 +527,122 @@ async function main() {
     // Create participants and bids for different scenarios
     console.log('🙋‍♀️ Creating participants and bids...');
 
-    // AUC001 - Upcoming auction with registrations
+    // AUC001 - Upcoming auction with registrations (Two-Tier Approval System)
     const auc001Participants = [
-      { user: users.bidder, status: 'confirmed' },
-      { user: users.bidder2, status: 'confirmed' },
-      { user: users.bidder3, status: 'submitted' },
-      { user: users.bidder4, status: 'registered' },
+      {
+        user: users.bidder,
+        status: 'confirmed', // Fully approved (Tier 1 + Tier 2)
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/bidder1_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/bidder1_bank.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder2,
+        status: 'deposit_paid', // Documents verified, deposit paid, awaiting final approval
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/bidder2_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/bidder2_bank.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder3,
+        status: 'documents_verified', // Tier 1 approved, awaiting deposit
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/bidder3_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/bidder3_bank.pdf',
+          },
+          {
+            type: 'business_license',
+            url: 'https://example.com/docs/bidder3_license.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder4,
+        status: 'pending_document_review', // Documents submitted, awaiting Tier 1 review
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/bidder4_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/bidder4_bank.pdf',
+          },
+        ],
+      },
     ];
 
-    for (const { user, status } of auc001Participants) {
+    for (const { user, status, documentUrls } of auc001Participants) {
       const participantData = {
         userId: user.id,
         auctionId: auctions['AUC001'].id,
         registeredAt: createDate(-1),
+        submittedAt: createDate(-1, 2),
+        documentUrls: JSON.stringify(documentUrls),
       };
 
-      if (status === 'submitted' || status === 'confirmed') {
-        participantData.submittedAt = createDate(-1, 2);
+      // Two-Tier Approval: Tier 1 - Document Verification
+      if (
+        status === 'documents_verified' ||
+        status === 'deposit_paid' ||
+        status === 'confirmed'
+      ) {
+        participantData.documentsVerifiedAt = createDate(-1, 4);
+        participantData.documentsVerifiedBy = users.admin.id;
       }
+
+      // Create payment record for deposit if applicable
+      let depositPayment = null;
+      if (status === 'deposit_paid' || status === 'confirmed') {
+        depositPayment = await prisma.payment.create({
+          data: {
+            userId: user.id,
+            auctionId: auctions['AUC001'].id,
+            paymentType: 'deposit',
+            amount: auctions['AUC001'].depositAmountRequired,
+            currency: 'VND',
+            status: 'completed',
+            paymentMethod: 'bank_transfer',
+            transactionId: `DEP-AUC001-${user.id.substring(0, 8)}`,
+            bankCode: 'BIDV',
+            paidAt: createDate(-1, 6),
+            paymentDetails: JSON.stringify({
+              auctionCode: 'AUC001',
+              participantName: user.fullName,
+              verifiedBy: users.admin.id,
+            }),
+          },
+        });
+
+        participantData.depositPaidAt = createDate(-1, 6);
+        participantData.depositAmount =
+          auctions['AUC001'].depositAmountRequired;
+        participantData.depositPaymentId = depositPayment.id;
+      }
+
+      // Two-Tier Approval: Tier 2 - Final Approval
       if (status === 'confirmed') {
-        participantData.confirmedAt = createDate(-1, 4);
+        participantData.confirmedAt = createDate(-1, 8);
+        participantData.confirmedBy = users.admin.id;
       }
 
       const participant = await prisma.auctionParticipant.create({
@@ -386,20 +655,91 @@ async function main() {
 
     // AUC002 - Live auction with active bidding
     const auc002Participants = [
-      { user: users.bidder, status: 'checked_in' },
-      { user: users.bidder2, status: 'checked_in' },
-      { user: users.bidder3, status: 'checked_in' },
+      {
+        user: users.bidder,
+        status: 'checked_in',
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/auc002_bidder1_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/auc002_bidder1_bank.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder2,
+        status: 'checked_in',
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/auc002_bidder2_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/auc002_bidder2_bank.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder3,
+        status: 'checked_in',
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/auc002_bidder3_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/auc002_bidder3_bank.pdf',
+          },
+          {
+            type: 'business_license',
+            url: 'https://example.com/docs/auc002_bidder3_license.pdf',
+          },
+        ],
+      },
     ];
 
     const auc002ParticipantIds = [];
-    for (const { user, status } of auc002Participants) {
+    for (const { user, status, documentUrls } of auc002Participants) {
+      // Create deposit payment first
+      const depositPayment = await prisma.payment.create({
+        data: {
+          userId: user.id,
+          auctionId: auctions['AUC002'].id,
+          paymentType: 'deposit',
+          amount: auctions['AUC002'].depositAmountRequired,
+          currency: 'VND',
+          status: 'completed',
+          paymentMethod: 'bank_transfer',
+          transactionId: `DEP-AUC002-${user.id.substring(0, 8)}`,
+          bankCode: 'VIETCOMBANK',
+          paidAt: createDate(-6),
+          paymentDetails: JSON.stringify({
+            auctionCode: 'AUC002',
+            participantName: user.fullName,
+            verifiedBy: users.admin.id,
+          }),
+        },
+      });
+
       const participant = await prisma.auctionParticipant.create({
         data: {
           userId: user.id,
           auctionId: auctions['AUC002'].id,
           registeredAt: createDate(-8),
           submittedAt: createDate(-7),
-          confirmedAt: createDate(-6),
+          documentUrls: JSON.stringify(documentUrls),
+          documentsVerifiedAt: createDate(-7, 2),
+          documentsVerifiedBy: users.admin.id,
+          depositPaidAt: createDate(-6),
+          depositAmount: auctions['AUC002'].depositAmountRequired,
+          depositPaymentId: depositPayment.id,
+          confirmedAt: createDate(-6, 2),
+          confirmedBy: users.admin.id,
           checkedInAt: status === 'checked_in' ? createDate(0, -1) : null,
         },
       });
@@ -442,20 +782,87 @@ async function main() {
 
     // AUC003 - Completed auction with winner
     const auc003Participants = [
-      { user: users.bidder, status: 'completed' },
-      { user: users.bidder2, status: 'completed' },
-      { user: users.bidder4, status: 'completed' },
+      {
+        user: users.bidder,
+        status: 'completed',
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/auc003_bidder1_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/auc003_bidder1_bank.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder2,
+        status: 'completed',
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/auc003_bidder2_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/auc003_bidder2_bank.pdf',
+          },
+        ],
+      },
+      {
+        user: users.bidder4,
+        status: 'completed',
+        documentUrls: [
+          {
+            type: 'identity_card',
+            url: 'https://example.com/docs/auc003_bidder4_id.pdf',
+          },
+          {
+            type: 'financial_proof',
+            url: 'https://example.com/docs/auc003_bidder4_bank.pdf',
+          },
+        ],
+      },
     ];
 
     const auc003ParticipantIds = [];
-    for (const { user } of auc003Participants) {
+    for (const { user, documentUrls } of auc003Participants) {
+      // Create deposit payment
+      const depositPayment = await prisma.payment.create({
+        data: {
+          userId: user.id,
+          auctionId: auctions['AUC003'].id,
+          paymentType: 'deposit',
+          amount: auctions['AUC003'].depositAmountRequired,
+          currency: 'VND',
+          status: 'completed',
+          paymentMethod: 'bank_transfer',
+          transactionId: `DEP-AUC003-${user.id.substring(0, 8)}`,
+          bankCode: 'TECHCOMBANK',
+          paidAt: createDate(-15),
+          paymentDetails: JSON.stringify({
+            auctionCode: 'AUC003',
+            participantName: user.fullName,
+            verifiedBy: users.admin.id,
+          }),
+        },
+      });
+
       const participant = await prisma.auctionParticipant.create({
         data: {
           userId: user.id,
           auctionId: auctions['AUC003'].id,
           registeredAt: createDate(-18),
           submittedAt: createDate(-17),
-          confirmedAt: createDate(-15),
+          documentUrls: JSON.stringify(documentUrls),
+          documentsVerifiedAt: createDate(-16),
+          documentsVerifiedBy: users.admin.id,
+          depositPaidAt: createDate(-15),
+          depositAmount: auctions['AUC003'].depositAmountRequired,
+          depositPaymentId: depositPayment.id,
+          confirmedAt: createDate(-15, 2),
+          confirmedBy: users.admin.id,
           checkedInAt: createDate(-5, -1),
         },
       });
@@ -495,6 +902,35 @@ async function main() {
 
     // Create contract for completed auction
     if (winningBid) {
+      // Create winner payment
+      const winnerPayment = await prisma.payment.create({
+        data: {
+          userId: auc003ParticipantIds[2].user.id,
+          auctionId: auctions['AUC003'].id,
+          paymentType: 'winning_payment',
+          amount: winningBid.amount - auctions['AUC003'].depositAmountRequired,
+          currency: 'VND',
+          status: 'completed',
+          paymentMethod: 'bank_transfer',
+          transactionId: `WIN-AUC003-${auc003ParticipantIds[2].user.id.substring(
+            0,
+            8
+          )}`,
+          bankCode: 'VIETCOMBANK',
+          paidAt: createDate(-3),
+          paymentDetails: JSON.stringify({
+            auctionCode: 'AUC003',
+            winningBidAmount: winningBid.amount.toString(),
+            depositAmount: auctions['AUC003'].depositAmountRequired.toString(),
+            remainingAmount: (
+              winningBid.amount - auctions['AUC003'].depositAmountRequired
+            ).toString(),
+            participantName: auc003ParticipantIds[2].user.fullName,
+            verifiedBy: users.admin.id,
+          }),
+        },
+      });
+
       const contract = await prisma.contract.create({
         data: {
           auctionId: auctions['AUC003'].id,
@@ -512,6 +948,101 @@ async function main() {
           'vi-VN'
         )} VND`
       );
+      console.log(
+        `    ✓ Created winner payment: ${winnerPayment.amount.toLocaleString(
+          'vi-VN'
+        )} VND`
+      );
+
+      // Create Auction Costs for AUC003
+      const auctionCost = await prisma.auctionCost.create({
+        data: {
+          auctionId: auctions['AUC003'].id,
+          advertisingCost: 5000000, // 5M VND
+          venueRentalCost: 3000000, // 3M VND
+          appraisalCost: 10000000, // 10M VND
+          assetViewingCost: 2000000, // 2M VND
+          otherCosts: JSON.stringify([
+            {
+              description: 'Photography and documentation',
+              amount: 1000000,
+              documentUrl: 'https://example.com/docs/photo-receipt.pdf',
+            },
+            {
+              description: 'Legal consultation',
+              amount: 5000000,
+              documentUrl: 'https://example.com/docs/legal-receipt.pdf',
+            },
+          ]),
+          totalCosts: 26000000, // 26M VND total
+          documents: JSON.stringify([
+            'https://example.com/docs/advertising-invoice.pdf',
+            'https://example.com/docs/venue-rental-receipt.pdf',
+            'https://example.com/docs/appraisal-report.pdf',
+          ]),
+        },
+      });
+      console.log(`    ✓ Created auction costs for AUC003`);
+
+      // Create Financial Summary for AUC003
+      const commissionFee = 55000000; // Calculated based on policy tiers
+      const dossierFee = 1000000; // Based on dossier fee policy
+      const depositAmount = auctions['AUC003'].depositAmountRequired;
+      const finalSalePrice = winningBid.amount;
+      const totalAuctionCosts = 26000000;
+      const totalFeesToSeller = commissionFee + totalAuctionCosts;
+      const netAmountToSeller = finalSalePrice - totalFeesToSeller;
+
+      const financialSummary = await prisma.auctionFinancialSummary.create({
+        data: {
+          auctionId: auctions['AUC003'].id,
+          finalSalePrice,
+          startingPrice: auctions['AUC003'].startingPrice,
+          commissionFee,
+          dossierFee,
+          depositAmount,
+          totalAuctionCosts,
+          totalFeesToSeller,
+          netAmountToSeller,
+          calculationDetails: JSON.stringify({
+            breakdown: {
+              finalSalePrice: finalSalePrice.toString(),
+              commissionFee: commissionFee.toString(),
+              dossierFee: dossierFee.toString(),
+              totalAuctionCosts: totalAuctionCosts.toString(),
+              depositAmount: depositAmount.toString(),
+            },
+            commissionCalculation: {
+              appliedTiers: [
+                { from: 0, to: 50000000, rate: 0.05, amount: 2500000 },
+                { from: 50000000, to: 100000000, rate: 0.04, amount: 2000000 },
+                {
+                  from: 100000000,
+                  to: 500000000,
+                  rate: 0.03,
+                  amount: 12000000,
+                },
+                {
+                  from: 500000000,
+                  to: 1000000000,
+                  rate: 0.02,
+                  amount: 10000000,
+                },
+                {
+                  from: 1000000000,
+                  to: 5500000000,
+                  rate: 0.01,
+                  amount: 45000000,
+                },
+              ],
+              totalCommission: 55000000,
+            },
+            sellerReceives: netAmountToSeller.toString(),
+            buyerPays: finalSalePrice.toString(),
+          }),
+        },
+      });
+      console.log(`    ✓ Created financial summary for AUC003`);
     }
 
     // Create auto-bid settings for some participants
@@ -542,7 +1073,41 @@ async function main() {
         newStatus: 'scheduled',
       },
       {
+        auctionId: auctions['AUC001'].id,
+        performedBy: users.admin.id,
+        action: 'PARTICIPANT_APPROVED',
+        reason: 'Documents verified for bidder (Tier 1)',
+      },
+      {
+        auctionId: auctions['AUC001'].id,
+        performedBy: users.admin.id,
+        action: 'PARTICIPANT_APPROVED',
+        reason: 'Final approval after deposit paid (Tier 2)',
+      },
+      {
         auctionId: auctions['AUC002'].id,
+        performedBy: users.admin.id,
+        action: 'AUCTION_CREATED',
+        reason: 'Phiên đấu giá xe hơi được tạo',
+        newStatus: 'scheduled',
+      },
+      {
+        auctionId: auctions['AUC002'].id,
+        performedBy: users.admin.id,
+        action: 'STATUS_OVERRIDE',
+        previousStatus: 'scheduled',
+        newStatus: 'live',
+        reason: 'Bắt đầu phiên đấu giá',
+      },
+      {
+        auctionId: auctions['AUC003'].id,
+        performedBy: users.admin.id,
+        action: 'AUCTION_CREATED',
+        reason: 'Phiên đấu giá đất nền được tạo',
+        newStatus: 'scheduled',
+      },
+      {
+        auctionId: auctions['AUC003'].id,
         performedBy: users.admin.id,
         action: 'STATUS_OVERRIDE',
         previousStatus: 'scheduled',
@@ -563,6 +1128,28 @@ async function main() {
         action: 'CONTRACT_CREATED',
         reason: 'Tạo hợp đồng cho người thắng đấu giá',
       },
+      {
+        auctionId: auctions['AUC004'].id,
+        performedBy: users.admin.id,
+        action: 'AUCTION_CREATED',
+        reason: 'Phiên đấu giá máy móc được tạo',
+        newStatus: 'scheduled',
+      },
+      {
+        auctionId: auctions['AUC004'].id,
+        performedBy: users.admin.id,
+        action: 'AUCTION_FINALIZED',
+        previousStatus: 'live',
+        newStatus: 'no_bid',
+        reason: 'Không có người đặt giá',
+      },
+      {
+        auctionId: auctions['AUC005'].id,
+        performedBy: users.admin.id,
+        action: 'AUCTION_CREATED',
+        reason: 'Phiên đấu giá villa được tạo',
+        newStatus: 'scheduled',
+      },
     ];
 
     for (const logData of auditLogs) {
@@ -580,33 +1167,156 @@ async function main() {
     });
     console.log(`    ✓ Related AUC001 to AUC005 (similar properties)`);
 
+    // Add additional test scenarios for registration flows
+    console.log('🧪 Creating additional test scenarios...');
+
+    // Scenario 1: Rejected documents (can re-apply)
+    const rejectedDocUrls = JSON.stringify([
+      {
+        type: 'identity_card',
+        url: 'https://example.com/docs/rejected_id_blurry.pdf',
+      },
+    ]);
+
+    const rejectedParticipant = await prisma.auctionParticipant.create({
+      data: {
+        userId: users.bidder.id,
+        auctionId: auctions['AUC005'].id,
+        registeredAt: createDate(6),
+        submittedAt: createDate(6, 1),
+        documentUrls: rejectedDocUrls,
+        documentsRejectedAt: createDate(6, 3),
+        documentsRejectedReason:
+          'Documents are unclear. Please provide: clear ID photo, complete bank statement',
+      },
+    });
+    console.log(
+      `    ✓ Created rejected registration for testing re-submission flow`
+    );
+
+    // Scenario 2: Withdrawn registration (can re-apply)
+    const withdrawnDocUrls = JSON.stringify([
+      {
+        type: 'identity_card',
+        url: 'https://example.com/docs/withdrawn_id.pdf',
+      },
+      {
+        type: 'financial_proof',
+        url: 'https://example.com/docs/withdrawn_bank.pdf',
+      },
+    ]);
+
+    const withdrawnParticipant = await prisma.auctionParticipant.create({
+      data: {
+        userId: users.bidder2.id,
+        auctionId: auctions['AUC005'].id,
+        registeredAt: createDate(6),
+        submittedAt: createDate(6, 1),
+        documentUrls: withdrawnDocUrls,
+        withdrawnAt: createDate(6, 4),
+        withdrawalReason: 'Changed my mind about participating',
+      },
+    });
+    console.log(
+      `    ✓ Created withdrawn registration for testing re-registration flow`
+    );
+
+    // Scenario 3: Deposit deadline approaching (for testing 24-hour warning)
+    const depositDeadlinePayment = await prisma.payment.create({
+      data: {
+        userId: users.bidder3.id,
+        auctionId: auctions['AUC001'].id,
+        paymentType: 'deposit',
+        amount: auctions['AUC001'].depositAmountRequired,
+        currency: 'VND',
+        status: 'pending',
+        paymentMethod: 'bank_transfer',
+        paymentDetails: JSON.stringify({
+          auctionCode: 'AUC001',
+          participantName: users.bidder3.fullName,
+          deadlineApproaching: true,
+        }),
+      },
+    });
+    console.log(`    ✓ Created pending deposit payment for deadline testing`);
+
     console.log('\n✅ Comprehensive seed completed successfully!');
     console.log('\n📊 Summary:');
     console.log(`   👥 Users: ${sampleUsers.length}`);
+    console.log(`   📋 Auction Policies: 2 (state-owned + private)`);
     console.log(`   🏛️ Auctions: ${sampleAuctions.length}`);
     console.log('   📸 Images: Added to all auctions');
     console.log('   📎 Attachments: Added to all auctions');
-    console.log('   🙋‍♀️ Participants: Multiple per auction');
+    console.log(
+      '   🙋‍♀️ Participants: Multiple per auction with two-tier approval states'
+    );
     console.log('   💰 Bids: Active bidding on live auction');
-    console.log('   📄 Contracts: 1 signed contract');
+    console.log('   💳 Payments: Deposit and winner payments tracked');
+    console.log('   📄 Contracts: 1 signed contract with payment');
+    console.log('   💼 Auction Costs: Detailed cost breakdown for AUC003');
+    console.log(
+      '   📊 Financial Summary: Complete financial analysis for AUC003'
+    );
     console.log('   🤖 Auto-bid: 1 active setting');
-    console.log('   📋 Audit logs: 4 entries');
+    console.log(`   📋 Audit logs: ${auditLogs.length} entries`);
     console.log('   🔗 Relations: 1 auction relation');
+    console.log(
+      '   🧪 Test scenarios: Document rejection, withdrawal, deposit deadline'
+    );
 
     console.log('\n🎯 Test scenarios available:');
-    console.log('   • AUC001: Registration open - test user registration flow');
+    console.log('   • AUC001: Registration open - test two-tier approval flow');
+    console.log('     - Bidder 1: Fully approved (can bid)');
+    console.log('     - Bidder 2: Deposit paid, awaiting final approval');
+    console.log('     - Bidder 3: Documents verified, needs to pay deposit');
+    console.log('     - Bidder 4: Documents submitted, awaiting Tier 1 review');
     console.log('   • AUC002: Live auction - test bidding in real-time');
-    console.log('   • AUC003: Completed - test post-auction contract flow');
+    console.log(
+      '   • AUC003: Completed - test post-auction payment & contract flow'
+    );
     console.log('   • AUC004: Failed - test no-bid scenario');
-    console.log('   • AUC005: Future - test upcoming auction preparation');
+    console.log(
+      '   • AUC005: Future - test rejection/withdrawal/re-application'
+    );
 
-    console.log('\n📧 Email testing scenarios:');
-    console.log('   • Registration confirmations');
-    console.log('   • Bid notifications');
-    console.log('   • Auction end notifications');
-    console.log('   • Contract signing notifications');
-    console.log('   • Winner notifications');
+    console.log('\n📧 Email notification test points:');
+    console.log(
+      '   • Document verification (Tier 1) → User receives payment instructions'
+    );
+    console.log('   • Deposit payment confirmed → User + admins notified');
+    console.log('   • Final approval (Tier 2) → User can now bid');
+    console.log('   • Document rejection → User can re-apply');
+    console.log('   • Winner payment request → 7-day deadline');
+    console.log('   • Winner payment confirmed → Contract ready');
+
+    console.log('\n🔄 Two-Tier Approval Flow:');
+    console.log(
+      '   1. REGISTERED + PENDING_DOCUMENT_REVIEW → Documents submitted'
+    );
+    console.log(
+      '   2. DOCUMENTS_VERIFIED (Tier 1) → Admin verifies documents ✉️'
+    );
+    console.log('   3. DEPOSIT_PAID → User pays within 24 hours ✉️');
+    console.log('   4. CONFIRMED (Tier 2) → Admin final approval ✉️');
+    console.log('   5. READY TO BID → User can place bids');
+
+    console.log('\n⏰ Deadline Testing:');
+    console.log('   • Deposit payment: 24 hours from document verification');
+    console.log('   • Winner payment: 7 days from auction finalization');
+    console.log('   • Auto-cancellation if deadlines missed');
   } catch (error) {
+    // Check if error is related to data already existing
+    if (
+      error.code === 'P2003' ||
+      error.message?.includes('foreign key constraint')
+    ) {
+      console.log('⚠️  Database contains existing data that prevents cleanup');
+      console.log('💡 Using existing data - skipping seed');
+      console.log(
+        '💡 To reseed, run: docker compose down -v && docker compose up --build'
+      );
+      process.exit(0); // Exit cleanly
+    }
     console.error('❌ Seed failed:', error);
     process.exit(1);
   } finally {

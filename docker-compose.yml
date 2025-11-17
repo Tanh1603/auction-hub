@@ -1,47 +1,60 @@
-version: "3.8"
-
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: auction-hub-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: auction-hub
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_DB: auction-hub
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d auction-hub"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
+    networks:
+      - auction-hub-network
 
-  # Backend API
+  # NestJS Backend Application
   backend:
     build:
       context: .
-      dockerfile: ./server/dockerfile
+      dockerfile: Dockerfile
     container_name: auction-hub-backend
     restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:
-      - ./server/.env
+      - server/.env
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://user:password@postgres:5432/auction-hub
+      # Override DATABASE_URL for Docker network
+      DATABASE_URL: postgresql://user:password@postgres:5432/auction-hub
+
+      # Node
+      NODE_ENV: production
+      PORT: 3000
     depends_on:
       postgres:
         condition: service_healthy
-
+    networks:
+      - auction-hub-network
     command: >
-      sh -c "npx prisma generate --schema=server/prisma/schema.prisma && npx prisma db push --schema=server/prisma/schema.prisma && node server/prisma/comprehensive-seed.js && node dist/server/main.js"
-
-    # No need for extra command, Dockerfile runs seed automatically
+      sh -c "
+        npx prisma db push --schema=server/prisma/schema.prisma &&
+        (cd server/prisma && node comprehensive-seed.js || true) &&
+        cd /app && node dist/server/main.js
+      "
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  auction-hub-network:
+    driver: bridge

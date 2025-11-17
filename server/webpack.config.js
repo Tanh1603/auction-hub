@@ -8,10 +8,16 @@ module.exports = {
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
     }),
   },
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename],
+    },
+  },
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
-      compiler: 'tsc',
+      compiler: 'swc', // Use SWC for speed
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
       assets: [
@@ -25,7 +31,8 @@ module.exports = {
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,
-      sourceMaps: true,
+      sourceMaps: false, // Disable source maps in production for speed
+      transformers: [],
     }),
   ],
 };
