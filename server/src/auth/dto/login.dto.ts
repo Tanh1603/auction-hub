@@ -1,5 +1,5 @@
 import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
-import { User } from '@prisma/client';
+import { User } from '../../../generated';
 
 export class LoginRequestDto {
   @IsEmail({}, { message: 'Invalid email format' })
