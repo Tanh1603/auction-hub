@@ -1,4 +1,4 @@
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from "../../../generated/runtime/library";
 
 export class AucitonSummaryDto {
   id: string;
