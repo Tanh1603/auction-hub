@@ -3,7 +3,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaymentCreateRequestDto } from './dto/PaymentCreateRequest.dto';
 import { Payment } from './dto/Payment.dto';
 import { PaymentVerificationDto } from './dto/PaymentVerification.dto';
-// import { PaymentStatus } from '@prisma/client';
 import Stripe from 'stripe';
 import * as QRCode from 'qrcode';
 import { PaymentStatus } from '../../generated';
