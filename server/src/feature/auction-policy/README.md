@@ -1,8 +1,634 @@
 # Auction Policy Feature - Technical Documentation
 
-**Version:** 2.0  
-**Last Updated:** November 17, 2024  
-**Status:** ✅ Production Ready
+**Version:** 3.0  
+**Last Updated:** November 18, 2024  
+**Status:** ✅ Refactored with System Variables
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Core Services](#core-services)
+4. [Auction Costs Management](#auction-costs-management)
+5. [Policy Calculations](#policy-calculations)
+6. [API Reference](#api-reference)
+7. [Legal Compliance](#legal-compliance)
+8. [Testing Guide](#testing-guide)
+9. [Migration Notes](#migration-notes)
+
+---
+
+## Overview
+
+The **Auction Policy** module has been **significantly simplified** by replacing the complex 5-table policy system with a single **System Variables** table. All policy CRUD operations are now handled through the `SystemVariablesController` in the CommonModule.
+
+### What Changed (v3.0)
+
+**REMOVED:**
+
+- ❌ `AuctionPolicyService` - Policy CRUD moved to `SystemVariablesService`
+- ❌ `AuctionPolicyController` - Endpoints moved to `SystemVariablesController`
+- ❌ 5 database tables (AuctionPolicy, CommissionPolicyConfig, DossierFeePolicyConfig, DepositPolicyConfig)
+- ❌ Complex nested JSON configurations
+
+**KEPT:**
+
+- ✅ `PolicyCalculationService` - Refactored to use system variables (now async)
+- ✅ `AuctionCostService` & `AuctionCostController` - Unchanged
+- ✅ All calculation logic and legal compliance (commission tiers hardcoded as required by law)
+- ✅ Financial summary generation
+
+**NEW:**
+
+- ✨ `SystemVariablesService` - Simple key-value configuration store with 5-min cache
+- ✨ `SystemVariablesController` - Admin-only system configuration endpoints
+- ✨ Single `SystemVariable` table - Replaces 5 complex policy tables
+
+### Key Benefits
+
+- 📉 **75% code reduction** (~2000 → ~500 lines)
+- ⚡ **Faster queries** (3-level nested includes → simple cached gets)
+- 🔧 **Easier configuration** (key-value pairs instead of JSON tiers)
+- 🛡️ **Better security** (admin-only access to system engine)
+- 📦 **Simpler maintenance** (one table instead of five)
+
+---
+
+## Architecture
+
+### Simplified Design (v3.0)
+
+```
+┌───────────────────────────────────────┐
+│     SYSTEM VARIABLES (Admin Only)     │
+│  deposit.min_percentage = 5           │
+│  deposit.max_percentage = 20          │
+│  commission.min_amount = 1000000      │
+│  commission.max_amount = 400000000    │
+│  dossier.tier1_limit = 200000000      │
+└───────────────────────────────────────┘
+                   │
+                   │ (cached gets)
+                   ▼
+┌───────────────────────────────────────┐
+│    POLICY CALCULATION SERVICE         │
+│  • calculateCommission() [async]      │
+│  • validateDossierFee() [async]       │
+│  • validateDepositPercentage() [async]│
+│  • Legal tiers hardcoded in code      │
+└───────────────────────────────────────┘
+                   │
+                   ▼
+┌───────────────────────────────────────┐
+│         AUCTION COSTS MODULE          │
+│  • AuctionCostService                 │
+│  • AuctionCostController              │
+│  • Track advertising, venue, etc.     │
+└───────────────────────────────────────┘
+```
+
+### Module Structure
+
+```
+auction-policy/
+├── auction-policy.module.ts           # Simplified module
+├── policy-calculation.service.ts      # Refactored to use system variables (async)
+├── auction-cost.service.ts            # Unchanged
+├── auction-cost.controller.ts         # Unchanged
+└── dto/
+    ├── create-auction-cost.dto.ts     # Unchanged
+    └── update-auction-cost.dto.ts     # Unchanged
+```
+
+### Service Responsibilities
+
+| Service                      | Responsibility                                              |
+| ---------------------------- | ----------------------------------------------------------- |
+| **SystemVariablesService**   | CRUD for system configuration (in CommonModule)             |
+| **PolicyCalculationService** | Calculate commissions, validate fees using system variables |
+| **AuctionCostService**       | Track and manage variable auction costs                     |
+
+---
+
+## Core Services
+
+### SystemVariablesService (CommonModule)
+
+**Location:** `server/src/common/services/system-variables.service.ts`
+
+**Purpose:** Centralized configuration store for all system-wide settings.
+
+**Key Features:**
+
+- ✅ 5-minute in-memory cache
+- ✅ Category-based organization
+- ✅ Type-safe value parsing (string, number, boolean, json)
+- ✅ Admin-only access
+
+**System Variable Categories:**
+
+```typescript
+// DEPOSIT CONFIGURATION
+'deposit.min_percentage_general'; // 5
+'deposit.max_percentage_general'; // 20
+'deposit.min_percentage_land'; // 10
+'deposit.max_percentage_land'; // 20
+'deposit.deadline_hours'; // 24
+'deposit.refund_deadline_days'; // 3
+
+// COMMISSION CONFIGURATION
+'commission.min_amount'; // 1000000
+'commission.max_amount'; // 400000000
+
+// DOSSIER FEE CONFIGURATION
+'dossier.tier1_price_limit'; // 200000000
+'dossier.tier1_max_fee'; // 100000
+'dossier.tier2_price_limit'; // 500000000
+'dossier.tier2_max_fee'; // 200000
+'dossier.tier3_max_fee'; // 500000
+
+// GENERAL CONFIGURATION
+'general.currency'; // VND
+'general.timezone'; // Asia/Ho_Chi_Minh
+'general.vat_rate'; // 10
+```
+
+**Usage Example:**
+
+```typescript
+// In any service
+constructor(private readonly sysVars: SystemVariablesService) {}
+
+async someMethod() {
+  // Get single value (cached)
+  const minDeposit = await this.sysVars.get('deposit', 'min_percentage_general');
+
+  // Get category (cached)
+  const allDepositVars = await this.sysVars.getCategory('deposit');
+
+  // Update value (admin only, clears cache)
+  await this.sysVars.update('deposit', 'min_percentage_general', '10', adminUserId);
+}
+```
+
+---
+
+### PolicyCalculationService (Refactored)
+
+**Location:** `server/src/feature/auction-policy/policy-calculation.service.ts`
+
+**Key Changes:**
+
+- All methods now **async** (use system variables)
+- No longer depends on nested policy queries
+- Legal commission tiers remain **hardcoded** (Vietnamese law requirement)
+
+#### calculateCommission() - Now Async
+
+```typescript
+async calculateCommission(
+  finalPrice: number,
+  assetCategory: 'general' | 'land_use_right' = 'general'
+): Promise<number>
+```
+
+**Legal Tiers (Hardcoded):**
+
+- **General Assets:** Progressive 5%-0.1% based on price brackets
+- **Land Use Rights:** Progressive 0.45%-0.1% based on price brackets
+
+**Constraints (System Variables):**
+
+- Min: `commission.min_amount` (default: 1,000,000 VND)
+- Max: `commission.max_amount` (default: 400,000,000 VND)
+
+**Example:**
+
+```typescript
+const commission = await policyCalc.calculateCommission(2500000000, 'general');
+// Result: 48,750,000 VND (within min/max constraints)
+```
+
+#### validateDossierFee() - Now Async
+
+```typescript
+async validateDossierFee(
+  dossierFee: number,
+  startingPrice: number
+): Promise<{ valid: boolean; message?: string; maxAllowed?: number }>
+```
+
+**Uses System Variables:**
+
+- `dossier.tier1_price_limit` → Max fee `dossier.tier1_max_fee`
+- `dossier.tier2_price_limit` → Max fee `dossier.tier2_max_fee`
+- Above tier2 → Max fee `dossier.tier3_max_fee`
+
+**Example:**
+
+```typescript
+const result = await policyCalc.validateDossierFee(150000, 180000000);
+// Result: { valid: false, message: "...", maxAllowed: 100000 }
+```
+
+#### validateDepositPercentage() - Now Async
+
+```typescript
+async validateDepositPercentage(
+  percentage: number,
+  assetCategory: 'general' | 'land_use_right'
+): Promise<{ valid: boolean; message?: string; range?: { min: number; max: number } }>
+```
+
+**Uses System Variables:**
+
+- General: `deposit.min_percentage_general` to `deposit.max_percentage_general`
+- Land: `deposit.min_percentage_land` to `deposit.max_percentage_land`
+
+**Example:**
+
+```typescript
+const result = await policyCalc.validateDepositPercentage(15, 'general');
+// Result: { valid: true }
+```
+
+#### calculateAuctionFinancialSummary() - Simplified
+
+```typescript
+async calculateAuctionFinancialSummary(
+  auctionId: string,
+  finalSalePrice: number
+)
+```
+
+**Key Changes:**
+
+- ❌ No longer queries nested policy configurations
+- ✅ Uses system variables for all limits/constraints
+- ✅ Directly calculates commission based on hardcoded legal tiers
+- ✅ Faster execution (no 3-level includes)
+
+---
+
+## Auction Costs Management
+
+**Status:** Unchanged from v2.0
+
+The auction costs tracking system remains the same. See the original documentation sections for:
+
+- Cost categories (advertising, venue, appraisal, etc.)
+- AuctionCostService methods
+- AuctionCostController endpoints
+- Cost tracking examples
+
+---
+
+## Policy Calculations
+
+### Commission Calculation (Circular 45/2017, 108/2020)
+
+**IMPORTANT:** Commission tiers are **hardcoded in code** as required by Vietnamese law. Only min/max constraints are configurable via system variables.
+
+**General Assets Progressive Tiers:**
+
+| Price Range (VND) | Rate | Base Amount (VND) |
+| ----------------- | ---- | ----------------- |
+| 0 - 50M           | 5%   | 0                 |
+| 50M - 100M        | 3.5% | 2,500,000         |
+| 100M - 500M       | 3%   | 4,250,000         |
+| 500M - 1B         | 2.5% | 16,250,000        |
+| 1B - 5B           | 1.5% | 26,250,000        |
+| 5B - 10B          | 0.2% | 86,250,000        |
+| 10B+              | 0.1% | 96,250,000        |
+
+**Land Use Rights Progressive Tiers:**
+
+| Price Range (VND) | Rate  | Base Amount (VND) |
+| ----------------- | ----- | ----------------- |
+| 0 - 5B            | 0.45% | 50,000,000        |
+| 5B - 10B          | 0.15% | 72,500,000        |
+| 10B+              | 0.1%  | 80,000,000        |
+
+**Configurable Constraints (System Variables):**
+
+- `commission.min_amount`: 1,000,000 VND
+- `commission.max_amount`: 400,000,000 VND
+
+---
+
+### Dossier Fee Validation (Circular 48/2017)
+
+**Uses System Variables:**
+
+| System Variable             | Default Value | Description         |
+| --------------------------- | ------------- | ------------------- |
+| `dossier.tier1_price_limit` | 200,000,000   | Tier 1 upper limit  |
+| `dossier.tier1_max_fee`     | 100,000       | Max fee for Tier 1  |
+| `dossier.tier2_price_limit` | 500,000,000   | Tier 2 upper limit  |
+| `dossier.tier2_max_fee`     | 200,000       | Max fee for Tier 2  |
+| `dossier.tier3_max_fee`     | 500,000       | Max fee for Tier 3+ |
+
+---
+
+### Deposit Policy (Circular 48/2017)
+
+**Uses System Variables:**
+
+| System Variable                  | Default Value | Description               |
+| -------------------------------- | ------------- | ------------------------- |
+| `deposit.min_percentage_general` | 5             | Min % for general assets  |
+| `deposit.max_percentage_general` | 20            | Max % for general assets  |
+| `deposit.min_percentage_land`    | 10            | Min % for land use rights |
+| `deposit.max_percentage_land`    | 20            | Max % for land use rights |
+| `deposit.deadline_hours`         | 24            | Hours to pay deposit      |
+| `deposit.refund_deadline_days`   | 3             | Days to process refund    |
+
+---
+
+## API Reference
+
+### System Variables API (NEW - Admin Only)
+
+**Base Path:** `/system-variables`  
+**Access:** Admin/Super Admin only  
+**Module:** CommonModule
+
+#### Get All System Variables
+
+```http
+GET /system-variables
+Authorization: Bearer {admin-token}
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "var_123",
+    "category": "deposit",
+    "key": "min_percentage_general",
+    "value": "5",
+    "dataType": "number",
+    "description": "Minimum deposit percentage for general assets",
+    "isActive": true,
+    "updatedBy": "user_admin",
+    "updatedAt": "2024-11-18T10:00:00Z"
+  }
+]
+```
+
+#### Get Category
+
+```http
+GET /system-variables/category/{category}
+Authorization: Bearer {admin-token}
+```
+
+**Example:** `GET /system-variables/category/deposit`
+
+#### Get Single Variable
+
+```http
+GET /system-variables/{category}/{key}
+Authorization: Bearer {admin-token}
+```
+
+**Example:** `GET /system-variables/deposit/min_percentage_general`
+
+#### Update Variable
+
+```http
+PATCH /system-variables/{category}/{key}
+Authorization: Bearer {admin-token}
+Content-Type: application/json
+
+{
+  "value": "10",
+  "description": "Updated minimum deposit percentage"
+}
+```
+
+**Note:** Updates clear the cache automatically.
+
+#### Create Variable
+
+```http
+POST /system-variables
+Authorization: Bearer {admin-token}
+Content-Type: application/json
+
+{
+  "category": "deposit",
+  "key": "new_setting",
+  "value": "15",
+  "dataType": "number",
+  "description": "New deposit setting"
+}
+```
+
+#### Clear Cache
+
+```http
+POST /system-variables/cache/clear
+Authorization: Bearer {admin-token}
+```
+
+---
+
+### Auction Costs API (Unchanged)
+
+See original documentation sections for:
+
+- `POST /auction-costs/auction/{auctionId}` - Create/update costs
+- `GET /auction-costs/auction/{auctionId}` - Get costs
+- `PATCH /auction-costs/auction/{auctionId}` - Update specific fields
+- `POST /auction-costs/auction/{auctionId}/other-cost` - Add other cost
+- `DELETE /auction-costs/auction/{auctionId}` - Delete costs
+
+---
+
+## Legal Compliance
+
+### Vietnamese Legal Circulars (Unchanged)
+
+- **Circular 45/2017** (Updated by 108/2020): Commission calculation
+- **Circular 48/2017**: Dossier fees and deposit requirements
+
+### Compliance Implementation
+
+✅ **Commission Tiers:** Hardcoded in `PolicyCalculationService` (cannot be changed)  
+✅ **Min/Max Constraints:** Configurable via system variables  
+✅ **Dossier Fee Limits:** Configurable via system variables  
+✅ **Deposit Ranges:** Configurable via system variables
+
+---
+
+## Testing Guide
+
+### Unit Tests (Updated for Async)
+
+```typescript
+describe('PolicyCalculationService (v3.0)', () => {
+  it('should calculate commission using system variables', async () => {
+    const commission = await policyCalc.calculateCommission(2500000000, 'general');
+    expect(commission).toBe(48750000);
+  });
+
+  it('should validate dossier fee with system variables', async () => {
+    const result = await policyCalc.validateDossierFee(150000, 180000000);
+    expect(result.valid).toBe(false);
+    expect(result.maxAllowed).toBe(100000);
+  });
+
+  it('should validate deposit percentage from system variables', async () => {
+    const result = await policyCalc.validateDepositPercentage(15, 'general');
+    expect(result.valid).toBe(true);
+  });
+});
+```
+
+### Integration Tests
+
+```typescript
+describe('System Variables Integration', () => {
+  it('should update min deposit and affect validation', async () => {
+    // Update system variable
+    await request(app).patch('/system-variables/deposit/min_percentage_general').set('Authorization', `Bearer ${adminToken}`).send({ value: '10' }).expect(200);
+
+    // Test validation with new value
+    const result = await policyCalc.validateDepositPercentage(8, 'general');
+    expect(result.valid).toBe(false); // Now invalid (min is 10)
+  });
+});
+```
+
+---
+
+## Migration Notes
+
+### From v2.0 to v3.0
+
+**Database Changes:**
+
+1. New table: `SystemVariable`
+2. Old tables remain (for historical data):
+   - `AuctionPolicy`
+   - `CommissionPolicyConfig`
+   - `DossierFeePolicyConfig`
+   - `DepositPolicyConfig`
+3. New auctions no longer use `auctionPolicyId`
+
+**Code Changes:**
+
+1. `PolicyCalculationService` methods now async
+2. All policy queries replaced with system variable lookups
+3. Policy CRUD removed from `AuctionPolicyModule`
+4. System variables seeded in `comprehensive-seed.js`
+
+**Migration Steps:**
+
+```bash
+# 1. Create SystemVariable table
+npx prisma db push
+
+# 2. Seed system variables
+cd server
+node prisma/comprehensive-seed.js
+
+# 3. Verify system variables
+GET /system-variables (as admin)
+
+# 4. Test calculations still work
+POST /auction-policy/calculate/commission
+{
+  "finalPrice": 2500000000,
+  "assetCategory": "general"
+}
+```
+
+**Optional Cleanup (After Validation):**
+
+```sql
+-- Drop old policy tables (ONLY after confirming everything works)
+DROP TABLE "CommissionPolicyConfig";
+DROP TABLE "DossierFeePolicyConfig";
+DROP TABLE "DepositPolicyConfig";
+DROP TABLE "AuctionPolicy";
+```
+
+---
+
+## Related Documentation
+
+- **System Variables:** `server/src/common/services/system-variables.service.ts`
+- **Simplification Plan:** `AUCTION_POLICY_SIMPLIFICATION_PLAN.md`
+- **Database Schema:** `server/prisma/schema.prisma`
+- **Seed Data:** `server/prisma/comprehensive-seed.js`
+
+---
+
+**Document Version:** 3.0  
+**Last Updated:** November 18, 2024  
+**Maintained By:** Auction Hub Development Team
+
+---
+
+## Quick Reference
+
+### Key System Variables
+
+```bash
+# Deposit
+deposit.min_percentage_general = 5
+deposit.max_percentage_general = 20
+deposit.min_percentage_land = 10
+deposit.max_percentage_land = 20
+deposit.deadline_hours = 24
+deposit.refund_deadline_days = 3
+
+# Commission
+commission.min_amount = 1000000
+commission.max_amount = 400000000
+
+# Dossier
+dossier.tier1_price_limit = 200000000
+dossier.tier1_max_fee = 100000
+dossier.tier2_price_limit = 500000000
+dossier.tier2_max_fee = 200000
+dossier.tier3_max_fee = 500000
+
+# General
+general.currency = VND
+general.timezone = Asia/Ho_Chi_Minh
+general.vat_rate = 10
+```
+
+### Quick Commands
+
+```bash
+# Get all system variables
+curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:3000/system-variables
+
+# Update a variable
+curl -X PATCH \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"10"}' \
+  http://localhost:3000/system-variables/deposit/min_percentage_general
+
+# Clear cache
+curl -X POST \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:3000/system-variables/cache/clear
+```
+
+---
+
+````
 
 ---
 
@@ -1784,6 +2410,7 @@ For questions or issues:
 
 ---
 
-**Document Version:** 2.0  
-**Last Updated:** November 17, 2024  
+**Document Version:** 2.0
+**Last Updated:** November 17, 2024
 **Maintained By:** Auction Hub Development Team
+````

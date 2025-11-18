@@ -1,39 +1,50 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JSONUtils } from '../../common/utils/json.utils';
+import { SystemVariablesService } from '../../common/services/system-variables.service';
 
 /**
  * Policy Calculation Service
  * Implements all business logic from Vietnamese legal circulars:
- * - Circular 45/2017: Commission/Remuneration
- * - Circular 108/2020: Updates to commission
- * - Circular 48/2017: Dossier fees and deposits
+ * - Circular 45/2017: Commission/Remuneration (HARDCODED - never changes)
+ * - Circular 108/2020: Updates to commission (HARDCODED - never changes)
+ * - Circular 48/2017: Dossier fees and deposits (uses system variables for limits)
+ *
+ * NOTE: Commission calculation tiers are HARDCODED by law and should NOT be moved to database.
+ * Only variable settings (deposit percentages, deadlines, etc.) use system variables.
  */
 @Injectable()
 export class PolicyCalculationService {
   private readonly logger = new Logger(PolicyCalculationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sysVars: SystemVariablesService
+  ) {}
 
   /**
    * MODULE 1: Calculate Commission/Remuneration Fee
    * Based on final sale price with progressive (tiered) calculation
    *
+   * HARDCODED TIERS - Defined by Circular 45/2017 & 108/2020
+   * These are LEGAL REQUIREMENTS and should NOT be moved to database
+   *
    * @param finalPrice - The hammer price (final sale price)
    * @param assetCategory - "general" or "land_use_right"
    * @returns Commission fee in VND
    */
-  calculateCommission(
+  async calculateCommission(
     finalPrice: number,
     assetCategory: 'general' | 'land_use_right' = 'general'
-  ): number {
+  ): Promise<number> {
     // ✅ FIX: Validate financial input
     this.validateFinancialValue(finalPrice, 'Final price');
 
     let commission = 0;
 
+    // HARDCODED LEGAL TIERS - DO NOT MOVE TO DATABASE
     if (assetCategory === 'general') {
-      // Table 1.1: General Assets
+      // Table 1.1: General Assets (Circular 45/2017, 108/2020)
       if (finalPrice <= 50_000_000) {
         commission = finalPrice * 0.05;
       } else if (finalPrice <= 100_000_000) {
@@ -50,11 +61,9 @@ export class PolicyCalculationService {
         commission = 96_250_000 + (finalPrice - 10_000_000_000) * 0.001;
       }
     } else {
-      // Table 1.2: Land Use Rights
+      // Table 1.2: Land Use Rights (Circular 45/2017, 108/2020)
       if (finalPrice <= 5_000_000_000) {
-        // Note: Circular specifies a base value - using 0 as default
-        const baseValue = 0;
-        commission = 50_000_000 + (finalPrice - baseValue) * 0.0045;
+        commission = 50_000_000 + finalPrice * 0.0045;
       } else if (finalPrice <= 10_000_000_000) {
         commission = 72_500_000 + (finalPrice - 5_000_000_000) * 0.0015;
       } else {
@@ -62,12 +71,18 @@ export class PolicyCalculationService {
       }
     }
 
-    // Apply min and max constraints
-    const MIN_COMMISSION = 1_000_000;
-    const MAX_COMMISSION = 400_000_000;
+    // Apply min and max constraints from system variables
+    const minCommission = await this.sysVars.get<number>(
+      'commission',
+      'commission.min_amount'
+    );
+    const maxCommission = await this.sysVars.get<number>(
+      'commission',
+      'commission.max_amount'
+    );
 
-    commission = Math.max(commission, MIN_COMMISSION);
-    commission = Math.min(commission, MAX_COMMISSION);
+    commission = Math.max(commission, minCommission);
+    commission = Math.min(commission, maxCommission);
 
     // ✅ FIX: Round to nearest VND (no decimal places)
     return this.roundVND(commission);
@@ -76,28 +91,49 @@ export class PolicyCalculationService {
   /**
    * MODULE 2: Validate Dossier Fee
    * Fee must comply with maximum limits based on starting price
+   * Uses system variables for tier limits
    *
    * @param dossierFee - The proposed dossier fee
    * @param startingPrice - The auction starting price
    * @returns Validation result with error message if invalid
    */
-  validateDossierFee(
+  async validateDossierFee(
     dossierFee: number,
     startingPrice: number
-  ): { valid: boolean; message?: string; maxAllowed?: number } {
+  ): Promise<{ valid: boolean; message?: string; maxAllowed?: number }> {
     // ✅ FIX: Validate inputs
     this.validateFinancialValue(dossierFee, 'Dossier fee');
     this.validateFinancialValue(startingPrice, 'Starting price');
 
-    let maxFee: number;
+    // Get tier limits from system variables (Circular 48/2017)
+    const tier1Max = await this.sysVars.get<number>(
+      'dossier',
+      'dossier.tier1_max'
+    );
+    const tier1Fee = await this.sysVars.get<number>(
+      'dossier',
+      'dossier.tier1_fee'
+    );
+    const tier2Max = await this.sysVars.get<number>(
+      'dossier',
+      'dossier.tier2_max'
+    );
+    const tier2Fee = await this.sysVars.get<number>(
+      'dossier',
+      'dossier.tier2_fee'
+    );
+    const tier3Fee = await this.sysVars.get<number>(
+      'dossier',
+      'dossier.tier3_fee'
+    );
 
-    // Table 2: Maximum Dossier Fee (Circular 48/2017)
-    if (startingPrice <= 200_000_000) {
-      maxFee = 100_000;
-    } else if (startingPrice <= 500_000_000) {
-      maxFee = 200_000;
+    let maxFee: number;
+    if (startingPrice <= tier1Max) {
+      maxFee = tier1Fee;
+    } else if (startingPrice <= tier2Max) {
+      maxFee = tier2Fee;
     } else {
-      maxFee = 500_000;
+      maxFee = tier3Fee;
     }
 
     if (dossierFee > maxFee) {
@@ -120,27 +156,31 @@ export class PolicyCalculationService {
   /**
    * MODULE 3: Validate Deposit Percentage
    * Percentage must be within allowed range based on asset category
+   * Uses system variables for min/max ranges
    *
    * @param percentage - The deposit percentage (e.g., 10 for 10%)
    * @param assetCategory - "general" or "land_use_right"
    * @returns Validation result
    */
-  validateDepositPercentage(
+  async validateDepositPercentage(
     percentage: number,
     assetCategory: 'general' | 'land_use_right' = 'general'
-  ): {
+  ): Promise<{
     valid: boolean;
     message?: string;
     range?: { min: number; max: number };
-  } {
-    let minPercentage: number;
-    let maxPercentage = 20; // Same for both
+  }> {
+    const categoryPrefix = assetCategory === 'general' ? 'general' : 'land';
 
-    if (assetCategory === 'general') {
-      minPercentage = 5;
-    } else {
-      minPercentage = 10; // Land use rights
-    }
+    // Get deposit percentage ranges from system variables (Circular 48/2017)
+    const minPercentage = await this.sysVars.get<number>(
+      'deposit',
+      `deposit.${categoryPrefix}.min_percentage`
+    );
+    const maxPercentage = await this.sysVars.get<number>(
+      'deposit',
+      `deposit.${categoryPrefix}.max_percentage`
+    );
 
     if (percentage < minPercentage || percentage > maxPercentage) {
       return {
@@ -183,6 +223,7 @@ export class PolicyCalculationService {
 
   /**
    * COMPREHENSIVE: Calculate complete financial summary after auction finalization
+   * NO LONGER REQUIRES POLICY - Uses system variables and auction data directly
    *
    * @param auctionId - The auction ID
    * @param finalSalePrice - The hammer price
@@ -193,17 +234,10 @@ export class PolicyCalculationService {
     finalSalePrice: number
   ) {
     try {
-      // Get auction with policy and costs
+      // Get auction with costs only (no policy needed!)
       const auction = await this.prisma.auction.findUnique({
         where: { id: auctionId },
         include: {
-          auctionPolicy: {
-            include: {
-              commissionConfig: true,
-              dossierConfig: true,
-              depositConfig: true,
-            },
-          },
           costs: true,
         },
       });
@@ -212,7 +246,7 @@ export class PolicyCalculationService {
         throw new BadRequestException('Auction not found');
       }
 
-      // ✅ FIX: Use proper asset type mapping with validation
+      // ✅ Asset type mapping with validation
       const ASSET_TYPE_MAP: Record<string, 'general' | 'land_use_right'> = {
         land_use_rights: 'land_use_right',
         land_use_right: 'land_use_right',
@@ -228,12 +262,11 @@ export class PolicyCalculationService {
         this.logger.warn(
           `Unknown asset type: ${auction.assetType}, defaulting to 'general'`
         );
-        // Default to 'general' instead of throwing error to prevent blocking auctions
       }
       const finalAssetCategory = assetCategory || 'general';
 
-      // 1. Calculate Commission Fee
-      const commissionFee = this.calculateCommission(
+      // 1. Calculate Commission Fee (uses hardcoded legal tiers + system var limits)
+      const commissionFee = await this.calculateCommission(
         finalSalePrice,
         finalAssetCategory
       );
@@ -241,66 +274,32 @@ export class PolicyCalculationService {
       // 2. Get Dossier Fee (already set by admin and validated)
       const dossierFee = parseFloat(auction.dossierFee?.toString() || '0');
 
-      // 3. Calculate Deposit Amount (from unified policy config)
+      // 3. Calculate Deposit Amount (from auction data + system variables)
       let depositAmount = 0;
       let depositPercentage: number | undefined;
-      let depositType: 'percentage' | 'fixed' = 'percentage';
+      const depositType: 'percentage' | 'fixed' = 'percentage';
 
-      if (auction.auctionPolicy?.depositConfig) {
-        const depositConfig = auction.auctionPolicy.depositConfig;
-        depositType = depositConfig.depositType as 'percentage' | 'fixed';
+      // Use the deposit percentage set on the auction
+      depositPercentage = parseFloat(
+        auction.depositPercentage?.toString() || '10'
+      );
 
-        if (depositType === 'percentage') {
-          // Use the actual deposit percentage set for the auction, or fallback to policy min
-          depositPercentage = parseFloat(
-            auction.depositPercentage?.toString() ||
-              depositConfig.minPercentage?.toString() ||
-              '10'
-          );
-          depositAmount = this.calculateDepositAmount(
-            'percentage',
-            parseFloat(auction.startingPrice.toString()),
-            depositPercentage,
-            undefined,
-            {
-              minDepositAmount: depositConfig.minDepositAmount
-                ? parseFloat(depositConfig.minDepositAmount.toString())
-                : undefined,
-              maxDepositAmount: depositConfig.maxDepositAmount
-                ? parseFloat(depositConfig.maxDepositAmount.toString())
-                : undefined,
-            }
-          );
-        } else {
-          // Fixed deposit
-          const fixedAmount = depositConfig.fixedAmount
-            ? parseFloat(depositConfig.fixedAmount.toString())
-            : 0;
-          depositAmount = this.calculateDepositAmount(
-            'fixed',
-            parseFloat(auction.startingPrice.toString()),
-            undefined,
-            fixedAmount,
-            {
-              minDepositAmount: depositConfig.minDepositAmount
-                ? parseFloat(depositConfig.minDepositAmount.toString())
-                : undefined,
-              maxDepositAmount: depositConfig.maxDepositAmount
-                ? parseFloat(depositConfig.maxDepositAmount.toString())
-                : undefined,
-            }
-          );
+      // Get min deposit amount from system variables
+      const minDepositAmount = await this.sysVars.get<number>(
+        'deposit',
+        'deposit.min_amount'
+      );
+
+      depositAmount = await this.calculateDepositAmount(
+        'percentage',
+        parseFloat(auction.startingPrice.toString()),
+        depositPercentage,
+        undefined,
+        {
+          minDepositAmount,
+          maxDepositAmount: undefined,
         }
-      } else {
-        // Fallback for auctions without policy (backward compatibility)
-        depositPercentage = parseFloat(
-          auction.depositPercentage?.toString() || '10'
-        );
-        depositAmount = Math.round(
-          (parseFloat(auction.startingPrice.toString()) * depositPercentage) /
-            100
-        );
-      }
+      );
 
       // 4. Get Total Auction Costs
       const totalAuctionCosts = auction.costs
@@ -496,8 +495,9 @@ export class PolicyCalculationService {
 
   /**
    * Calculate deposit amount based on policy configuration
+   * Uses system variables for constraints
    */
-  calculateDepositAmount(
+  async calculateDepositAmount(
     depositType: 'percentage' | 'fixed',
     startingPrice: number,
     percentage?: number,
@@ -506,7 +506,7 @@ export class PolicyCalculationService {
       minDepositAmount?: number;
       maxDepositAmount?: number;
     }
-  ): number {
+  ): Promise<number> {
     // ✅ FIX: Validate starting price
     this.validateFinancialValue(startingPrice, 'Starting price');
 

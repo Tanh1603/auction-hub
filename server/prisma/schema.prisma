@@ -380,6 +380,26 @@ model AuctionFinancialSummary {
 }
 
 // ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+model SystemVariable {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category    String   @db.VarChar(100)  // "deposit", "commission", "dossier", "general"
+  key         String   @db.VarChar(255)  // "deposit.general.min_percentage"
+  value       String   @db.Text          // Stored as string, parsed by type
+  dataType    String   @default("string") @map("data_type") @db.VarChar(20)  // "number", "boolean", "string", "json"
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([category, key])
+  @@index([category])
+  @@map("system_variables")
+}
+
+// ============================================
 // PARTICIPANTS
 // ============================================
 model AuctionParticipant {

@@ -298,6 +298,171 @@ async function main() {
 
     // Clean existing data (only runs if database is empty)
     console.log('🧹 Database is empty, proceeding with seed...');
+
+    // ========================================
+    // SEED SYSTEM VARIABLES FIRST
+    // ========================================
+    console.log('\n⚙️  Seeding system variables...');
+
+    const systemVariables = [
+      // Deposit variables
+      {
+        category: 'deposit',
+        key: 'deposit.general.min_percentage',
+        value: '5',
+        dataType: 'number',
+        description: 'Minimum deposit % for general assets (Circular 48/2017)',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.general.max_percentage',
+        value: '20',
+        dataType: 'number',
+        description: 'Maximum deposit % for general assets (Circular 48/2017)',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.land.min_percentage',
+        value: '10',
+        dataType: 'number',
+        description: 'Minimum deposit % for land use rights (Circular 48/2017)',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.land.max_percentage',
+        value: '20',
+        dataType: 'number',
+        description: 'Maximum deposit % for land use rights (Circular 48/2017)',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.min_amount',
+        value: '1000000',
+        dataType: 'number',
+        description: 'Absolute minimum deposit amount in VND',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.deadline_hours',
+        value: '24',
+        dataType: 'number',
+        description:
+          'Hours before auction start to pay deposit (Circular 48/2017)',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.refund_deadline_days',
+        value: '3',
+        dataType: 'number',
+        description:
+          'Working days to process deposit refund (Circular 48/2017)',
+      },
+      {
+        category: 'deposit',
+        key: 'deposit.requires_documents',
+        value: 'true',
+        dataType: 'boolean',
+        description: 'Whether documents are required for deposit payment',
+      },
+
+      // Commission variables
+      {
+        category: 'commission',
+        key: 'commission.min_amount',
+        value: '1000000',
+        dataType: 'number',
+        description:
+          'Minimum commission amount in VND (Circular 45/2017, 108/2020)',
+      },
+      {
+        category: 'commission',
+        key: 'commission.max_amount',
+        value: '400000000',
+        dataType: 'number',
+        description:
+          'Maximum commission amount in VND (Circular 45/2017, 108/2020)',
+      },
+
+      // Dossier fee variables
+      {
+        category: 'dossier',
+        key: 'dossier.tier1_max',
+        value: '200000000',
+        dataType: 'number',
+        description:
+          'Tier 1 starting price limit (up to 200M VND) - Circular 48/2017',
+      },
+      {
+        category: 'dossier',
+        key: 'dossier.tier1_fee',
+        value: '100000',
+        dataType: 'number',
+        description:
+          'Tier 1 maximum dossier fee (100,000 VND) - Circular 48/2017',
+      },
+      {
+        category: 'dossier',
+        key: 'dossier.tier2_max',
+        value: '500000000',
+        dataType: 'number',
+        description:
+          'Tier 2 starting price limit (200M-500M VND) - Circular 48/2017',
+      },
+      {
+        category: 'dossier',
+        key: 'dossier.tier2_fee',
+        value: '200000',
+        dataType: 'number',
+        description:
+          'Tier 2 maximum dossier fee (200,000 VND) - Circular 48/2017',
+      },
+      {
+        category: 'dossier',
+        key: 'dossier.tier3_fee',
+        value: '500000',
+        dataType: 'number',
+        description:
+          'Tier 3+ maximum dossier fee (500,000 VND, 500M+ starting price) - Circular 48/2017',
+      },
+
+      // General variables
+      {
+        category: 'general',
+        key: 'general.currency',
+        value: 'VND',
+        dataType: 'string',
+        description: 'System currency code',
+      },
+      {
+        category: 'general',
+        key: 'general.timezone',
+        value: 'Asia/Ho_Chi_Minh',
+        dataType: 'string',
+        description: 'System timezone',
+      },
+      {
+        category: 'general',
+        key: 'general.vat_rate',
+        value: '0.1',
+        dataType: 'number',
+        description: 'VAT rate (10%)',
+      },
+    ];
+
+    for (const variable of systemVariables) {
+      await prisma.systemVariable.upsert({
+        where: {
+          category_key: {
+            category: variable.category,
+            key: variable.key,
+          },
+        },
+        create: variable,
+        update: { value: variable.value },
+      });
+    }
+
+    console.log(`✅ Seeded ${systemVariables.length} system variables`);
     console.log('🧹 Cleaning any leftover data...');
     await prisma.$transaction([
       // Delete in correct order to respect foreign key constraints
