@@ -52,8 +52,6 @@ async function main() {
     assetDescription: item.assetDescription,
     assetAddress: item.assetAddress,
     isActive: true,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
     validCheckInBeforeStartMinutes: item.validCheckInBeforeStartMinutes,
     validCheckInAfterStartMinutes: item.validCheckInAfterStartMinutes,
     depositEndAt: item.depositEndAt ? new Date(item.depositEndAt) : null,
