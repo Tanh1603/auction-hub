@@ -12,6 +12,7 @@ import { CommonModule } from '../common/common.module';
 import { AuctionFinalizationModule } from '../feature/auction-finalization/auction-finalization.module';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { AuctionPolicyModule } from '../feature/auction-policy/auction-policy.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuctionPolicyModule } from '../feature/auction-policy/auction-policy.mo
     BiddingModule,
     AuctionFinalizationModule,
     AuctionPolicyModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [

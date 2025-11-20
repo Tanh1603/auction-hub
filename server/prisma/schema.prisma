@@ -5,8 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider      = "prisma-client-js"
-  output        = ".././generated"
+  provider = "prisma-client-js"
+  output   = ".././generated"
 }
 
 datasource db {
@@ -69,65 +69,65 @@ model User {
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
-  ownedAuctions           Auction[]            @relation("AuctionOwner")
-  participations          AuctionParticipant[]
-  deniedBids              AuctionBid[]         @relation("BidDenier")
-  contractsAsPropertyOwner Contract[]          @relation("ContractPropertyOwner")
-  contractsAsBuyer        Contract[]           @relation("ContractBuyer")
-  contractsCreated        Contract[]           @relation("ContractCreator")
-  auditLogs               AuctionAuditLog[]    @relation("AuditPerformer")
-  payments                Payment[]
-  documentsVerified       AuctionParticipant[] @relation("DocumentVerifier")
-  registrationsConfirmed  AuctionParticipant[] @relation("RegistrationConfirmer")
+  ownedAuctions            Auction[]            @relation("AuctionOwner")
+  participations           AuctionParticipant[]
+  deniedBids               AuctionBid[]         @relation("BidDenier")
+  contractsAsPropertyOwner Contract[]           @relation("ContractPropertyOwner")
+  contractsAsBuyer         Contract[]           @relation("ContractBuyer")
+  contractsCreated         Contract[]           @relation("ContractCreator")
+  auditLogs                AuctionAuditLog[]    @relation("AuditPerformer")
+  payments                 Payment[]
+  documentsVerified        AuctionParticipant[] @relation("DocumentVerifier")
+  registrationsConfirmed   AuctionParticipant[] @relation("RegistrationConfirmer")
 
   @@map("users")
 }
 
 // AUCTIONS
 model Auction {
-  id                              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  propertyOwner                   String        @map("property_owner") @db.Uuid
-  name                            String        @db.VarChar(255)
-  code                            String        @db.VarChar(55) @unique
-  saleStartAt                     DateTime      @map("sale_start_at") @db.Timestamptz(6)
-  saleEndAt                       DateTime      @map("sale_end_at") @db.Timestamptz(6)
-  saleFee                         Decimal       @map("sale_fee") @db.Decimal(18, 2)
-  viewTime                        String        @map("view_time") @db.VarChar(100)
-  depositEndAt                    DateTime      @map("deposit_end_at") @db.Timestamptz(6)
-  depositAmountRequired           Decimal       @map("deposit_amount_required") @db.Decimal(18, 2)
-  auctionStartAt                  DateTime      @map("auction_start_at") @db.Timestamptz(6)
-  auctionEndAt                    DateTime      @map("auction_end_at") @db.Timestamptz(6)
-  assetDescription                String        @map("asset_description") @db.Text
-  assetAddress                    String        @map("asset_address") @db.VarChar(255)
-  validCheckInBeforeStartMinutes  Int           @map("valid_check_in_before_start_minutes")
-  validCheckInAfterStartMinutes   Int           @map("valid_check_in_after_start_minutes")
-  startingPrice                   Decimal       @map("starting_price") @db.Decimal(18, 2)
-  reservePrice                    Decimal?      @map("reserve_price") @db.Decimal(18, 2)
-  bidIncrement                    Decimal       @map("bid_increment") @db.Decimal(18, 2)
-  hasMaxBidSteps                  Boolean       @map("has_max_bid_steps")
-  maxBidSteps                     Int?          @map("max_bid_steps")
-  isActive                        Boolean       @map("is_active")
-  assetType                       AssetType     @map("asset_type")
-  numberOfFollow                  Int           @default(0) @map("number_of_follow")
-  status                          AuctionStatus @default(scheduled)
+  id                             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyOwner                  String        @map("property_owner") @db.Uuid
+  name                           String        @db.VarChar(255)
+  code                           String        @unique @db.VarChar(55)
+  saleStartAt                    DateTime      @map("sale_start_at") @db.Timestamptz(6)
+  saleEndAt                      DateTime      @map("sale_end_at") @db.Timestamptz(6)
+  saleFee                        Decimal       @map("sale_fee") @db.Decimal(18, 2)
+  viewTime                       String        @map("view_time") @db.VarChar(100)
+  depositEndAt                   DateTime      @map("deposit_end_at") @db.Timestamptz(6)
+  depositAmountRequired          Decimal       @map("deposit_amount_required") @db.Decimal(18, 2)
+  auctionStartAt                 DateTime      @map("auction_start_at") @db.Timestamptz(6)
+  auctionEndAt                   DateTime      @map("auction_end_at") @db.Timestamptz(6)
+  assetDescription               String        @map("asset_description") @db.Text
+  assetAddress                   String        @map("asset_address") @db.VarChar(255)
+  validCheckInBeforeStartMinutes Int           @map("valid_check_in_before_start_minutes")
+  validCheckInAfterStartMinutes  Int           @map("valid_check_in_after_start_minutes")
+  startingPrice                  Decimal       @map("starting_price") @db.Decimal(18, 2)
+  reservePrice                   Decimal?      @map("reserve_price") @db.Decimal(18, 2)
+  bidIncrement                   Decimal       @map("bid_increment") @db.Decimal(18, 2)
+  hasMaxBidSteps                 Boolean       @map("has_max_bid_steps")
+  maxBidSteps                    Int?          @map("max_bid_steps")
+  isActive                       Boolean       @default(true) @map("is_active")
+  assetType                      AssetType     @map("asset_type")
+  numberOfFollow                 Int           @default(0) @map("number_of_follow")
+  status                         AuctionStatus @default(scheduled)
 
   // Fees set by admin (validated against policy)
-  dossierFee                      Decimal?      @map("dossier_fee") @db.Decimal(18, 2)
-  depositPercentage               Decimal?      @map("deposit_percentage") @db.Decimal(5, 2)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  dossierFee        Decimal?  @map("dossier_fee") @db.Decimal(18, 2)
+  depositPercentage Decimal?  @map("deposit_percentage") @db.Decimal(5, 2)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  owner                User                        @relation("AuctionOwner", fields: [propertyOwner], references: [id])
-  images               AuctionImage[]
-  attachments          AuctionAttachment[]
-  participants         AuctionParticipant[]
-  bids                 AuctionBid[]
-  contracts            Contract[]
-  auditLogs            AuctionAuditLog[]
-  relatedFrom          AuctionRelation[]           @relation("AuctionRelationFrom")
-  relatedTo            AuctionRelation[]           @relation("AuctionRelationTo")
-  costs                AuctionCost?
-  financialSummary     AuctionFinancialSummary?
+  owner            User                    @relation("AuctionOwner", fields: [propertyOwner], references: [id])
+  images           AuctionImage[]
+  attachments      AuctionAttachment[]
+  participants     AuctionParticipant[]
+  bids             AuctionBid[]
+  contracts        Contract[]
+  auditLogs        AuctionAuditLog[]
+  relatedFrom      AuctionRelation[]       @relation("AuctionRelationFrom")
+  relatedTo        AuctionRelation[]       @relation("AuctionRelationTo")
+  costs            AuctionCost?
+  financialSummary AuctionFinancialSummary?
 
   @@map("auctions")
 }
@@ -319,12 +319,12 @@ model AuctionParticipant {
   withdrawalReason        String?   @map("withdrawal_reason") @db.VarChar(500)
 
   // Relations
-  user                   User              @relation(fields: [userId], references: [id])
-  auction                Auction           @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  bids                   AuctionBid[]
-  autoBidSettings        AutoBidSetting[]
-  documentsVerifier      User?             @relation("DocumentVerifier", fields: [documentsVerifiedBy], references: [id])
-  confirmer              User?             @relation("RegistrationConfirmer", fields: [confirmedBy], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+  auction           Auction          @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  bids              AuctionBid[]
+  autoBidSettings   AutoBidSetting[]
+  documentsVerifier User?            @relation("DocumentVerifier", fields: [documentsVerifiedBy], references: [id])
+  confirmer         User?            @relation("RegistrationConfirmer", fields: [confirmedBy], references: [id])
 
   @@unique([auctionId, userId])
   @@map("auction_participants")
@@ -385,19 +385,19 @@ model AutoBidSetting {
 // CONTRACTS
 // ============================================
 model Contract {
-  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId          String         @map("auction_id") @db.Uuid
-  winningBidId       String         @map("winning_bid_id") @db.Uuid
-  propertyOwnerUserId String        @map("property_owner_user_id") @db.Uuid
-  buyerUserId        String         @map("buyer_user_id") @db.Uuid
-  createdBy          String         @map("created_by") @db.Uuid
-  price              Decimal        @db.Decimal(18, 2)
-  status             ContractStatus
-  signedAt           DateTime?      @map("signed_at") @db.Timestamptz(6)
-  cancelledAt        DateTime?      @map("cancelled_at") @db.Timestamptz(6)
-  docUrl             String?        @map("doc_url") @db.VarChar(1000)
-  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId           String         @map("auction_id") @db.Uuid
+  winningBidId        String         @map("winning_bid_id") @db.Uuid
+  propertyOwnerUserId String         @map("property_owner_user_id") @db.Uuid
+  buyerUserId         String         @map("buyer_user_id") @db.Uuid
+  createdBy           String         @map("created_by") @db.Uuid
+  price               Decimal        @db.Decimal(18, 2)
+  status              ContractStatus
+  signedAt            DateTime?      @map("signed_at") @db.Timestamptz(6)
+  cancelledAt         DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  docUrl              String?        @map("doc_url") @db.VarChar(1000)
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   auction       Auction    @relation(fields: [auctionId], references: [id])
@@ -422,16 +422,16 @@ enum ContractStatus {
 // AUDIT LOGS
 // ============================================
 model AuctionAuditLog {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId      String        @map("auction_id") @db.Uuid
-  performedBy    String        @map("performed_by") @db.Uuid
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId      String         @map("auction_id") @db.Uuid
+  performedBy    String         @map("performed_by") @db.Uuid
   action         AuditAction
   previousStatus AuctionStatus? @map("previous_status")
   newStatus      AuctionStatus? @map("new_status")
-  reason         String?       @db.Text
-  notes          String?       @db.Text
+  reason         String?        @db.Text
+  notes          String?        @db.Text
   metadata       Json?
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Relations
   auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
