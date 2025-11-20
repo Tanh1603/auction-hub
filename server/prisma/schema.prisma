@@ -60,19 +60,19 @@ model User {
   isVerified      Boolean   @default(false) @map("is_verified")
   isBanned        Boolean   @default(false) @map("is_banned")
   banReason       String?   @map("ban_reason") @db.Text
-  bannedAt        DateTime? @map("banned_at") @db.Timestamp
-  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamp
+  bannedAt        DateTime? @map("banned_at") @db.Timestamptz(6)
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
   ratingScore     Decimal   @default(5.00) @map("rating_score") @db.Decimal(3, 2)
   totalRatings    Int       @default(0) @map("total_ratings")
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
-  deletedAt       DateTime? @map("deleted_at") @db.Timestamp
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
   ownedAuctions           Auction[]            @relation("AuctionOwner")
   participations          AuctionParticipant[]
   deniedBids              AuctionBid[]         @relation("BidDenier")
-  contractsAsSeller       Contract[]           @relation("ContractSeller")
+  contractsAsPropertyOwner Contract[]          @relation("ContractPropertyOwner")
   contractsAsBuyer        Contract[]           @relation("ContractBuyer")
   contractsCreated        Contract[]           @relation("ContractCreator")
   auditLogs               AuctionAuditLog[]    @relation("AuditPerformer")
@@ -243,14 +243,14 @@ model AuctionFinancialSummary {
   depositAmount         Decimal   @map("deposit_amount") @db.Decimal(18, 2)
 
   // Costs
-  totalAuctionCosts     Decimal   @map("total_auction_costs") @db.Decimal(18, 2)
+  totalAuctionCosts        Decimal   @map("total_auction_costs") @db.Decimal(18, 2)
 
   // Totals
-  totalFeesToSeller     Decimal   @map("total_fees_to_seller") @db.Decimal(18, 2) // Commission + Costs
-  netAmountToSeller     Decimal   @map("net_amount_to_seller") @db.Decimal(18, 2) // FinalPrice - TotalFees
+  totalFeesToPropertyOwner Decimal   @map("total_fees_to_property_owner") @db.Decimal(18, 2) // Commission + Costs
+  netAmountToPropertyOwner Decimal   @map("net_amount_to_property_owner") @db.Decimal(18, 2) // FinalPrice - TotalFees
 
   // Calculation breakdown (JSON for transparency)
-  calculationDetails    Json      @map("calculation_details")
+  calculationDetails       Json      @map("calculation_details")
 
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -385,26 +385,26 @@ model AutoBidSetting {
 // CONTRACTS
 // ============================================
 model Contract {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId     String         @map("auction_id") @db.Uuid
-  winningBidId  String         @map("winning_bid_id") @db.Uuid
-  sellerUserId  String         @map("seller_user_id") @db.Uuid
-  buyerUserId   String         @map("buyer_user_id") @db.Uuid
-  createdBy     String         @map("created_by") @db.Uuid
-  price         Decimal        @db.Decimal(18, 2)
-  status        ContractStatus
-  signedAt      DateTime?      @map("signed_at") @db.Timestamptz(6)
-  cancelledAt   DateTime?      @map("cancelled_at") @db.Timestamptz(6)
-  docUrl        String?        @map("doc_url") @db.VarChar(1000)
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId          String         @map("auction_id") @db.Uuid
+  winningBidId       String         @map("winning_bid_id") @db.Uuid
+  propertyOwnerUserId String        @map("property_owner_user_id") @db.Uuid
+  buyerUserId        String         @map("buyer_user_id") @db.Uuid
+  createdBy          String         @map("created_by") @db.Uuid
+  price              Decimal        @db.Decimal(18, 2)
+  status             ContractStatus
+  signedAt           DateTime?      @map("signed_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  docUrl             String?        @map("doc_url") @db.VarChar(1000)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  auction    Auction    @relation(fields: [auctionId], references: [id])
-  winningBid AuctionBid @relation(fields: [winningBidId], references: [id])
-  seller     User       @relation("ContractSeller", fields: [sellerUserId], references: [id])
-  buyer      User       @relation("ContractBuyer", fields: [buyerUserId], references: [id])
-  creator    User       @relation("ContractCreator", fields: [createdBy], references: [id])
+  auction       Auction    @relation(fields: [auctionId], references: [id])
+  winningBid    AuctionBid @relation(fields: [winningBidId], references: [id])
+  propertyOwner User       @relation("ContractPropertyOwner", fields: [propertyOwnerUserId], references: [id])
+  buyer         User       @relation("ContractBuyer", fields: [buyerUserId], references: [id])
+  creator       User       @relation("ContractCreator", fields: [createdBy], references: [id])
 
   @@map("contracts")
 }
@@ -470,11 +470,11 @@ model Payment {
   transactionId  String?        @map("transaction_id") @db.VarChar(100)
   bankCode       String?        @map("bank_code") @db.VarChar(50)
   paymentDetails Json?          @map("payment_details")
-  paidAt         DateTime?      @map("paid_at") @db.Timestamp
-  refundedAt     DateTime?      @map("refunded_at") @db.Timestamp
+  paidAt         DateTime?      @map("paid_at") @db.Timestamptz(6)
+  refundedAt     DateTime?      @map("refunded_at") @db.Timestamptz(6)
   refundReason   String?        @map("refund_reason") @db.Text
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamp
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id])
 

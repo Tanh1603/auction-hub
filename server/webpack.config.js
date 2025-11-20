@@ -27,6 +27,11 @@ module.exports = {
           input: './generated',
           output: './generated',
         },
+        {
+          glob: '**/*.hbs',
+          input: './src/common/email/templates',
+          output: './templates',
+        },
       ],
       optimization: false,
       outputHashing: 'none',

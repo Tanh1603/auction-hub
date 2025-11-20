@@ -477,11 +477,7 @@ async function main() {
       prisma.auctionRelation.deleteMany(),
       prisma.auctionAttachment.deleteMany(),
       prisma.auctionImage.deleteMany(),
-      prisma.depositPolicyConfig.deleteMany(),
-      prisma.dossierFeePolicyConfig.deleteMany(),
-      prisma.commissionPolicyConfig.deleteMany(),
       prisma.auction.deleteMany(),
-      prisma.auctionPolicy.deleteMany(),
       prisma.user.deleteMany(), // Delete users last
     ]);
 
@@ -504,150 +500,6 @@ async function main() {
       );
     }
 
-    // Create Auction Policies
-    console.log('📋 Creating auction policies...');
-
-    // Default State-Owned Policy
-    const stateOwnedPolicy = await prisma.auctionPolicy.create({
-      data: {
-        name: 'Chính sách đấu giá tài sản nhà nước',
-        description:
-          'Chính sách mặc định cho đấu giá tài sản nhà nước theo quy định',
-        assetOwnership: 'state_owned',
-        isActive: true,
-        isDefault: true,
-        commissionConfig: {
-          create: {
-            assetCategory: 'general',
-            tiers: JSON.stringify([
-              { from: 0, to: 50000000, rate: 0.05, baseAmount: 0 },
-              {
-                from: 50000000,
-                to: 100000000,
-                rate: 0.04,
-                baseAmount: 2500000,
-              },
-              {
-                from: 100000000,
-                to: 500000000,
-                rate: 0.03,
-                baseAmount: 4500000,
-              },
-              {
-                from: 500000000,
-                to: 1000000000,
-                rate: 0.02,
-                baseAmount: 16500000,
-              },
-              { from: 1000000000, to: null, rate: 0.01, baseAmount: 26500000 },
-            ]),
-            minCommission: 1000000,
-            maxCommission: 400000000,
-          },
-        },
-        dossierConfig: {
-          create: {
-            feeTiers: JSON.stringify([
-              { startPriceFrom: 0, startPriceTo: 200000000, maxFee: 100000 },
-              {
-                startPriceFrom: 200000000,
-                startPriceTo: 500000000,
-                maxFee: 300000,
-              },
-              {
-                startPriceFrom: 500000000,
-                startPriceTo: 1000000000,
-                maxFee: 500000,
-              },
-              {
-                startPriceFrom: 1000000000,
-                startPriceTo: null,
-                maxFee: 1000000,
-              },
-            ]),
-          },
-        },
-        depositConfig: {
-          create: {
-            depositType: 'percentage',
-            assetCategory: 'general',
-            minPercentage: 5,
-            maxPercentage: 20,
-            depositDeadlineHours: 24,
-            requiresDocuments: true,
-            requiredDocumentTypes: JSON.stringify([
-              'identity_card',
-              'financial_proof',
-            ]),
-            refundDeadlineDays: 3,
-          },
-        },
-      },
-      include: {
-        commissionConfig: true,
-        dossierConfig: true,
-        depositConfig: true,
-      },
-    });
-    console.log(`  ✓ Created state-owned policy`);
-
-    // Private Asset Policy
-    const privatePolicy = await prisma.auctionPolicy.create({
-      data: {
-        name: 'Chính sách đấu giá tài sản tư nhân',
-        description: 'Chính sách linh hoạt cho đấu giá tài sản tư nhân',
-        assetOwnership: 'private',
-        isActive: true,
-        isDefault: false,
-        commissionConfig: {
-          create: {
-            assetCategory: 'general',
-            tiers: JSON.stringify([
-              { from: 0, to: 100000000, rate: 0.03, baseAmount: 0 },
-              {
-                from: 100000000,
-                to: 500000000,
-                rate: 0.02,
-                baseAmount: 3000000,
-              },
-              { from: 500000000, to: null, rate: 0.015, baseAmount: 11000000 },
-            ]),
-            minCommission: 500000,
-            maxCommission: 300000000,
-          },
-        },
-        dossierConfig: {
-          create: {
-            feeTiers: JSON.stringify([
-              { startPriceFrom: 0, startPriceTo: 500000000, maxFee: 200000 },
-              { startPriceFrom: 500000000, startPriceTo: null, maxFee: 500000 },
-            ]),
-          },
-        },
-        depositConfig: {
-          create: {
-            depositType: 'percentage',
-            assetCategory: 'general',
-            minPercentage: 10,
-            maxPercentage: 20,
-            depositDeadlineHours: 48,
-            requiresDocuments: true,
-            requiredDocumentTypes: JSON.stringify([
-              'identity_card',
-              'financial_proof',
-            ]),
-            refundDeadlineDays: 5,
-          },
-        },
-      },
-      include: {
-        commissionConfig: true,
-        dossierConfig: true,
-        depositConfig: true,
-      },
-    });
-    console.log(`  ✓ Created private policy`);
-
     // Create auctions
     console.log('🏛️ Creating auctions...');
     const auctions = {};
@@ -656,7 +508,6 @@ async function main() {
         data: {
           ...auctionData,
           propertyOwner: users.auctioneer.id,
-          auctionPolicyId: stateOwnedPolicy.id, // Link to policy
         },
       });
       auctions[auctionData.code] = auction;
@@ -1408,7 +1259,7 @@ async function main() {
     console.log('\n✅ Comprehensive seed completed successfully!');
     console.log('\n📊 Summary:');
     console.log(`   👥 Users: ${sampleUsers.length}`);
-    console.log(`   📋 Auction Policies: 2 (state-owned + private)`);
+    console.log(`   ⚙️ System Variables: Seeded`);
     console.log(`   🏛️ Auctions: ${sampleAuctions.length}`);
     console.log('   📸 Images: Added to all auctions');
     console.log('   📎 Attachments: Added to all auctions');
