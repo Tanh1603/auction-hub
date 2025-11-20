@@ -1,3 +1,4 @@
+/* eslint-disable @nx/enforce-module-boundaries */
 // /* eslint-disable @typescript-eslint/no-explicit-any */
 // import {
 //   AuctionStatus,

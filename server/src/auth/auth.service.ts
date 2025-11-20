@@ -49,7 +49,7 @@ export class AuthService {
       const localUser = await this.prisma.user.create({
         data: {
           id: newSupabaseUser.id, // Use Supabase user ID
-          email: newSupabaseUser.email!,
+          email: newSupabaseUser.email || request.email,
           phoneNumber: request.phone_number,
           fullName: request.full_name || '',
           identityNumber: request.identity_number,

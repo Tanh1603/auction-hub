@@ -104,7 +104,7 @@ export class PaymentService {
       const payment: Payment = {
         payment_id: session.id,
         amount: paymentRequest.amount,
-        currency: 'VND', // ✅ FIX: Match Stripe session currency
+        currency: 'VND',
         status: session.payment_status || 'unpaid',
         payment_url: session.url,
         qr_code: qrCodeDataUrl,
@@ -124,8 +124,7 @@ export class PaymentService {
   async verifyPayment(sessionId: string): Promise<PaymentVerificationDto> {
     try {
       const session = await this.stripe.checkout.sessions.retrieve(sessionId);
-
-      // ✅ FIX: Enhanced logging for debugging payment verification
+      
       console.log('[PAYMENT VERIFICATION]', {
         sessionId: session.id,
         payment_status: session.payment_status,

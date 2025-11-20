@@ -5,12 +5,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
+import { PaymentModule } from '../payment/payment.module';
 import { AuctionModule } from '../auctions/auction.module';
 import { BiddingModule } from '../feature/bidding/bidding.module';
 import { CommonModule } from '../common/common.module';
 import { AuctionFinalizationModule } from '../feature/auction-finalization/auction-finalization.module';
 import { AuthGuard } from '../common/guards/auth.guard';
-import { PaymentModule } from '../payment/payment.module';
 import { AuctionPolicyModule } from '../feature/auction-policy/auction-policy.module';
 
 @Module({
@@ -22,10 +22,10 @@ import { AuctionPolicyModule } from '../feature/auction-policy/auction-policy.mo
     CommonModule,
     PrismaModule,
     AuthModule,
+    PaymentModule,
     AuctionModule,
     BiddingModule,
     AuctionFinalizationModule,
-    PaymentModule,
     AuctionPolicyModule,
   ],
   controllers: [AppController],
