@@ -1,4 +1,4 @@
-import { Decimal } from '../../../generated/runtime/library';
+import { Decimal, JsonValue } from '../../../generated/runtime/library';
 
 export class AuctionDetailDto {
   id: string;
@@ -8,6 +8,7 @@ export class AuctionDetailDto {
   assetType: string;
   assetAddress: string;
   assetDescription: string;
+  viewTime: string;
 
   saleStartAt: Date;
   saleEndAt: Date;
@@ -24,13 +25,17 @@ export class AuctionDetailDto {
     id: string;
     fullName: string;
     email: string;
+    avatarUrl: string;
   };
 
-  images: { url: string; sortOrder: number }[];
-  attachments: { url: string; type: string }[];
-  related: { id: string; name: string; code: string }[];
-
-  participantCount: number;
-  bidCount: number;
-  highestBid?: Decimal;
+  images: JsonValue;
+  attachments: JsonValue;
+  relatedAuctions: {
+    id: string;
+    name: string;
+    images: JsonValue;
+    startingPrice: Decimal;
+    depositAmountRequired: Decimal;
+    saleStartAt: Date;
+  }[];
 }
