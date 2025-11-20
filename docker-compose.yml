@@ -46,7 +46,7 @@ services:
       - auction-hub-network
     command: >
       sh -c "
-        npx prisma db push --schema=server/prisma/schema.prisma &&
+        node node_modules/.bin/prisma db push --schema=server/prisma/schema.prisma &&
         (cd server/prisma && node comprehensive-seed.js || true) &&
         cd /app && node dist/server/main.js
       "

@@ -111,9 +111,6 @@ model Auction {
   numberOfFollow                  Int           @default(0) @map("number_of_follow")
   status                          AuctionStatus @default(scheduled)
 
-  // Policy configuration
-  auctionPolicyId                 String?       @map("auction_policy_id") @db.Uuid
-
   // Fees set by admin (validated against policy)
   dossierFee                      Decimal?      @map("dossier_fee") @db.Decimal(18, 2)
   depositPercentage               Decimal?      @map("deposit_percentage") @db.Decimal(5, 2)
@@ -121,7 +118,6 @@ model Auction {
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   owner                User                        @relation("AuctionOwner", fields: [propertyOwner], references: [id])
-  auctionPolicy        AuctionPolicy?              @relation(fields: [auctionPolicyId], references: [id])
   images               AuctionImage[]
   attachments          AuctionAttachment[]
   participants         AuctionParticipant[]
@@ -202,120 +198,6 @@ model AuctionRelation {
 
   @@id([auctionId, relatedAuctionId])
   @@map("auction_relations")
-}
-
-// ============================================
-// AUCTION POLICY HUB (Comprehensive Policy System)
-// ============================================
-
-// Auction ownership/asset type classification
-enum AssetOwnership {
-  state_owned    // Mandatory compliance with all regulations
-  private        // Flexible, can override default rules
-
-  @@map("asset_ownership")
-}
-
-// Main Policy Hub - Contains all auction-related policies
-model AuctionPolicy {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name              String          @db.VarChar(255)
-  description       String?         @db.Text
-  assetOwnership    AssetOwnership  @default(state_owned) @map("asset_ownership")
-  isActive          Boolean         @default(true) @map("is_active")
-  isDefault         Boolean         @default(false) @map("is_default")
-  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Related policy configurations
-  commissionConfig  CommissionPolicyConfig?
-  dossierConfig     DossierFeePolicyConfig?
-  depositConfig     DepositPolicyConfig?
-
-  // Relations
-  auctions          Auction[]
-
-  @@map("auction_policies")
-}
-
-// Commission/Remuneration Policy (Module 1)
-// Tiered calculation based on final sale price
-model CommissionPolicyConfig {
-  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  policyId          String        @unique @map("policy_id") @db.Uuid
-  assetCategory     String        @default("general") @db.VarChar(50) // "general" or "land_use_right"
-
-  // Tier definitions (stored as JSON for flexibility)
-  // Example: [{ "from": 0, "to": 50000000, "rate": 0.05, "baseAmount": 0 }]
-  tiers             Json
-
-  // Min and max commission
-  minCommission     Decimal       @default(1000000) @map("min_commission") @db.Decimal(18, 2)
-  maxCommission     Decimal       @default(400000000) @map("max_commission") @db.Decimal(18, 2)
-
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  policy            AuctionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
-
-  @@map("commission_policy_configs")
-}
-
-// Dossier Fee Policy (Module 2)
-// Validation rules based on starting price
-model DossierFeePolicyConfig {
-  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  policyId          String        @unique @map("policy_id") @db.Uuid
-
-  // Fee tiers based on starting price
-  // Example: [{ "startPriceFrom": 0, "startPriceTo": 200000000, "maxFee": 100000 }]
-  feeTiers          Json          @map("fee_tiers")
-
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  policy            AuctionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
-
-  @@map("dossier_fee_policy_configs")
-}
-
-// Deposit Policy (Module 3)
-// Enhanced to support both percentage AND fixed deposits
-model DepositPolicyConfig {
-  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  policyId              String        @unique @map("policy_id") @db.Uuid
-
-  // Deposit type configuration
-  depositType           String        @default("percentage") @db.VarChar(20) // "percentage" or "fixed"
-
-  // For percentage-based deposits
-  assetCategory         String        @default("general") @db.VarChar(50) // "general" or "land_use_right"
-  minPercentage         Decimal       @default(5) @map("min_percentage") @db.Decimal(5, 2) // 5% for general, 10% for land
-  maxPercentage         Decimal       @default(20) @map("max_percentage") @db.Decimal(5, 2) // 20% for both
-
-  // For fixed-amount deposits
-  fixedAmount           Decimal?      @map("fixed_amount") @db.Decimal(18, 2) // Exact deposit amount
-
-  // Constraints (apply to both types)
-  minDepositAmount      Decimal?      @map("min_deposit_amount") @db.Decimal(18, 2)
-  maxDepositAmount      Decimal?      @map("max_deposit_amount") @db.Decimal(18, 2)
-
-  depositDeadlineHours  Int           @default(24) @map("deposit_deadline_hours")
-  requiresDocuments     Boolean       @default(true) @map("requires_documents")
-  requiredDocumentTypes Json?         @map("required_document_types")
-
-  // Refund/Forfeit rules (days)
-  refundDeadlineDays    Int           @default(3) @map("refund_deadline_days") // 3 working days
-
-  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  policy                AuctionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
-
-  @@map("deposit_policy_configs")
 }
 
 // Auction Costs (Module 4)

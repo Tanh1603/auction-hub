@@ -6,7 +6,7 @@
   {{#> details-box backgroundColor="#fef5e7" borderColor="#e74c3c"}}
     <h3>❌ Payment Unsuccessful</h3>
     <p>We were unable to process your <strong>{{#if (eq paymentType 'deposit')}}Deposit Payment{{else}}Winner Payment{{/if}}</strong> for auction <strong>{{auctionCode}}</strong>.</p>
-    <p><strong>Attempted Amount:</strong> {{attemptedAmount}} VND</p>
+    <p><strong>Attempted Amount:</strong> {{formatCurrency attemptedAmount}} VND</p>
     <p><strong>Reason:</strong> {{failureReason}}</p>
   {{/details-box}}
 

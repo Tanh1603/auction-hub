@@ -15,7 +15,7 @@
   {{/details-box}}
 
   {{#> details-box title="💰 Payment Information"}}
-    <p><strong>Total Paid:</strong> <span class="amount-highlight">{{totalPaid}} VND</span></p>
+    <p><strong>Total Paid:</strong> <span class="amount-highlight">{{formatCurrency totalPaid}} VND</span></p>
     <p><strong>Payment Date:</strong> {{formatDate paidAt}}</p>
     {{> badge type="success" icon="✅" text="PAYMENT VERIFIED"}}
   {{/details-box}}

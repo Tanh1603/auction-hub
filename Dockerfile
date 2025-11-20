@@ -27,7 +27,7 @@ COPY . .
 
 # Generate Prisma Client with custom output
 WORKDIR /app/server
-RUN npx prisma generate
+RUN node ../node_modules/.bin/prisma generate
 
 # Build the application
 WORKDIR /app
@@ -42,10 +42,15 @@ RUN npm install -g npm@latest
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
+RUN npm install --omit=dev --legacy-peer-deps && \
+    npm install prisma@6.17.1 --save-dev --legacy-peer-deps && \
+    npm cache clean --force
 
 # Copy built application from builder
 COPY --from=builder /app/dist/server ./dist/server
+
+# Copy email templates
+COPY --from=builder /app/server/src/common/email/templates ./dist/server/templates
 
 # Copy Prisma generated client
 COPY --from=builder /app/server/generated ./server/generated

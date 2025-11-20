@@ -14,7 +14,7 @@
     <p><strong>Result:</strong> No winner</p>
     {{/if}}
     {{#if winningAmount}}
-    <p><strong>Winning Amount:</strong> <span class="amount-highlight">${{winningAmount}}</span></p>
+    <p><strong>Winning Amount:</strong> <span class="amount-highlight">{{formatCurrency winningAmount}} VND</span></p>
     {{/if}}
     <p><strong>Total Bids Received:</strong> {{totalBids}}</p>
   {{/details-box}}

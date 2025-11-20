@@ -276,11 +276,10 @@ export class PolicyCalculationService {
 
       // 3. Calculate Deposit Amount (from auction data + system variables)
       let depositAmount = 0;
-      let depositPercentage: number | undefined;
-      const depositType: 'percentage' | 'fixed' = 'percentage';
+      const depositType = 'percentage' as const;
 
       // Use the deposit percentage set on the auction
-      depositPercentage = parseFloat(
+      const depositPercentage = parseFloat(
         auction.depositPercentage?.toString() || '10'
       );
 
@@ -327,16 +326,7 @@ export class PolicyCalculationService {
         },
         deposit: {
           type: depositType,
-          ...(depositType === 'percentage' && {
-            percentage: depositPercentage,
-          }),
-          ...(depositType === 'fixed' && {
-            fixedAmount: auction.auctionPolicy?.depositConfig?.fixedAmount
-              ? parseFloat(
-                  auction.auctionPolicy.depositConfig.fixedAmount.toString()
-                )
-              : undefined,
-          }),
+          percentage: depositPercentage,
           startingPrice: parseFloat(auction.startingPrice.toString()),
           amount: depositAmount,
         },
@@ -370,33 +360,31 @@ export class PolicyCalculationService {
       };
 
       // 7. Save or update financial summary
-      const financialSummary = await this.prisma.auctionFinancialSummary.upsert(
-        {
-          where: { auctionId },
-          create: {
-            auctionId,
-            finalSalePrice,
-            startingPrice: parseFloat(auction.startingPrice.toString()),
-            commissionFee,
-            dossierFee,
-            depositAmount,
-            totalAuctionCosts,
-            totalFeesToSeller,
-            netAmountToSeller,
-            calculationDetails: JSON.stringify(calculationDetails),
-          },
-          update: {
-            finalSalePrice,
-            commissionFee,
-            dossierFee,
-            depositAmount,
-            totalAuctionCosts,
-            totalFeesToSeller,
-            netAmountToSeller,
-            calculationDetails: JSON.stringify(calculationDetails),
-          },
-        }
-      );
+      await this.prisma.auctionFinancialSummary.upsert({
+        where: { auctionId },
+        create: {
+          auctionId,
+          finalSalePrice,
+          startingPrice: parseFloat(auction.startingPrice.toString()),
+          commissionFee,
+          dossierFee,
+          depositAmount,
+          totalAuctionCosts,
+          totalFeesToSeller,
+          netAmountToSeller,
+          calculationDetails: JSON.stringify(calculationDetails),
+        },
+        update: {
+          finalSalePrice,
+          commissionFee,
+          dossierFee,
+          depositAmount,
+          totalAuctionCosts,
+          totalFeesToSeller,
+          netAmountToSeller,
+          calculationDetails: JSON.stringify(calculationDetails),
+        },
+      });
 
       this.logger.log(`Financial summary calculated for auction ${auctionId}`);
 
@@ -562,12 +550,12 @@ export class PolicyCalculationService {
   /**
    * Validate deposit configuration
    */
-  validateDepositConfig(
+  async validateDepositConfig(
     depositType: 'percentage' | 'fixed',
     assetCategory?: string,
     percentage?: number,
     fixedAmount?: number
-  ): { valid: boolean; message?: string } {
+  ): Promise<{ valid: boolean; message?: string }> {
     if (depositType === 'percentage') {
       if (!assetCategory) {
         return {
@@ -584,7 +572,7 @@ export class PolicyCalculationService {
       }
 
       // Validate against asset category rules
-      const validation = this.validateDepositPercentage(
+      const validation = await this.validateDepositPercentage(
         percentage,
         assetCategory as 'general' | 'land_use_right'
       );

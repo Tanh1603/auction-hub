@@ -45,13 +45,7 @@ export class RegistrationPaymentService {
         where: { id: registrationId },
         include: {
           user: true,
-          auction: {
-            include: {
-              auctionPolicy: {
-                include: { depositConfig: true },
-              },
-            },
-          },
+          auction: true,
         },
       });
 
@@ -135,8 +129,19 @@ export class RegistrationPaymentService {
       // Verify payment with Stripe
       const verification = await this.paymentService.verifyPayment(sessionId);
 
+      // ✅ FIX: Enhanced logging for deposit payment verification
+      this.logger.log(
+        `[DEPOSIT VERIFICATION] Session ${sessionId}: ` +
+        `status='${verification.status}', ` +
+        `amount=${verification.amount}, ` +
+        `currency='${verification.currency}'`
+      );
+
       if (verification.status !== 'paid') {
-        throw new BadRequestException('Payment not completed yet');
+        this.logger.warn(
+          `[DEPOSIT VERIFICATION FAILED] Payment status is '${verification.status}', expected 'paid'`
+        );
+        throw new BadRequestException(`Payment not completed yet. Current status: ${verification.status}`);
       }
 
       // CRITICAL: Verify the received amount matches the expected deposit amount
@@ -145,15 +150,24 @@ export class RegistrationPaymentService {
       );
       const receivedAmount = verification.amount;
 
+      this.logger.log(
+        `[DEPOSIT AMOUNT CHECK] Expected: ${expectedAmount} VND, Received: ${receivedAmount} ${verification.currency}`
+      );
+
       if (receivedAmount < expectedAmount) {
         // Payment amount is insufficient
-        this.logger.warn(
-          `Payment verification failed for ${registrationId}. Expected ${expectedAmount}, but received ${receivedAmount}`
+        this.logger.error(
+          `[DEPOSIT VERIFICATION FAILED] Amount mismatch for ${registrationId}. ` +
+          `Expected ${expectedAmount} VND, but received ${receivedAmount} ${verification.currency}`
         );
         throw new BadRequestException(
-          `Payment received (${receivedAmount}) is less than the required deposit (${expectedAmount}). Please contact support.`
+          `Payment received (${receivedAmount} ${verification.currency}) is less than the required deposit (${expectedAmount} VND). Please contact support.`
         );
       }
+
+      this.logger.log(
+        `[DEPOSIT VERIFICATION SUCCESS] Amount verified: ${receivedAmount} ${verification.currency} >= ${expectedAmount} VND`
+      );
 
       // Find the payment record by transaction ID (Stripe session ID)
       const payment = await this.prisma.payment.findFirst({
@@ -168,7 +182,7 @@ export class RegistrationPaymentService {
       }
 
       // Update both payment and registration in a transaction
-      await this.prisma.$transaction(async (tx) => {
+      const updatedParticipant = await this.prisma.$transaction(async (tx) => {
         // Update payment status
         await tx.payment.update({
           where: { id: payment.id },
@@ -179,7 +193,7 @@ export class RegistrationPaymentService {
         });
 
         // Update registration with deposit info
-        await tx.auctionParticipant.update({
+        const updated = await tx.auctionParticipant.update({
           where: { id: registrationId },
           data: {
             depositPaidAt: new Date(),
@@ -187,7 +201,17 @@ export class RegistrationPaymentService {
             depositPaymentId: payment.id,
           },
         });
+
+        return updated;
       });
+
+      // LOG: Registration state AFTER payment verification
+      this.logger.log(
+        `[PAYMENT VERIFICATION SUCCESS] Registration ${registrationId}:` +
+        ` documentsVerifiedAt=${updatedParticipant.documentsVerifiedAt?.toISOString() || 'NULL'},` +
+        ` depositPaidAt=${updatedParticipant.depositPaidAt?.toISOString() || 'NULL'},` +
+        ` documentsVerifiedBy=${updatedParticipant.documentsVerifiedBy || 'NULL'}`
+      );
 
       this.logger.log(
         `Deposit payment verified for registration ${registrationId}. Session ID: ${sessionId}`
@@ -330,20 +354,20 @@ export class RegistrationPaymentService {
 
           // Check if deadline has passed
           if (now > deadlineDate) {
-            // Deadline expired - automatically reject registration
+            // Deadline expired - mark registration as needing re-submission
+            // IMPORTANT: Do NOT clear documentsVerifiedAt/documentsVerifiedBy
+            // The documents were already verified - only the payment deadline expired
             await this.prisma.auctionParticipant.update({
               where: { id: registrationId },
               data: {
-                documentsRejectedAt: new Date(),
-                documentsRejectedReason:
-                  'Payment deadline expired. Deposit not received within 24 hours.',
-                documentsVerifiedAt: null,
-                documentsVerifiedBy: null,
+                withdrawnAt: new Date(),
+                withdrawalReason:
+                  'Payment deadline expired. Deposit not received within 24 hours. Please re-register if you still wish to participate.',
               },
             });
 
             this.logger.error(
-              `Registration ${registrationId} automatically rejected due to expired payment deadline`
+              `Registration ${registrationId} automatically withdrawn due to expired payment deadline`
             );
 
             throw new BadRequestException(
@@ -363,7 +387,7 @@ export class RegistrationPaymentService {
             auctionCode: participant.auction.code,
             auctionName: participant.auction.name,
             paymentType: 'deposit',
-            attemptedAmount: depositAmount.toLocaleString(),
+            attemptedAmount: depositAmount.toString(), // Don't format here - let email template handle it
             failureReason: this.getPaymentFailureReason(verification.status),
             retryUrl: `${process.env.FRONTEND_URL}/auctions/${participant.auctionId}/payment/retry?paymentId=${paymentId}`,
             deadline: deadlineDate,
@@ -416,7 +440,7 @@ export class RegistrationPaymentService {
         recipientName: updated.user.fullName,
         auctionCode: updated.auction.code,
         auctionName: updated.auction.name,
-        depositAmount: verification.amount.toLocaleString(),
+        depositAmount: verification.amount.toString(), // Don't format here - let email template handle it
         paidAt: new Date(),
         awaitingApproval: true,
       });
@@ -439,7 +463,7 @@ export class RegistrationPaymentService {
           userEmail: updated.user.email,
           auctionCode: updated.auction.code,
           auctionName: updated.auction.name,
-          depositAmount: verification.amount.toLocaleString(),
+          depositAmount: verification.amount.toString(), // Don't format here - let email template handle it
           paidAt: new Date(),
           registrationId: registrationId,
         })

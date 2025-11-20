@@ -8,7 +8,7 @@
   <p>Great news! The winning bidder has completed the payment for auction <strong>{{auctionCode}}</strong>.</p>
 
   {{#> details-box title="💰 Payment Summary"}}
-    <p><strong>Total Amount Paid:</strong> <span class="amount-highlight">{{totalPaid}} VND</span></p>
+    <p><strong>Total Amount Paid:</strong> <span class="amount-highlight">{{formatCurrency totalPaid}} VND</span></p>
     <p><strong>Buyer:</strong> {{buyerName}}</p>
   {{/details-box}}
 

@@ -271,13 +271,7 @@ export class AdminApprovalService {
           where: { id: registrationId },
           include: {
             user: true,
-            auction: {
-              include: {
-                auctionPolicy: {
-                  include: { depositConfig: true },
-                },
-              },
-            },
+            auction: true,
           },
         });
 
@@ -313,7 +307,10 @@ export class AdminApprovalService {
         });
 
         this.logger.log(
-          `Documents verified for registration ${registrationId} by admin ${adminId}`
+          `[TIER 1 APPROVAL] Documents verified for registration ${registrationId} by admin ${adminId}.` +
+          ` State: documentsVerifiedAt=${updated.documentsVerifiedAt?.toISOString()},` +
+          ` documentsVerifiedBy=${updated.documentsVerifiedBy}.` +
+          ` User can now proceed to deposit payment.`
         );
 
         return { updated, participant };
@@ -328,7 +325,7 @@ export class AdminApprovalService {
         nextStep: 'pay_deposit',
         depositAmount: parseFloat(
           result.participant.auction.depositAmountRequired.toString()
-        ).toLocaleString(),
+        ).toString(), // Don't format here - let email template handle it
         paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
       });
 
@@ -420,13 +417,7 @@ export class AdminApprovalService {
           where: { id: registrationId },
           include: {
             user: true,
-            auction: {
-              include: {
-                auctionPolicy: {
-                  include: { depositConfig: true },
-                },
-              },
-            },
+            auction: true,
           },
         });
 
@@ -434,15 +425,29 @@ export class AdminApprovalService {
           throw new NotFoundException('Registration not found');
         }
 
+        // LOG: Full registration state before final approval
+        this.logger.log(
+          `[FINAL APPROVAL CHECK] Registration ${registrationId}:` +
+          ` documentsVerifiedAt=${participant.documentsVerifiedAt?.toISOString() || 'NULL'},` +
+          ` documentsVerifiedBy=${participant.documentsVerifiedBy || 'NULL'},` +
+          ` depositPaidAt=${participant.depositPaidAt?.toISOString() || 'NULL'},` +
+          ` depositAmount=${participant.depositAmount || 'NULL'},` +
+          ` withdrawnAt=${participant.withdrawnAt?.toISOString() || 'NULL'},` +
+          ` submittedAt=${participant.submittedAt?.toISOString() || 'NULL'}`
+        );
+
         // Check if documents are verified
         if (!participant.documentsVerifiedAt) {
+          this.logger.error(
+            `[FINAL APPROVAL FAILED] Registration ${registrationId}: documentsVerifiedAt is NULL!` +
+            ` Full state logged above. This means Tier 1 document verification was not completed.`
+          );
           throw new BadRequestException('Documents must be verified first');
         }
 
         // Check if deposit is required and paid
-        const requiresDeposit =
-          participant.auction.auctionPolicy?.depositConfig?.requiresDocuments ??
-          true;
+        // Deposit is always required (from system variables)
+        const requiresDeposit = true;
         if (requiresDeposit && !participant.depositPaidAt) {
           throw new BadRequestException(
             'Deposit must be paid before final approval'

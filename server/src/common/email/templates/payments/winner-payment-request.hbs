@@ -8,11 +8,11 @@
   <p>Congratulations! You are the winning bidder for auction <strong>{{auctionCode}}</strong>!</p>
 
   {{#> details-box title="💰 Payment Breakdown" backgroundColor="#fef5e7" borderColor="#f39c12"}}
-    <p><strong>Winning Bid Amount:</strong> {{winningAmount}} VND</p>
-    <p><strong>Deposit Already Paid:</strong> -{{depositAlreadyPaid}} VND</p>
-    <p><strong>Dossier Fee:</strong> +{{dossierFee}} VND</p>
+    <p><strong>Winning Bid Amount:</strong> {{formatCurrency winningAmount}} VND</p>
+    <p><strong>Deposit Already Paid:</strong> -{{formatCurrency depositAlreadyPaid}} VND</p>
+    <p><strong>Dossier Fee:</strong> +{{formatCurrency dossierFee}} VND</p>
     <hr>
-    <p><strong>Total Amount Due:</strong> <span class="amount-warning">{{totalDue}} VND</span></p>
+    <p><strong>Total Amount Due:</strong> <span class="amount-warning">{{formatCurrency totalDue}} VND</span></p>
     <p><strong>Payment Deadline:</strong> <span style="color: #e74c3c; font-weight: bold;">{{formatDate paymentDeadline}}</span></p>
   {{/details-box}}
 

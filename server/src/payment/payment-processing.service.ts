@@ -19,7 +19,7 @@ export class PaymentProcessingService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly paymentService: PaymentService,
+    private readonly paymentService: PaymentService
   ) {}
 
   /**
@@ -30,24 +30,19 @@ export class PaymentProcessingService {
     userId: string,
     auctionId: string,
     registrationId: string,
-    depositAmount: number,
+    depositAmount: number
   ) {
     try {
       this.logger.log(
-        `Processing deposit payment for user ${userId}, auction ${auctionId}, registration ${registrationId}`,
+        `Processing deposit payment for user ${userId}, auction ${auctionId}, registration ${registrationId}`
       );
 
       // Validate registration exists and is in correct state
       const registration = await this.prisma.auctionParticipant.findUnique({
         where: { id: registrationId },
         include: {
-          auction: {
-            include: {
-              auctionPolicy: {
-                include: { depositConfig: true },
-              },
-            },
-          },
+          user: true,
+          auction: true,
         },
       });
 
@@ -61,7 +56,7 @@ export class PaymentProcessingService {
 
       if (!registration.documentsVerifiedAt) {
         throw new BadRequestException(
-          'Documents must be verified before deposit payment',
+          'Documents must be verified before deposit payment'
         );
       }
 
@@ -71,12 +66,12 @@ export class PaymentProcessingService {
 
       // Validate deposit amount matches policy
       const expectedDepositAmount = parseFloat(
-        registration.auction.depositAmountRequired.toString(),
+        registration.auction.depositAmountRequired.toString()
       );
 
       if (Math.abs(depositAmount - expectedDepositAmount) > 0.01) {
         throw new BadRequestException(
-          `Deposit amount mismatch. Expected: ${expectedDepositAmount}, Received: ${depositAmount}`,
+          `Deposit amount mismatch. Expected: ${expectedDepositAmount}, Received: ${depositAmount}`
         );
       }
 
@@ -90,7 +85,7 @@ export class PaymentProcessingService {
       });
 
       this.logger.log(
-        `Deposit payment created: ${payment.payment_id} for registration ${registrationId}`,
+        `Deposit payment created: ${payment.payment_id} for registration ${registrationId}`
       );
 
       return {
@@ -101,12 +96,13 @@ export class PaymentProcessingService {
         bankInfo: payment.bank_info,
         deadline: payment.payment_deadline,
         status: 'pending',
-        message: 'Deposit payment initiated. Please complete payment within deadline.',
+        message:
+          'Deposit payment initiated. Please complete payment within deadline.',
       };
     } catch (error) {
       this.logger.error(
         `Failed to process deposit payment for registration ${registrationId}`,
-        error,
+        error
       );
       throw error;
     }
@@ -168,7 +164,7 @@ export class PaymentProcessingService {
   async calculateWinnerPayment(auctionId: string, winnerId: string) {
     try {
       this.logger.log(
-        `Calculating winner payment for auction ${auctionId}, winner ${winnerId}`,
+        `Calculating winner payment for auction ${auctionId}, winner ${winnerId}`
       );
 
       // Get auction with financial summary
@@ -231,7 +227,7 @@ export class PaymentProcessingService {
       const totalDue = remainingAmount + dossierFee;
 
       this.logger.log(
-        `Winner payment calculated: Winning amount: ${winningAmount}, Deposit: ${depositPaid}, Remaining: ${totalDue}`,
+        `Winner payment calculated: Winning amount: ${winningAmount}, Deposit: ${depositPaid}, Remaining: ${totalDue}`
       );
 
       return {
@@ -253,7 +249,7 @@ export class PaymentProcessingService {
     } catch (error) {
       this.logger.error(
         `Failed to calculate winner payment for auction ${auctionId}`,
-        error,
+        error
       );
       throw error;
     }
@@ -265,23 +261,23 @@ export class PaymentProcessingService {
   async processWinnerPayment(
     userId: string,
     auctionId: string,
-    paymentAmount: number,
+    paymentAmount: number
   ) {
     try {
       this.logger.log(
-        `Processing winner payment for user ${userId}, auction ${auctionId}, amount ${paymentAmount}`,
+        `Processing winner payment for user ${userId}, auction ${auctionId}, amount ${paymentAmount}`
       );
 
       // Calculate expected payment
       const paymentBreakdown = await this.calculateWinnerPayment(
         auctionId,
-        userId,
+        userId
       );
 
       // Validate amount
       if (Math.abs(paymentAmount - paymentBreakdown.totalDue) > 0.01) {
         throw new BadRequestException(
-          `Payment amount mismatch. Expected: ${paymentBreakdown.totalDue}, Received: ${paymentAmount}`,
+          `Payment amount mismatch. Expected: ${paymentBreakdown.totalDue}, Received: ${paymentAmount}`
         );
       }
 
@@ -295,7 +291,7 @@ export class PaymentProcessingService {
       });
 
       this.logger.log(
-        `Winner payment created: ${payment.payment_id} for auction ${auctionId}`,
+        `Winner payment created: ${payment.payment_id} for auction ${auctionId}`
       );
 
       return {
@@ -313,7 +309,7 @@ export class PaymentProcessingService {
     } catch (error) {
       this.logger.error(
         `Failed to process winner payment for auction ${auctionId}`,
-        error,
+        error
       );
       throw error;
     }
@@ -367,7 +363,7 @@ export class PaymentProcessingService {
         });
 
         this.logger.log(
-          `Winner payment verified. Contract ${contract.id} ready for signing`,
+          `Winner payment verified. Contract ${contract.id} ready for signing`
         );
       }
 
@@ -435,11 +431,11 @@ export class PaymentProcessingService {
   async refundDeposit(
     registrationId: string,
     reason: string,
-    refundedBy: string,
+    refundedBy: string
   ) {
     try {
       this.logger.log(
-        `Processing deposit refund for registration ${registrationId}`,
+        `Processing deposit refund for registration ${registrationId}`
       );
 
       // Find deposit payment
@@ -491,7 +487,7 @@ export class PaymentProcessingService {
     } catch (error) {
       this.logger.error(
         `Failed to refund deposit for registration ${registrationId}`,
-        error,
+        error
       );
       throw error;
     }

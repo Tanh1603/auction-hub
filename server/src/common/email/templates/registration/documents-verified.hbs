@@ -14,7 +14,7 @@
   <h3>📞 Next Step: Pay Deposit</h3>
   <p>To complete your registration, you must pay the deposit amount:</p>
   {{#> details-box backgroundColor="#fef5e7" borderColor="#f39c12"}}
-    <p><strong>Deposit Amount:</strong> <span class="amount-warning">{{depositAmount}} VND</span></p>
+    <p><strong>Deposit Amount:</strong> <span class="amount-warning">{{formatCurrency depositAmount}} VND</span></p>
     {{#if paymentDeadline}}
     <p><strong>Payment Deadline:</strong> {{formatDate paymentDeadline}}</p>
     {{/if}}

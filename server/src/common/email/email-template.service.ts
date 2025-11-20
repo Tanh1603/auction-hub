@@ -74,7 +74,7 @@ export class EmailTemplateService {
   private async registerPartials(): Promise<void> {
     if (this.partialsRegistered) return;
 
-    const partialsDir = path.join(__dirname, '..', 'templates', 'partials');
+    const partialsDir = path.join(__dirname, 'templates', 'partials');
 
     try {
       const files = await fs.readdir(partialsDir);
@@ -106,7 +106,7 @@ export class EmailTemplateService {
       return this.baseTemplate;
     }
 
-    const basePath = path.join(__dirname, '..', 'templates', 'base.hbs');
+    const basePath = path.join(__dirname, 'templates', 'base.hbs');
 
     try {
       const baseContent = await fs.readFile(basePath, 'utf-8');
@@ -130,12 +130,7 @@ export class EmailTemplateService {
       return this.templateCache.get(templatePath)!;
     }
 
-    const fullPath = path.join(
-      __dirname,
-      '..',
-      'templates',
-      `${templatePath}.hbs`
-    );
+    const fullPath = path.join(__dirname, 'templates', `${templatePath}.hbs`);
 
     try {
       const templateContent = await fs.readFile(fullPath, 'utf-8');
@@ -243,7 +238,7 @@ export class EmailTemplateService {
    * List all available templates
    */
   async listTemplates(): Promise<string[]> {
-    const templatesDir = path.join(__dirname, '..', 'templates');
+    const templatesDir = path.join(__dirname, 'templates');
     const templates: string[] = [];
 
     const scanDir = async (dir: string, prefix = ''): Promise<void> => {

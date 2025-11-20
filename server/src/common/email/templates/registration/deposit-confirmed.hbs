@@ -8,7 +8,7 @@
   <p>Your deposit payment for auction <strong>{{auctionCode}}</strong> has been successfully verified!</p>
 
   {{#> details-box title="💰 Payment Summary"}}
-    <p><strong>Amount Paid:</strong> <span class="amount-highlight">{{depositAmount}} VND</span></p>
+    <p><strong>Amount Paid:</strong> <span class="amount-highlight">{{formatCurrency depositAmount}} VND</span></p>
     <p><strong>Payment Date:</strong> {{formatDate paidAt}}</p>
     <p><strong>Auction:</strong> {{auctionName}}</p>
     <p><strong>Auction Code:</strong> {{auctionCode}}</p>

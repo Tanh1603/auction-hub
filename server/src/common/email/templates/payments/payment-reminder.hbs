@@ -6,7 +6,7 @@
   {{#> details-box backgroundColor="#fef5e7" borderColor=(if (lte daysRemaining 1) "#e74c3c" "#f39c12")}}
     <h3>⏰ Urgent: Payment Deadline Approaching</h3>
     <p>This is a reminder that your <strong>{{#if (eq paymentType 'deposit')}}Deposit Payment{{else}}Final Payment{{/if}}</strong> for auction <strong>{{auctionCode}}</strong> is due soon.</p>
-    <p><strong>Amount Due:</strong> <span style="font-size: 24px; font-weight: bold;">{{amountDue}} VND</span></p>
+    <p><strong>Amount Due:</strong> <span style="font-size: 24px; font-weight: bold;">{{formatCurrency amountDue}} VND</span></p>
     <p><strong>Deadline:</strong> <span style="color: {{#if (lte daysRemaining 1)}}#e74c3c{{else}}#f39c12{{/if}}; font-weight: bold;">{{formatDate deadline}}</span></p>
     <p><strong>Time Remaining:</strong> <span style="color: {{#if (lte daysRemaining 1)}}#e74c3c{{else}}#f39c12{{/if}}; font-weight: bold;">{{daysRemaining}} day(s)</span></p>
   {{/details-box}}

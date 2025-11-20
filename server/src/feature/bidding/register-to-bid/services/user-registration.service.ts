@@ -91,21 +91,57 @@ export class UserRegistrationService {
           }
 
           // already withdrawn - allow re-applying (check this BEFORE pending review)
+          // IMPORTANT: Clear ALL previous state to start fresh
           if (existing.withdrawnAt) {
             this.logger.log(
-              `User ${currentUser.id} re-registering after withdrawal for auction ${dto.auctionId}`
+              `[RE-REGISTRATION] User ${currentUser.id} re-registering after withdrawal for auction ${dto.auctionId}.` +
+              ` Previous state: documentsVerifiedAt=${existing.documentsVerifiedAt?.toISOString() || 'NULL'},` +
+              ` depositPaidAt=${existing.depositPaidAt?.toISOString() || 'NULL'}.` +
+              ` Resetting all previous state to start fresh registration.`
             );
             const updated = await tx.auctionParticipant.update({
               where: { id: existing.id },
               data: {
+                // Clear withdrawal state
                 withdrawnAt: null,
                 withdrawalReason: null,
+
+                // Reset to fresh registration with new documents
                 submittedAt: new Date(),
                 documentUrls,
+
+                // Clear all previous approval/rejection state (Tier 1)
+                documentsVerifiedAt: null,
+                documentsVerifiedBy: null,
                 documentsRejectedAt: null,
                 documentsRejectedReason: null,
+
+                // Clear all previous payment state (Tier 2)
+                depositPaidAt: null,
+                depositAmount: null,
+                depositPaymentId: null,
+
+                // Clear final approval
+                confirmedAt: null,
+                confirmedBy: null,
+
+                // Clear legacy rejection
+                rejectedAt: null,
+                rejectedReason: null,
+
+                // Clear check-in
+                checkedInAt: null,
               },
             });
+
+            this.logger.log(
+              `[RE-REGISTRATION COMPLETE] User ${currentUser.id}, Registration ${existing.id}.` +
+              ` New state: submittedAt=${updated.submittedAt?.toISOString()},` +
+              ` documentsVerifiedAt=${updated.documentsVerifiedAt || 'NULL'},` +
+              ` depositPaidAt=${updated.depositPaidAt || 'NULL'}.` +
+              ` Ready for fresh Tier 1 document verification.`
+            );
+
             return this.toDto(updated);
           }
 
