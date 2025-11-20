@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output = ".././generated"
+  output   = ".././generated"
 }
 
 datasource db {
@@ -60,55 +60,52 @@ model User {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamp
 
-    // Relations
-  ownedAuctions         Auction[]            @relation("AuctionOwner")
-  participations        AuctionParticipant[]
-  deniedBids            AuctionBid[]         @relation("BidDenier")
-  contractsAsSeller     Contract[]           @relation("ContractSeller")
-  contractsAsBuyer      Contract[]           @relation("ContractBuyer")
-  contractsCreated      Contract[]           @relation("ContractCreator")
-  payments Payment[]
+  // Relations
+  ownedAuctions     Auction[]            @relation("AuctionOwner")
+  participations    AuctionParticipant[]
+  deniedBids        AuctionBid[]         @relation("BidDenier")
+  contractsAsSeller Contract[]           @relation("ContractSeller")
+  contractsAsBuyer  Contract[]           @relation("ContractBuyer")
+  contractsCreated  Contract[]           @relation("ContractCreator")
+  payments          Payment[]
 
   @@map("users")
 }
 
 // AUCTIONS
 model Auction {
-  id                              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  propertyOwner                   String        @map("property_owner") @db.Uuid
-  name                            String        @db.VarChar(255)
-  code                            String        @db.VarChar(55) @unique
-  saleStartAt                     DateTime      @map("sale_start_at") @db.Timestamptz(6)
-  saleEndAt                       DateTime      @map("sale_end_at") @db.Timestamptz(6)
-  saleFee                         Decimal       @map("sale_fee") @db.Decimal(18, 2)
-  viewTime                        String        @map("view_time") @db.VarChar(100)
-  depositEndAt                    DateTime      @map("deposit_end_at") @db.Timestamptz(6)
-  depositAmountRequired           Decimal       @map("deposit_amount_required") @db.Decimal(18, 2)
-  auctionStartAt                  DateTime      @map("auction_start_at") @db.Timestamptz(6)
-  auctionEndAt                    DateTime      @map("auction_end_at") @db.Timestamptz(6)
-  assetDescription                String        @map("asset_description") @db.Text
-  assetAddress                    String        @map("asset_address") @db.VarChar(255)
-  validCheckInBeforeStartMinutes  Int           @map("valid_check_in_before_start_minutes")
-  validCheckInAfterStartMinutes   Int           @map("valid_check_in_after_start_minutes")
-  startingPrice                   Decimal       @map("starting_price") @db.Decimal(18, 2)
-  bidIncrement                    Decimal       @map("bid_increment") @db.Decimal(18, 2)
-  hasMaxBidSteps                  Boolean       @map("has_max_bid_steps")
-  maxBidSteps                     Int?          @map("max_bid_steps")
-  isActive                        Boolean       @map("is_active")
-  assetType                       AssetType     @map("asset_type")
-  numberOfFollow                  Int           @default(0) @map("number_of_follow")
-  status                          AuctionStatus @default(scheduled)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyOwner                  String        @map("property_owner") @db.Uuid
+  name                           String        @db.VarChar(255)
+  code                           String        @unique @db.VarChar(55)
+  saleStartAt                    DateTime      @map("sale_start_at") @db.Timestamptz(6)
+  saleEndAt                      DateTime      @map("sale_end_at") @db.Timestamptz(6)
+  saleFee                        Decimal       @map("sale_fee") @db.Decimal(18, 2)
+  viewTime                       String        @map("view_time") @db.VarChar(100)
+  depositEndAt                   DateTime      @map("deposit_end_at") @db.Timestamptz(6)
+  depositAmountRequired          Decimal       @map("deposit_amount_required") @db.Decimal(18, 2)
+  auctionStartAt                 DateTime      @map("auction_start_at") @db.Timestamptz(6)
+  auctionEndAt                   DateTime      @map("auction_end_at") @db.Timestamptz(6)
+  assetDescription               String        @map("asset_description") @db.Text
+  assetAddress                   String        @map("asset_address") @db.VarChar(255)
+  validCheckInBeforeStartMinutes Int           @map("valid_check_in_before_start_minutes")
+  validCheckInAfterStartMinutes  Int           @map("valid_check_in_after_start_minutes")
+  startingPrice                  Decimal       @map("starting_price") @db.Decimal(18, 2)
+  bidIncrement                   Decimal       @map("bid_increment") @db.Decimal(18, 2)
+  isActive                       Boolean       @map("is_active") @default(true)
+  assetType                      AssetType     @map("asset_type")
+  status                         AuctionStatus @default(scheduled)
+  images                         Json?          @db.JsonB
+  attachments                    Json?          @db.JsonB
+  createdAt                      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  owner             User                 @relation("AuctionOwner", fields: [propertyOwner], references: [id])
-  images            AuctionImage[]
-  attachments       AuctionAttachment[]
-  participants      AuctionParticipant[]
-  bids              AuctionBid[]
-  contracts         Contract[]
-  relatedFrom       AuctionRelation[]    @relation("AuctionRelationFrom")
-  relatedTo         AuctionRelation[]    @relation("AuctionRelationTo")
+  owner        User                 @relation("AuctionOwner", fields: [propertyOwner], references: [id])
+  participants AuctionParticipant[]
+  bids         AuctionBid[]
+  contracts    Contract[]
+  relatedFrom  AuctionRelation[]    @relation("AuctionRelationFrom")
+  relatedTo    AuctionRelation[]    @relation("AuctionRelationTo")
 
   @@map("auctions")
 }
@@ -132,40 +129,6 @@ enum AuctionStatus {
   cancelled
 
   @@map("auction_status")
-}
-
-model AuctionImage {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId String   @map("auction_id") @db.Uuid
-  url       String   @db.VarChar(255)
-  sortOrder Int      @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-
-  @@map("auction_images")
-}
-
-model AuctionAttachment {
-  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId String         @map("auction_id") @db.Uuid
-  url       String         @db.VarChar(255)
-  type      AttachmentType
-  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-
-  @@map("auction_attachments")
-}
-
-enum AttachmentType {
-  document
-  image
-  video
-
-  @@map("attachment_type")
 }
 
 model AuctionRelation {
@@ -197,8 +160,8 @@ model AuctionParticipant {
   withdrawnAt    DateTime? @map("withdrawn_at") @db.Timestamptz(6)
 
   // Relations
-  user            User              @relation(fields: [userId], references: [id])
-  auction         Auction           @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id])
+  auction         Auction          @relation(fields: [auctionId], references: [id], onDelete: Cascade)
   bids            AuctionBid[]
   autoBidSettings AutoBidSetting[]
 
@@ -261,19 +224,19 @@ model AutoBidSetting {
 // CONTRACTS
 // ============================================
 model Contract {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId     String         @map("auction_id") @db.Uuid
-  winningBidId  String         @map("winning_bid_id") @db.Uuid
-  sellerUserId  String         @map("seller_user_id") @db.Uuid
-  buyerUserId   String         @map("buyer_user_id") @db.Uuid
-  createdBy     String         @map("created_by") @db.Uuid
-  price         Decimal        @db.Decimal(18, 2)
-  status        ContractStatus
-  signedAt      DateTime?      @map("signed_at") @db.Timestamptz(6)
-  cancelledAt   DateTime?      @map("cancelled_at") @db.Timestamptz(6)
-  docUrl        String?        @map("doc_url") @db.VarChar(1000)
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId    String         @map("auction_id") @db.Uuid
+  winningBidId String         @map("winning_bid_id") @db.Uuid
+  sellerUserId String         @map("seller_user_id") @db.Uuid
+  buyerUserId  String         @map("buyer_user_id") @db.Uuid
+  createdBy    String         @map("created_by") @db.Uuid
+  price        Decimal        @db.Decimal(18, 2)
+  status       ContractStatus
+  signedAt     DateTime?      @map("signed_at") @db.Timestamptz(6)
+  cancelledAt  DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  docUrl       String?        @map("doc_url") @db.VarChar(1000)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   auction    Auction    @relation(fields: [auctionId], references: [id])
@@ -293,6 +256,7 @@ enum ContractStatus {
 
   @@map("contract_status")
 }
+
 model Payment {
   id             String         @id @default(uuid()) @db.Uuid
   userId         String         @map("user_id") @db.Uuid
