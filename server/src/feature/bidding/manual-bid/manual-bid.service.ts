@@ -124,18 +124,6 @@ export class ManualBidService {
       );
     }
 
-    // Validate maximum bid steps if configured
-    if (auction.hasMaxBidSteps && auction.maxBidSteps !== null) {
-      const maxAllowedDelta = auction.bidIncrement.mul(auction.maxBidSteps);
-      if (delta.gt(maxAllowedDelta)) {
-        throw new BadRequestException(
-          `Bid exceeds maximum allowed increment (${
-            auction.maxBidSteps
-          } steps of ${auction.bidIncrement.toString()})`
-        );
-      }
-    }
-
     // Note: Reserve price validation would typically be done by the auctioneer
     // when they review bids, not during bid placement
     // However, if you want to enforce it here, you would need a reservePrice field on the Auction model

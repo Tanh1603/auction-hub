@@ -131,7 +131,7 @@ export class WinnerPaymentService {
         financialSummary: auction.financialSummary
           ? {
               netAmountToSeller: parseFloat(
-                auction.financialSummary.netAmountToSeller.toString()
+                auction.financialSummary.netAmountToPropertyOwner.toString()
               ),
               totalCommission: parseFloat(
                 auction.financialSummary.commissionFee.toString()
@@ -267,7 +267,7 @@ export class WinnerPaymentService {
         where: { auctionId },
         include: {
           auction: true,
-          seller: true,
+          propertyOwner: true,
           buyer: true,
         },
       });
@@ -312,9 +312,9 @@ export class WinnerPaymentService {
           auctionId,
           contractId: contract.id,
           seller: {
-            userId: contract.sellerUserId,
-            fullName: contract.seller.fullName,
-            email: contract.seller.email,
+            userId: contract.propertyOwnerUserId,
+            fullName: contract.propertyOwner.fullName,
+            email: contract.propertyOwner.email,
           },
           buyer: {
             userId: contract.buyerUserId,

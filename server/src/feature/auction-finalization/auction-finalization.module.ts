@@ -6,12 +6,12 @@ import { AuctionOwnerService } from './services/auction-owner.service';
 import { WinnerPaymentService } from './services/winner-payment.service';
 import { AuctionResultsService } from './services/auction-results.service';
 import { PrismaModule } from '../../prisma/prisma.module';
-import { BiddingGateway } from '../bidding/bidding.gateway';
+import { BiddingModule } from '../bidding/bidding.module';
 import { AuctionPolicyModule } from '../auction-policy/auction-policy.module';
 import { PaymentModule } from '../../payment/payment.module';
 
 @Module({
-  imports: [PrismaModule, AuctionPolicyModule, PaymentModule],
+  imports: [PrismaModule, AuctionPolicyModule, PaymentModule, BiddingModule],
   controllers: [AuctionFinalizationController],
   providers: [
     AuctionFinalizationService,
@@ -19,7 +19,6 @@ import { PaymentModule } from '../../payment/payment.module';
     AuctionOwnerService,
     WinnerPaymentService,
     AuctionResultsService,
-    BiddingGateway,
   ],
   exports: [AuctionFinalizationService],
 })

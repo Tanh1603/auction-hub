@@ -2,12 +2,12 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ManualBidService } from './manual-bid.service';
 import { ManualBidController } from './manual-bid.controller';
 import { PrismaModule } from '../../../prisma/prisma.module';
-import { BiddingGateway } from '../bidding.gateway';
+import { BiddingModule } from '../bidding.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, forwardRef(() => BiddingModule)],
   controllers: [ManualBidController],
-  providers: [ManualBidService, BiddingGateway],
-  exports: [BiddingGateway],
+  providers: [ManualBidService],
+  exports: [ManualBidService],
 })
 export class ManualBidModule {}

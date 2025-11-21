@@ -9,15 +9,24 @@ Two-tier approval system with document verification and deposit payment.
 **Endpoint**: `POST /register-to-bid`
 **Access**: Authenticated
 **Status**: 201 Created
+**Content-Type**: `multipart/form-data`
 
-**Request Body**:
+**Request Body** (form-data):
 
 ```
-{
-  auctionId: string (UUID, REQUIRED),
-  documentUrls?: Array<{type: string, url: string}>
-}
+auctionId: string (UUID, REQUIRED)
+documents?: File[] (max 10 files, 10MB each)
+media?: File[] (max 10 files, 10MB each)
 ```
+
+**Supported File Types**:
+- **documents**: PDF, DOC, DOCX
+- **media**: Images (JPG, PNG, GIF), Videos
+
+**File Upload Process**:
+- Files are uploaded to Cloudinary automatically
+- Uploaded files are stored as JSONB in database
+- Each file entry contains: url, publicId, sortOrder
 
 **Response** (201):
 
@@ -28,6 +37,16 @@ Two-tier approval system with document verification and deposit payment.
   auctionId: string,
   registeredAt: Date,
   submittedAt: Date,
+  documents?: Array<{
+    url: string,
+    publicId: string,
+    sortOrder: number
+  }>,
+  media?: Array<{
+    url: string,
+    publicId: string,
+    sortOrder: number
+  }>,
   documentsVerifiedAt?: Date,
   documentsVerifiedBy?: string,
   documentsRejectedAt?: Date,
@@ -222,7 +241,7 @@ Two-tier approval system with document verification and deposit payment.
 
 ## Two-Tier Approval Flow
 
-1. User registers with documents
+1. User registers with document/media files (uploaded to Cloudinary)
 2. Admin verifies documents (Tier 1)
 3. User initiates deposit payment (receives Stripe payment URL)
 4. User completes payment via Stripe checkout
@@ -230,3 +249,11 @@ Two-tier approval system with document verification and deposit payment.
 6. Admin gives final approval (Tier 2)
 7. User checks in (24 hours before auction starts)
 8. User can now bid
+
+## File Upload & Storage
+
+- All documents and media are uploaded via `multipart/form-data`
+- Files are automatically uploaded to Cloudinary cloud storage
+- File metadata (url, publicId, sortOrder) is stored as JSONB in PostgreSQL
+- Max file size: 10MB per file
+- Max file count: 10 files per field (documents and media)

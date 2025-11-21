@@ -370,8 +370,8 @@ export class PolicyCalculationService {
           dossierFee,
           depositAmount,
           totalAuctionCosts,
-          totalFeesToSeller,
-          netAmountToSeller,
+          totalFeesToPropertyOwner: totalFeesToSeller,
+          netAmountToPropertyOwner: netAmountToSeller,
           calculationDetails: JSON.stringify(calculationDetails),
         },
         update: {
@@ -380,8 +380,8 @@ export class PolicyCalculationService {
           dossierFee,
           depositAmount,
           totalAuctionCosts,
-          totalFeesToSeller,
-          netAmountToSeller,
+          totalFeesToPropertyOwner: totalFeesToSeller,
+          netAmountToPropertyOwner: netAmountToSeller,
           calculationDetails: JSON.stringify(calculationDetails),
         },
       });

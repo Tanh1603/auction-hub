@@ -1,14 +1,28 @@
 // User-focused controller
 // Handles: registration, withdrawal, check-in
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiTags,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { RegisterToBidService } from '../register-to-bid.service';
-import { CreateRegisterToBidDto } from '../dto/create-register-to-bid.dto';
+import {
+  CreateRegisterToBidDto,
+  RegisterToBidFileUploadDto,
+} from '../dto/create-register-to-bid.dto';
 import { WithdrawRegistrationDto } from '../dto/withdraw-registration.dto';
 import { CheckInDto } from '../dto/check-in.dto';
 import {
@@ -24,10 +38,30 @@ export class UserRegistrationController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'documents', maxCount: 10 },
+        { name: 'media', maxCount: 10 },
+      ],
+      {
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB per file
+        },
+      }
+    )
+  )
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Register or resubmit for auction',
+    summary: 'Register or resubmit for auction with document/media upload',
     description:
-      'Register to bid on an auction. Can resubmit if rejected or re-apply if withdrawn.',
+      'Register to bid on an auction with document and media file uploads. ' +
+      'Can resubmit if rejected or re-apply if withdrawn. ' +
+      'Supports PDF, DOC, DOCX for documents and images/videos for media.',
+  })
+  @ApiBody({
+    description: 'Registration data with file uploads',
+    type: RegisterToBidFileUploadDto,
   })
   @ApiResponse({
     status: 201,
@@ -44,9 +78,14 @@ export class UserRegistrationController {
   @ApiBearerAuth()
   create(
     @Body() dto: CreateRegisterToBidDto,
+    @UploadedFiles()
+    files: {
+      documents?: Express.Multer.File[];
+      media?: Express.Multer.File[];
+    },
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.svc.create(dto, user);
+    return this.svc.create(dto, user, files.documents, files.media);
   }
 
   @Post('withdraw')

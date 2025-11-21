@@ -284,47 +284,48 @@ The auction registration follows a **two-tier approval system** with automated e
 - 📧 After final approval (Tier 2) - user can now bid
 - 📧 Payment failure/deadline warnings
 
-### 5. Register to Bid on Auction (with Documents)
+### 5. Register to Bid on Auction (with Documents & Media Upload)
 
-**Method**: `POST`  
-**URL**: `http://localhost:3000/api/register-to-bid`  
+**Method**: `POST`
+**URL**: `http://localhost:3000/api/register-to-bid`
 **Headers**:
 
 ```json
 {
-  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
-  "Content-Type": "application/json"
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
 }
 ```
 
-**Body** (JSON):
+**Body** (form-data):
 
-```json
-{
-  "auctionId": "auction-uuid-here",
-  "documentUrls": [
-    {
-      "type": "identity_card",
-      "url": "https://example.com/documents/id-card.pdf"
-    },
-    {
-      "type": "financial_proof",
-      "url": "https://example.com/documents/bank-statement.pdf"
-    },
-    {
-      "type": "business_license",
-      "url": "https://example.com/documents/license.pdf"
-    }
-  ]
-}
-```
+This endpoint uses `multipart/form-data` for file uploads. Configure in Postman:
 
-**Document Types** (examples):
+1. Select **Body** tab
+2. Select **form-data** radio button
+3. Add the following fields:
 
-- `identity_card` - National ID or passport
-- `financial_proof` - Bank statements or financial documents
-- `business_license` - For business entities
-- `address_proof` - Utility bills or residence documents
+| Key | Type | Value |
+|-----|------|-------|
+| `auctionId` | Text | `auction-uuid-here` |
+| `documents` | File | Select PDF/DOC file (identity card) |
+| `documents` | File | Select PDF/DOC file (financial proof) |
+| `documents` | File | Select PDF/DOC file (business license) |
+| `media` | File | Select image/video file (optional) |
+| `media` | File | Select image/video file (optional) |
+
+**File Requirements**:
+
+- **Documents**: PDF, DOC, DOCX formats
+- **Media**: Images (JPG, PNG) or Videos
+- **Max file size**: 10MB per file
+- **Max count**: 10 files per field (documents and media each)
+
+**Document Types** (recommended):
+
+- Identity card/National ID or passport
+- Financial proof (bank statements or financial documents)
+- Business license (for business entities)
+- Address proof (utility bills or residence documents)
 
 **Expected Response**:
 
@@ -339,10 +340,23 @@ The auction registration follows a **two-tier approval system** with automated e
     "registeredAt": "2025-11-14T10:00:00.000Z",
     "submittedAt": "2025-11-14T10:00:00.000Z",
     "currentState": "PENDING_DOCUMENT_REVIEW",
-    "documentUrls": [
+    "documents": [
       {
-        "type": "identity_card",
-        "url": "https://example.com/documents/id-card.pdf"
+        "url": "https://res.cloudinary.com/your-cloud/documents/abc123.pdf",
+        "publicId": "auction-hub/documents/abc123",
+        "sortOrder": 0
+      },
+      {
+        "url": "https://res.cloudinary.com/your-cloud/documents/def456.pdf",
+        "publicId": "auction-hub/documents/def456",
+        "sortOrder": 1
+      }
+    ],
+    "media": [
+      {
+        "url": "https://res.cloudinary.com/your-cloud/media/xyz789.jpg",
+        "publicId": "auction-hub/media/xyz789",
+        "sortOrder": 0
       }
     ]
   },
@@ -354,9 +368,13 @@ The auction registration follows a **two-tier approval system** with automated e
 
 **Notes**:
 
+- Files are automatically uploaded to Cloudinary
+- Documents and media are stored as JSONB in the database
 - Documents are submitted immediately with registration
 - Registration enters `PENDING_DOCUMENT_REVIEW` state automatically
 - User cannot bid until final approval is received
+- If upload fails, the entire registration will fail
+- Both documents and media fields are optional but at least one is recommended for document verification
 
 ### 6. Withdraw Registration (User)
 
@@ -483,34 +501,30 @@ The auction registration follows a **two-tier approval system** with automated e
 
 ### 9. Re-Apply After Rejection (User)
 
-**Method**: `POST`  
-**URL**: `http://localhost:3000/api/register-to-bid`  
+**Method**: `POST`
+**URL**: `http://localhost:3000/api/register-to-bid`
 **Headers**:
 
 ```json
 {
-  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
-  "Content-Type": "application/json"
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
 }
 ```
 
-**Body** (JSON):
+**Body** (form-data):
 
-```json
-{
-  "auctionId": "auction-uuid-here",
-  "documentUrls": [
-    {
-      "type": "identity_card",
-      "url": "https://example.com/documents/updated-id-card.pdf"
-    },
-    {
-      "type": "financial_proof",
-      "url": "https://example.com/documents/updated-bank-statement.pdf"
-    }
-  ]
-}
-```
+This endpoint uses the same format as the initial registration. Configure in Postman:
+
+1. Select **Body** tab
+2. Select **form-data** radio button
+3. Add the following fields:
+
+| Key | Type | Value |
+|-----|------|-------|
+| `auctionId` | Text | `auction-uuid-here` |
+| `documents` | File | Select updated PDF/DOC file |
+| `documents` | File | Select updated PDF/DOC file |
+| `media` | File | Select updated image/video (optional) |
 
 **Expected Response**:
 
@@ -523,12 +537,20 @@ The auction registration follows a **two-tier approval system** with automated e
     "submittedAt": "2025-11-14T12:00:00.000Z",
     "currentState": "PENDING_DOCUMENT_REVIEW",
     "documentsRejectedAt": null,
-    "documentsRejectedReason": null
+    "documentsRejectedReason": null,
+    "documents": [
+      {
+        "url": "https://res.cloudinary.com/your-cloud/documents/new123.pdf",
+        "publicId": "auction-hub/documents/new123",
+        "sortOrder": 0
+      }
+    ],
+    "media": []
   }
 }
 ```
 
-**Note**: The system automatically detects this is a re-submission and clears the rejection data.
+**Note**: The system automatically detects this is a re-submission and clears the rejection data. New files will be uploaded to Cloudinary.
 
 ### 10. Initiate Deposit Payment (User)
 

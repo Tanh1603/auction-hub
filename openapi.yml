@@ -103,58 +103,157 @@ components:
         id:
           type: string
           format: uuid
-        name:
-          type: string
         code:
           type: string
-        description:
+          description: Unique auction code
+        name:
           type: string
-        status:
+          description: Auction name
+        assetType:
           type: string
           enum:
             [
-              draft,
-              scheduled,
-              registration_open,
-              registration_closed,
-              live,
-              ended,
-              success,
-              no_bid,
-              cancelled,
+              secured_asset,
+              land_use_rights,
+              administrative_violation_asset,
+              state_asset,
+              enforcement_asset,
+              other_asset,
             ]
+          description: Type of asset being auctioned
+        assetAddress:
+          type: string
+          description: Physical address of the asset
+        assetDescription:
+          type: string
+          description: Detailed description of the asset
+        status:
+          type: string
+          enum: [scheduled, live, success, no_bid, cancelled]
+          description: Current status of the auction
         startingPrice:
           type: number
+          description: Opening bid price
         bidIncrement:
           type: number
+          description: Minimum increment for each bid
         reservePrice:
           type: number
           nullable: true
+          description: Minimum acceptable price (optional)
+        depositAmountRequired:
+          type: number
+          description: Required deposit amount to participate
+        saleFee:
+          type: number
+          description: Fee for purchasing auction documents
+        viewTime:
+          type: string
+          description: Schedule for viewing the asset
+        dossierFee:
+          type: number
+          nullable: true
+          description: Administrative fee (validated against policy)
+        depositPercentage:
+          type: number
+          nullable: true
+          description: Deposit as percentage of starting price (validated against policy)
+        saleStartAt:
+          type: string
+          format: date-time
+          description: When document sales begin
+        saleEndAt:
+          type: string
+          format: date-time
+          description: When document sales end
         auctionStartAt:
           type: string
           format: date-time
+          description: When bidding begins
         auctionEndAt:
           type: string
           format: date-time
-        registrationOpenAt:
+          description: When bidding ends
+        depositEndAt:
           type: string
           format: date-time
-        registrationCloseAt:
-          type: string
-          format: date-time
+          description: Deadline for deposit payment
+        validCheckInBeforeStartMinutes:
+          type: integer
+          description: Minutes allowed to check in before auction starts
+        validCheckInAfterStartMinutes:
+          type: integer
+          description: Minutes allowed to check in after auction starts
+        isActive:
+          type: boolean
+          description: Whether auction is active
+        numberOfFollow:
+          type: integer
+          description: Number of users following this auction
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+              sortOrder:
+                type: integer
+          description: Auction images stored as JSON
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+          description: Auction documents/attachments stored as JSON
+        owner:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            fullName:
+              type: string
+            email:
+              type: string
+            avatarUrl:
+              type: string
+              nullable: true
+          description: Property owner information
+        relatedAuctions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              code:
+                type: string
+              images:
+                type: array
+              startingPrice:
+                type: number
+              depositAmountRequired:
+                type: number
+              saleStartAt:
+                type: string
+                format: date-time
+          description: Related auctions
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
-        totalParticipants:
-          type: integer
-        totalBids:
-          type: integer
-        currentHighestBid:
-          type: number
-          nullable: true
 
     Registration:
       type: object
@@ -178,17 +277,51 @@ components:
           type: string
           format: date-time
           nullable: true
+          description: When documents were verified (Tier 1)
         documentsVerifiedBy:
           type: string
           format: uuid
           nullable: true
+          description: Admin who verified documents
         documentsRejectedAt:
           type: string
           format: date-time
           nullable: true
+          description: When documents were rejected (Tier 1)
         documentsRejectedReason:
           type: string
           nullable: true
+          description: Reason for document rejection
+        documents:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+                format: uri
+              type:
+                type: string
+              sortOrder:
+                type: integer
+          description: Registration documents stored as JSON (Cloudinary URLs)
+        media:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+                format: uri
+              sortOrder:
+                type: integer
+          description: Registration media files stored as JSON (Cloudinary URLs)
         depositPaidAt:
           type: string
           format: date-time
@@ -598,15 +731,15 @@ paths:
     post:
       tags:
         - Registration
-      summary: Register for auction
-      description: Submit registration to participate in an auction
+      summary: Register for auction with document/media upload
+      description: Submit registration to participate in an auction with document and media files. Files are uploaded to Cloudinary automatically.
       operationId: registerForAuction
       security:
         - bearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               required:
@@ -615,23 +748,34 @@ paths:
                 auctionId:
                   type: string
                   format: uuid
-                documentUrls:
+                  description: ID of the auction to register for
+                documents:
                   type: array
                   items:
-                    type: object
-                    properties:
-                      type:
-                        type: string
-                      url:
-                        type: string
-                        format: uri
+                    type: string
+                    format: binary
+                  description: Array of document files (PDF, DOC, DOCX). Max 10 files, 10MB each.
+                  maxItems: 10
+                media:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Array of media files (images, videos). Max 10 files, 10MB each.
+                  maxItems: 10
       responses:
         '201':
-          description: Registration created
+          description: Registration created with files uploaded to Cloudinary
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Registration'
+        '400':
+          description: Bad request - file upload failed or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Already registered
           content:
@@ -1373,41 +1517,189 @@ paths:
           schema:
             type: string
             enum: [completed, now, upcoming]
+          description: Filter by auction status (completed=ended, now=currently active, upcoming=future)
+        - name: active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
         - name: page
           in: query
           schema:
             type: integer
             default: 1
+          description: Page number
         - name: limit
           in: query
           schema:
             type: integer
             default: 10
-        - name: sortBy
-          in: query
-          schema:
-            type: string
-            default: createdAt
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
+          description: Items per page
       responses:
         '200':
           description: Paginated auction list
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/PaginatedResponse'
-                  - type: object
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        startingPrice:
+                          type: number
+                        depositAmountRequired:
+                          type: number
+                        auctionStartAt:
+                          type: string
+                          format: date-time
+                  meta:
+                    type: object
                     properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Auction'
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+    post:
+      tags:
+        - Auctions
+      summary: Create new auction
+      description: Create a new auction (Admin/Auctioneer only)
+      operationId: createAuction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - name
+                - assetType
+                - assetAddress
+                - assetDescription
+                - saleStartAt
+                - saleEndAt
+                - auctionStartAt
+                - auctionEndAt
+                - depositEndAt
+                - startingPrice
+                - bidIncrement
+                - depositAmountRequired
+                - saleFee
+                - viewTime
+                - validCheckInBeforeStartMinutes
+                - validCheckInAfterStartMinutes
+                - propertyOwnerId
+              properties:
+                code:
+                  type: string
+                  description: Unique auction code
+                name:
+                  type: string
+                  description: Auction name
+                assetType:
+                  type: string
+                  enum:
+                    [
+                      secured_asset,
+                      land_use_rights,
+                      administrative_violation_asset,
+                      state_asset,
+                      enforcement_asset,
+                      other_asset,
+                    ]
+                  description: Type of asset being auctioned
+                assetAddress:
+                  type: string
+                  description: Physical address of the asset
+                assetDescription:
+                  type: string
+                  description: Detailed description of the asset
+                saleStartAt:
+                  type: string
+                  format: date-time
+                  description: When document sales begin
+                saleEndAt:
+                  type: string
+                  format: date-time
+                  description: When document sales end
+                auctionStartAt:
+                  type: string
+                  format: date-time
+                  description: When bidding begins
+                auctionEndAt:
+                  type: string
+                  format: date-time
+                  description: When bidding ends
+                depositEndAt:
+                  type: string
+                  format: date-time
+                  description: Deadline for deposit payment
+                startingPrice:
+                  type: number
+                  description: Opening bid price
+                bidIncrement:
+                  type: number
+                  description: Minimum increment for each bid
+                depositAmountRequired:
+                  type: number
+                  description: Required deposit amount to participate
+                saleFee:
+                  type: number
+                  description: Fee for purchasing auction documents
+                viewTime:
+                  type: string
+                  description: Schedule for viewing the asset
+                validCheckInBeforeStartMinutes:
+                  type: integer
+                  description: Minutes allowed to check in before auction starts
+                validCheckInAfterStartMinutes:
+                  type: integer
+                  description: Minutes allowed to check in after auction starts
+                propertyOwnerId:
+                  type: string
+                  format: uuid
+                  description: Property owner user ID
+                relatedAuctions:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: List of related auction IDs (optional)
+      responses:
+        '201':
+          description: Auction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+                  message:
+                    type: string
+                    example: Create auction successfully!
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auctions/{id}:
     get:
@@ -1429,7 +1721,166 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Auction'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+        '404':
+          description: Auction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Auctions
+      summary: Update auction
+      description: Update auction details (Admin/Auctioneer only)
+      operationId: updateAuction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+                assetType:
+                  type: string
+                  enum:
+                    [
+                      secured_asset,
+                      land_use_rights,
+                      administrative_violation_asset,
+                      state_asset,
+                      enforcement_asset,
+                      other_asset,
+                    ]
+                assetAddress:
+                  type: string
+                assetDescription:
+                  type: string
+                saleStartAt:
+                  type: string
+                  format: date-time
+                saleEndAt:
+                  type: string
+                  format: date-time
+                auctionStartAt:
+                  type: string
+                  format: date-time
+                auctionEndAt:
+                  type: string
+                  format: date-time
+                depositEndAt:
+                  type: string
+                  format: date-time
+                startingPrice:
+                  type: number
+                bidIncrement:
+                  type: number
+                depositAmountRequired:
+                  type: number
+                saleFee:
+                  type: number
+                viewTime:
+                  type: string
+                validCheckInBeforeStartMinutes:
+                  type: integer
+                validCheckInAfterStartMinutes:
+                  type: integer
+                propertyOwnerId:
+                  type: string
+                  format: uuid
+                relatedAuctions:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                isActive:
+                  type: boolean
+                  description: Toggle auction active status
+      responses:
+        '200':
+          description: Auction updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+                  message:
+                    type: string
+                    example: Update auction successfully!
+        '404':
+          description: Auction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auctions/{id}/resources:
+    patch:
+      tags:
+        - Auctions
+      summary: Update auction resources
+      description: Upload or update images and attachments for an auction (Admin/Auctioneer only)
+      operationId: updateAuctionResources
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files (max 10, max size 10MB each)
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Attachment files (max 10, max size 10MB each)
+      responses:
+        '200':
+          description: Resources updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+                  message:
+                    type: string
+                    example: Updated resource successfully!
         '404':
           description: Auction not found
           content:

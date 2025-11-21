@@ -86,34 +86,12 @@ async function main() {
     skipDuplicates: true,
   });
 
+  console.log('🔗 Tạo quan hệ related auctions...');
   const auctions = await prisma.auction.findMany({
     select: { id: true, code: true },
   });
 
   const auctionMap = Object.fromEntries(auctions.map((a) => [a.code, a.id]));
-
-  const imagesData = data.data.flatMap((item: any) =>
-    (item.auctionImages ?? []).map((img: any, i: number) => ({
-      auctionId: auctionMap[item.code],
-      url: img.url,
-      sortOrder: i,
-    }))
-  );
-
-  const attachmentsData = data.data.flatMap((item: any) =>
-    (item.auctionAttachments ?? []).map((a: any) => ({
-      auctionId: auctionMap[item.code],
-      url: a.url,
-      type: a.type ?? 'document',
-    }))
-  );
-
-  if (imagesData.length)
-    await prisma.auctionImage.createMany({ data: imagesData });
-  if (attachmentsData.length)
-    await prisma.auctionAttachment.createMany({ data: attachmentsData });
-
-  console.log('🔗 Tạo quan hệ related auctions...');
   const relations: { auctionId: string; relatedAuctionId: string }[] = [];
 
   for (const item of data.data) {

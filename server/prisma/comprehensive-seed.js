@@ -111,8 +111,6 @@ const sampleAuctions = [
     assetAddress: '123 Nguyễn Huệ, Quận 1, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
     isActive: true,
   },
 
@@ -136,8 +134,6 @@ const sampleAuctions = [
     assetAddress: 'Showroom ABC, Quận 7, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    hasMaxBidSteps: true,
-    maxBidSteps: 20,
     isActive: true,
   },
 
@@ -162,8 +158,6 @@ const sampleAuctions = [
     assetAddress: 'Đường Võ Văn Ngân, Quận 9, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
     isActive: true,
   },
 
@@ -187,8 +181,6 @@ const sampleAuctions = [
     assetAddress: 'KCN Tân Thuận, Quận 7, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
     isActive: true,
   },
 
@@ -213,8 +205,6 @@ const sampleAuctions = [
     assetAddress: 'KDC Riviera Point, TP. Thủ Đức',
     validCheckInBeforeStartMinutes: 45,
     validCheckInAfterStartMinutes: 30,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
     isActive: true,
   },
 ];

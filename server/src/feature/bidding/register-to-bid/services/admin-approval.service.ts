@@ -541,7 +541,8 @@ export class AdminApprovalService {
     documentsVerifiedBy: p.documentsVerifiedBy,
     documentsRejectedAt: p.documentsRejectedAt,
     documentsRejectedReason: p.documentsRejectedReason,
-    documentUrls: p.documentUrls ? JSON.parse(p.documentUrls as string) : null,
+    documents: p.documents ? JSON.parse(p.documents as string) : null,
+    media: p.media ? JSON.parse(p.media as string) : null,
 
     // Two-tier approval: Tier 2 - Deposit verification
     depositPaidAt: p.depositPaidAt,

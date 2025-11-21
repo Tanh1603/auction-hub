@@ -12,13 +12,17 @@ import { CreateRegisterToBidDto } from '../dto/create-register-to-bid.dto';
 import { WithdrawRegistrationDto } from '../dto/withdraw-registration.dto';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { CurrentUserData } from '../../../../common/decorators/current-user.decorator';
+import { CloudinaryService } from '../../../../cloudinary/cloudinary.service';
 import type { AuctionParticipant } from '../../../../../generated';
 
 @Injectable()
 export class UserRegistrationService {
   private readonly logger = new Logger(UserRegistrationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinaryService: CloudinaryService
+  ) {}
 
   /**
    * Create or resubmit registration for an auction
@@ -29,7 +33,54 @@ export class UserRegistrationService {
    * - rejectedAt: set when admin rejects
    * - withdrawnAt: set when user withdraws
    */
-  async create(dto: CreateRegisterToBidDto, currentUser: CurrentUserData) {
+  async create(
+    dto: CreateRegisterToBidDto,
+    currentUser: CurrentUserData,
+    documentFiles?: Express.Multer.File[],
+    mediaFiles?: Express.Multer.File[]
+  ) {
+    // Upload files to Cloudinary before transaction
+    let uploadedDocuments: any[] = [];
+    let uploadedMedia: any[] = [];
+
+    try {
+      if (documentFiles && documentFiles.length > 0) {
+        const cloudinaryResults = await this.cloudinaryService.uploadFiles(
+          documentFiles
+        );
+        uploadedDocuments = cloudinaryResults.map((result, index) => ({
+          url: result.url,
+          publicId: result.publicId,
+          sortOrder: index,
+        }));
+        this.logger.log(
+          `Uploaded ${uploadedDocuments.length} documents to Cloudinary for user ${currentUser.id}`
+        );
+      }
+
+      if (mediaFiles && mediaFiles.length > 0) {
+        const cloudinaryResults = await this.cloudinaryService.uploadFiles(
+          mediaFiles
+        );
+        uploadedMedia = cloudinaryResults.map((result, index) => ({
+          url: result.url,
+          publicId: result.publicId,
+          sortOrder: index,
+        }));
+        this.logger.log(
+          `Uploaded ${uploadedMedia.length} media files to Cloudinary for user ${currentUser.id}`
+        );
+      }
+    } catch (uploadError) {
+      this.logger.error(
+        `Failed to upload files to Cloudinary for user ${currentUser.id}`,
+        (uploadError as Error)?.stack
+      );
+      throw new BadRequestException(
+        'Failed to upload files. Please try again.'
+      );
+    }
+
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         // 1. verify user exists and get full user data from database
@@ -77,10 +128,13 @@ export class UserRegistrationService {
           },
         });
 
-        // Prepare document URLs as JSON
-        const documentUrls = dto.documentUrls
-          ? JSON.stringify(dto.documentUrls)
-          : null;
+        // Prepare documents and media as JSON
+        const documentsJson =
+          uploadedDocuments.length > 0
+            ? JSON.stringify(uploadedDocuments)
+            : null;
+        const mediaJson =
+          uploadedMedia.length > 0 ? JSON.stringify(uploadedMedia) : null;
 
         // 4. state machine for existing participant
         if (existing) {
@@ -108,7 +162,8 @@ export class UserRegistrationService {
 
                 // Reset to fresh registration with new documents
                 submittedAt: new Date(),
-                documentUrls,
+                documents: documentsJson,
+                media: mediaJson,
 
                 // Clear all previous approval/rejection state (Tier 1)
                 documentsVerifiedAt: null,
@@ -156,7 +211,8 @@ export class UserRegistrationService {
                 documentsRejectedAt: null,
                 documentsRejectedReason: null,
                 submittedAt: new Date(),
-                documentUrls,
+                documents: documentsJson,
+                media: mediaJson,
               },
             });
             return this.toDto(updated);
@@ -173,7 +229,8 @@ export class UserRegistrationService {
                 rejectedAt: null,
                 rejectedReason: null,
                 submittedAt: new Date(),
-                documentUrls,
+                documents: documentsJson,
+                media: mediaJson,
               },
             });
             return this.toDto(updated);
@@ -190,7 +247,8 @@ export class UserRegistrationService {
               where: { id: existing.id },
               data: {
                 submittedAt: new Date(),
-                documentUrls,
+                documents: documentsJson,
+                media: mediaJson,
               },
             });
             return this.toDto(updated);
@@ -226,7 +284,8 @@ export class UserRegistrationService {
             auctionId: dto.auctionId,
             registeredAt: new Date(),
             submittedAt: new Date(), // immediately submit documents
-            documentUrls,
+            documents: documentsJson,
+            media: mediaJson,
           },
         });
         return this.toDto(created);
@@ -471,7 +530,8 @@ export class UserRegistrationService {
     documentsVerifiedBy: p.documentsVerifiedBy,
     documentsRejectedAt: p.documentsRejectedAt,
     documentsRejectedReason: p.documentsRejectedReason,
-    documentUrls: p.documentUrls ? JSON.parse(p.documentUrls as string) : null,
+    documents: p.documents ? JSON.parse(p.documents as string) : null,
+    media: p.media ? JSON.parse(p.media as string) : null,
 
     // Two-tier approval: Tier 2 - Deposit verification
     depositPaidAt: p.depositPaidAt,

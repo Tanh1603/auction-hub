@@ -172,10 +172,10 @@ export class AuctionResultsService {
           auction.financialSummary.totalAuctionCosts.toString()
         ),
         totalFeesToSeller: parseFloat(
-          auction.financialSummary.totalFeesToSeller.toString()
+          auction.financialSummary.totalFeesToPropertyOwner.toString()
         ),
         netAmountToSeller: parseFloat(
-          auction.financialSummary.netAmountToSeller.toString()
+          auction.financialSummary.netAmountToPropertyOwner.toString()
         ),
         calculationDetails: auction.financialSummary.calculationDetails
           ? JSON.parse(auction.financialSummary.calculationDetails as string)

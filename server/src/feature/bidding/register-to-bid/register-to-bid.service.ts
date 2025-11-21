@@ -28,8 +28,18 @@ export class RegisterToBidService {
    * Create or resubmit registration for an auction
    * Delegates to UserRegistrationService
    */
-  async create(dto: CreateRegisterToBidDto, currentUser: CurrentUserData) {
-    return this.userRegistrationService.create(dto, currentUser);
+  async create(
+    dto: CreateRegisterToBidDto,
+    currentUser: CurrentUserData,
+    documentFiles?: Express.Multer.File[],
+    mediaFiles?: Express.Multer.File[]
+  ) {
+    return this.userRegistrationService.create(
+      dto,
+      currentUser,
+      documentFiles,
+      mediaFiles
+    );
   }
 
   /**

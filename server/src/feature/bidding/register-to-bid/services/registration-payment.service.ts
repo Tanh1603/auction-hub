@@ -132,16 +132,18 @@ export class RegistrationPaymentService {
       // ✅ FIX: Enhanced logging for deposit payment verification
       this.logger.log(
         `[DEPOSIT VERIFICATION] Session ${sessionId}: ` +
-        `status='${verification.status}', ` +
-        `amount=${verification.amount}, ` +
-        `currency='${verification.currency}'`
+          `status='${verification.status}', ` +
+          `amount=${verification.amount}, ` +
+          `currency='${verification.currency}'`
       );
 
       if (verification.status !== 'paid') {
         this.logger.warn(
           `[DEPOSIT VERIFICATION FAILED] Payment status is '${verification.status}', expected 'paid'`
         );
-        throw new BadRequestException(`Payment not completed yet. Current status: ${verification.status}`);
+        throw new BadRequestException(
+          `Payment not completed yet. Current status: ${verification.status}`
+        );
       }
 
       // CRITICAL: Verify the received amount matches the expected deposit amount
@@ -158,7 +160,7 @@ export class RegistrationPaymentService {
         // Payment amount is insufficient
         this.logger.error(
           `[DEPOSIT VERIFICATION FAILED] Amount mismatch for ${registrationId}. ` +
-          `Expected ${expectedAmount} VND, but received ${receivedAmount} ${verification.currency}`
+            `Expected ${expectedAmount} VND, but received ${receivedAmount} ${verification.currency}`
         );
         throw new BadRequestException(
           `Payment received (${receivedAmount} ${verification.currency}) is less than the required deposit (${expectedAmount} VND). Please contact support.`
@@ -208,9 +210,15 @@ export class RegistrationPaymentService {
       // LOG: Registration state AFTER payment verification
       this.logger.log(
         `[PAYMENT VERIFICATION SUCCESS] Registration ${registrationId}:` +
-        ` documentsVerifiedAt=${updatedParticipant.documentsVerifiedAt?.toISOString() || 'NULL'},` +
-        ` depositPaidAt=${updatedParticipant.depositPaidAt?.toISOString() || 'NULL'},` +
-        ` documentsVerifiedBy=${updatedParticipant.documentsVerifiedBy || 'NULL'}`
+          ` documentsVerifiedAt=${
+            updatedParticipant.documentsVerifiedAt?.toISOString() || 'NULL'
+          },` +
+          ` depositPaidAt=${
+            updatedParticipant.depositPaidAt?.toISOString() || 'NULL'
+          },` +
+          ` documentsVerifiedBy=${
+            updatedParticipant.documentsVerifiedBy || 'NULL'
+          }`
       );
 
       this.logger.log(
@@ -557,7 +565,7 @@ export class RegistrationPaymentService {
     documentsVerifiedBy: p.documentsVerifiedBy,
     documentsRejectedAt: p.documentsRejectedAt,
     documentsRejectedReason: p.documentsRejectedReason,
-    documentUrls: p.documentUrls ? JSON.parse(p.documentUrls as string) : null,
+    documentUrls: p.documents ? JSON.parse(p.documents as string) : null,
 
     // Two-tier approval: Tier 2 - Deposit verification
     depositPaidAt: p.depositPaidAt,

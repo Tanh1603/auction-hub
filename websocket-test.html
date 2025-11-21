@@ -1,430 +1,473 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebSocket Auction Testing</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 10px;
-        }
-        .connection-status {
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-        .connected {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .disconnected {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .input-group {
-            margin: 20px 0;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        button {
-            background: #4CAF50;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .danger {
-            background: #f44336;
-        }
-        .danger:hover {
-            background: #da190b;
-        }
-        .log-container {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 20px;
-            border-radius: 5px;
-            height: 400px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            margin-top: 20px;
-        }
-        .log-entry {
-            margin: 5px 0;
-            padding: 5px;
-            border-left: 3px solid transparent;
-        }
-        .log-info {
-            border-left-color: #4CAF50;
-        }
-        .log-success {
-            border-left-color: #2196F3;
-            background: rgba(33, 150, 243, 0.1);
-        }
-        .log-error {
-            border-left-color: #f44336;
-            background: rgba(244, 67, 54, 0.1);
-        }
-        .log-warning {
-            border-left-color: #ff9800;
-        }
-        .timestamp {
-            color: #888;
-            font-size: 12px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .stat-card {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #4CAF50;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-        }
-        .winner-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        .winner-card .stat-label {
-            color: rgba(255,255,255,0.8);
-        }
-        .winner-card .stat-value {
-            color: white;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        border-bottom: 3px solid #4caf50;
+        padding-bottom: 10px;
+      }
+      .connection-status {
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+        font-weight: bold;
+      }
+      .connected {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .disconnected {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .input-group {
+        margin: 20px 0;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      button {
+        background: #4caf50;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 5px;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .danger {
+        background: #f44336;
+      }
+      .danger:hover {
+        background: #da190b;
+      }
+      .log-container {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 20px;
+        border-radius: 5px;
+        height: 400px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        margin-top: 20px;
+      }
+      .log-entry {
+        margin: 5px 0;
+        padding: 5px;
+        border-left: 3px solid transparent;
+      }
+      .log-info {
+        border-left-color: #4caf50;
+      }
+      .log-success {
+        border-left-color: #2196f3;
+        background: rgba(33, 150, 243, 0.1);
+      }
+      .log-error {
+        border-left-color: #f44336;
+        background: rgba(244, 67, 54, 0.1);
+      }
+      .log-warning {
+        border-left-color: #ff9800;
+      }
+      .timestamp {
+        color: #888;
+        font-size: 12px;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .stat-card {
+        background: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #4caf50;
+      }
+      .stat-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+      }
+      .winner-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+      .winner-card .stat-label {
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .winner-card .stat-value {
+        color: white;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>🎯 WebSocket Manual Bid & Winner Price Testing</h1>
-        
-        <div id="connectionStatus" class="connection-status disconnected">
-            ❌ Disconnected
-        </div>
+      <h1>🎯 WebSocket Manual Bid & Winner Price Testing</h1>
 
-        <div class="input-group">
-            <label>Server URL:</label>
-            <input type="text" id="serverUrl" value="http://localhost:3000/bidding" placeholder="http://localhost:3000/bidding">
-        </div>
+      <div id="connectionStatus" class="connection-status disconnected">
+        ❌ Disconnected
+      </div>
 
-        <div class="input-group">
-            <label>Auction ID:</label>
-            <input type="text" id="auctionId" placeholder="Enter auction ID">
-        </div>
+      <div class="input-group">
+        <label>Server URL:</label>
+        <input
+          type="text"
+          id="serverUrl"
+          value="http://localhost:3000/bidding"
+          placeholder="http://localhost:3000/bidding"
+        />
+      </div>
 
-        <div>
-            <button onclick="connectSocket()">🔌 Connect</button>
-            <button onclick="disconnectSocket()" class="danger">❌ Disconnect</button>
-            <button onclick="joinAuction()">🎯 Join Auction</button>
-            <button onclick="leaveAuction()">👋 Leave Auction</button>
-            <button onclick="clearLogs()">🗑️ Clear Logs</button>
-        </div>
+      <div class="input-group">
+        <label>Auction ID:</label>
+        <input type="text" id="auctionId" placeholder="Enter auction ID" />
+      </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Time Remaining</div>
-                <div class="stat-value" id="timeRemaining">--:--:--</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Bids</div>
-                <div class="stat-value" id="totalBids">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Next Minimum Bid</div>
-                <div class="stat-value" id="nextMinBid">$0</div>
-            </div>
-        </div>
+      <div>
+        <button onclick="connectSocket()">🔌 Connect</button>
+        <button onclick="disconnectSocket()" class="danger">
+          ❌ Disconnect
+        </button>
+        <button onclick="joinAuction()">🎯 Join Auction</button>
+        <button onclick="leaveAuction()">👋 Leave Auction</button>
+        <button onclick="clearLogs()">🗑️ Clear Logs</button>
+      </div>
 
-        <div class="winner-card" id="winnerCard" style="display: none;">
-            <div class="stat-label">🏆 Current Winner</div>
-            <div class="stat-value" id="winnerName">--</div>
-            <div class="stat-label" style="margin-top: 10px;">💰 Winning Price</div>
-            <div class="stat-value" id="winnerPrice">$0</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Time Remaining</div>
+          <div class="stat-value" id="timeRemaining">--:--:--</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Bids</div>
+          <div class="stat-value" id="totalBids">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Next Minimum Bid</div>
+          <div class="stat-value" id="nextMinBid">$0</div>
+        </div>
+      </div>
 
-        <h3>📊 Real-time Logs</h3>
-        <div class="log-container" id="logContainer"></div>
+      <div class="winner-card" id="winnerCard" style="display: none">
+        <div class="stat-label">🏆 Current Winner</div>
+        <div class="stat-value" id="winnerName">--</div>
+        <div class="stat-label" style="margin-top: 10px">💰 Winning Price</div>
+        <div class="stat-value" id="winnerPrice">$0</div>
+      </div>
+
+      <h3>📊 Real-time Logs</h3>
+      <div class="log-container" id="logContainer"></div>
     </div>
 
     <script>
-        let socket = null;
-        let currentAuctionId = null;
+      let socket = null;
+      let currentAuctionId = null;
 
-        function log(message, type = 'info') {
-            const logContainer = document.getElementById('logContainer');
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.className = `log-entry log-${type}`;
-            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
-            logContainer.appendChild(entry);
-            logContainer.scrollTop = logContainer.scrollHeight;
+      function log(message, type = 'info') {
+        const logContainer = document.getElementById('logContainer');
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      function updateStatus(connected) {
+        const status = document.getElementById('connectionStatus');
+        if (connected) {
+          status.className = 'connection-status connected';
+          status.textContent = `✅ Connected (Socket ID: ${socket.id})`;
+        } else {
+          status.className = 'connection-status disconnected';
+          status.textContent = '❌ Disconnected';
+        }
+      }
+
+      function updateWinnerDisplay(winningBid) {
+        const winnerCard = document.getElementById('winnerCard');
+        if (winningBid) {
+          winnerCard.style.display = 'block';
+          document.getElementById('winnerName').textContent =
+            winningBid.bidderName || '--';
+          document.getElementById('winnerPrice').textContent = `$${(
+            winningBid.amount || 0
+          ).toLocaleString()}`;
+        } else {
+          winnerCard.style.display = 'none';
+        }
+      }
+
+      function formatTime(ms) {
+        const seconds = Math.floor((ms / 1000) % 60);
+        const minutes = Math.floor((ms / (1000 * 60)) % 60);
+        const hours = Math.floor(ms / (1000 * 60 * 60));
+        return `${hours.toString().padStart(2, '0')}:${minutes
+          .toString()
+          .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+
+      function connectSocket() {
+        const serverUrl = document.getElementById('serverUrl').value;
+
+        if (socket && socket.connected) {
+          log('Already connected!', 'warning');
+          return;
         }
 
-        function updateStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.className = 'connection-status connected';
-                status.textContent = `✅ Connected (Socket ID: ${socket.id})`;
-            } else {
-                status.className = 'connection-status disconnected';
-                status.textContent = '❌ Disconnected';
-            }
-        }
+        log(`Connecting to ${serverUrl}...`, 'info');
 
-        function updateWinnerDisplay(winningBid) {
-            const winnerCard = document.getElementById('winnerCard');
-            if (winningBid) {
-                winnerCard.style.display = 'block';
-                document.getElementById('winnerName').textContent = winningBid.bidderName || '--';
-                document.getElementById('winnerPrice').textContent = `$${(winningBid.amount || 0).toLocaleString()}`;
-            } else {
-                winnerCard.style.display = 'none';
-            }
-        }
-
-        function formatTime(ms) {
-            const seconds = Math.floor((ms / 1000) % 60);
-            const minutes = Math.floor((ms / (1000 * 60)) % 60);
-            const hours = Math.floor(ms / (1000 * 60 * 60));
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function connectSocket() {
-            const serverUrl = document.getElementById('serverUrl').value;
-            
-            if (socket && socket.connected) {
-                log('Already connected!', 'warning');
-                return;
-            }
-
-            log(`Connecting to ${serverUrl}...`, 'info');
-
-            socket = io(serverUrl, {
-                transports: ['websocket', 'polling'],
-                reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000,
-                reconnectionAttempts: 5,
-            });
-
-            socket.on('connect', () => {
-                log('✅ Connected to server!', 'success');
-                updateStatus(true);
-            });
-
-            socket.on('disconnect', (reason) => {
-                log(`❌ Disconnected: ${reason}`, 'error');
-                updateStatus(false);
-            });
-
-            socket.on('connect_error', (error) => {
-                log(`❌ Connection error: ${error.message}`, 'error');
-            });
-
-            // Auction state (on join)
-            socket.on('auctionState', (response) => {
-                log('📊 Received auction state', 'success');
-                log(`<strong>Auction:</strong> ${response.data.name} (${response.data.code})`, 'info');
-                log(`<strong>Status:</strong> ${response.data.status}`, 'info');
-                log(`<strong>Total Bids:</strong> ${response.data.totalBids}`, 'info');
-                
-                document.getElementById('totalBids').textContent = response.data.totalBids;
-                document.getElementById('nextMinBid').textContent = `$${response.data.nextMinimumBid.toLocaleString()}`;
-                
-                if (response.data.currentWinningBid) {
-                    log(`🏆 <strong>Current Winner:</strong> ${response.data.currentWinningBid.bidderName} - $${response.data.currentWinningBid.amount.toLocaleString()}`, 'success');
-                    updateWinnerDisplay(response.data.currentWinningBid);
-                } else {
-                    log('No bids yet', 'info');
-                }
-            });
-
-            // New bid event
-            socket.on('newBid', (response) => {
-                log('💰 <strong>NEW BID!</strong>', 'success');
-                if (response.data.currentWinningBid) {
-                    log(`🏆 Winner: ${response.data.currentWinningBid.bidderName}`, 'success');
-                    log(`💵 Amount: $${response.data.currentWinningBid.amount.toLocaleString()}`, 'success');
-                    updateWinnerDisplay(response.data.currentWinningBid);
-                }
-                document.getElementById('totalBids').textContent = response.data.totalBids;
-                document.getElementById('nextMinBid').textContent = `$${response.data.nextMinimumBid.toLocaleString()}`;
-            });
-
-            // Time updates (every second) - NOW INCLUDES WINNER PRICE!
-            socket.on('timeUpdate', (response) => {
-                const { timeRemaining, currentWinningBid, nextMinimumBid, totalBids } = response.data;
-                
-                // Update display
-                document.getElementById('timeRemaining').textContent = formatTime(timeRemaining);
-                
-                // ✅ Winner price is now streamed every second!
-                if (currentWinningBid) {
-                    updateWinnerDisplay(currentWinningBid);
-                    // Log every 10 seconds to avoid spam
-                    if (Math.floor(timeRemaining / 1000) % 10 === 0) {
-                        log(`⏱️ Time: ${formatTime(timeRemaining)} | 🏆 Winner: ${currentWinningBid.bidderName} - $${currentWinningBid.amount.toLocaleString()}`, 'info');
-                    }
-                }
-                
-                if (nextMinimumBid) {
-                    document.getElementById('nextMinBid').textContent = `$${nextMinimumBid.toLocaleString()}`;
-                }
-                
-                if (totalBids !== undefined) {
-                    document.getElementById('totalBids').textContent = totalBids;
-                }
-
-                if (response.data.hasEnded) {
-                    log('🏁 <strong>AUCTION HAS ENDED!</strong>', 'warning');
-                }
-            });
-
-            // Auction updates
-            socket.on('auctionUpdate', (response) => {
-                log(`📢 <strong>Auction Update:</strong> ${JSON.stringify(response.data)}`, 'warning');
-                if (response.data.type === 'AUCTION_ENDED') {
-                    log('🏁 Auction ended!', 'warning');
-                }
-                if (response.data.winningBid) {
-                    log(`🏆 Final Winner: ${response.data.winningBid.winnerName} - $${response.data.winningBid.amount}`, 'success');
-                }
-            });
-
-            // Bid denied
-            socket.on('bidDenied', (response) => {
-                log(`⛔ <strong>Bid Denied:</strong> ${response.data.deniedReason}`, 'error');
-            });
-
-            // Join confirmation
-            socket.on('joinedAuction', (response) => {
-                log(`✅ Joined auction: ${response.data.auctionId}`, 'success');
-            });
-
-            // Leave confirmation
-            socket.on('leftAuction', (response) => {
-                log(`👋 Left auction: ${response.data.auctionId}`, 'info');
-            });
-
-            // Error
-            socket.on('error', (response) => {
-                log(`❌ Error: ${response.data.message}`, 'error');
-            });
-        }
-
-        function disconnectSocket() {
-            if (socket) {
-                socket.disconnect();
-                log('Disconnected manually', 'info');
-                updateStatus(false);
-            }
-        }
-
-        function joinAuction() {
-            const auctionId = document.getElementById('auctionId').value;
-            
-            if (!auctionId) {
-                log('❌ Please enter an auction ID', 'error');
-                return;
-            }
-
-            if (!socket || !socket.connected) {
-                log('❌ Not connected to server', 'error');
-                return;
-            }
-
-            currentAuctionId = auctionId;
-            log(`Joining auction: ${auctionId}`, 'info');
-            socket.emit('joinAuction', { auctionId });
-        }
-
-        function leaveAuction() {
-            if (!currentAuctionId) {
-                log('❌ Not in any auction', 'error');
-                return;
-            }
-
-            if (!socket || !socket.connected) {
-                log('❌ Not connected to server', 'error');
-                return;
-            }
-
-            log(`Leaving auction: ${currentAuctionId}`, 'info');
-            socket.emit('leaveAuction', currentAuctionId);
-            currentAuctionId = null;
-        }
-
-        function clearLogs() {
-            document.getElementById('logContainer').innerHTML = '';
-            log('Logs cleared', 'info');
-        }
-
-        // Auto-connect on load
-        window.addEventListener('load', () => {
-            log('🎯 WebSocket Testing Tool Ready', 'success');
-            log('Instructions:', 'info');
-            log('1. Enter auction ID', 'info');
-            log('2. Click "Connect"', 'info');
-            log('3. Click "Join Auction"', 'info');
-            log('4. Watch real-time updates!', 'info');
+        socket = io(serverUrl, {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 5,
         });
+
+        socket.on('connect', () => {
+          log('✅ Connected to server!', 'success');
+          updateStatus(true);
+        });
+
+        socket.on('disconnect', (reason) => {
+          log(`❌ Disconnected: ${reason}`, 'error');
+          updateStatus(false);
+        });
+
+        socket.on('connect_error', (error) => {
+          log(`❌ Connection error: ${error.message}`, 'error');
+        });
+
+        // Auction state (on join)
+        socket.on('auctionState', (data) => {
+          log('📊 Received auction state', 'success');
+          log(`<strong>Auction:</strong> ${data.name} (${data.code})`, 'info');
+          log(`<strong>Status:</strong> ${data.status}`, 'info');
+          log(`<strong>Total Bids:</strong> ${data.totalBids}`, 'info');
+
+          document.getElementById('totalBids').textContent = data.totalBids;
+          document.getElementById(
+            'nextMinBid'
+          ).textContent = `$${data.nextMinimumBid.toLocaleString()}`;
+
+          if (data.currentWinningBid) {
+            log(
+              `🏆 <strong>Current Winner:</strong> ${
+                data.currentWinningBid.bidderName
+              } - $${data.currentWinningBid.amount.toLocaleString()}`,
+              'success'
+            );
+            updateWinnerDisplay(data.currentWinningBid);
+          } else {
+            log('No bids yet', 'info');
+          }
+        });
+
+        // New bid event
+        socket.on('newBid', (data) => {
+          log('💰 <strong>NEW BID!</strong>', 'success');
+          if (data.currentWinningBid) {
+            log(`🏆 Winner: ${data.currentWinningBid.bidderName}`, 'success');
+            log(
+              `💵 Amount: $${data.currentWinningBid.amount.toLocaleString()}`,
+              'success'
+            );
+            updateWinnerDisplay(data.currentWinningBid);
+          }
+          document.getElementById('totalBids').textContent = data.totalBids;
+          document.getElementById(
+            'nextMinBid'
+          ).textContent = `$${data.nextMinimumBid.toLocaleString()}`;
+        });
+
+        // Time updates (every second) - NOW INCLUDES WINNER PRICE!
+        socket.on('timeUpdate', (data) => {
+          const {
+            timeRemaining,
+            currentWinningBid,
+            nextMinimumBid,
+            totalBids,
+          } = data;
+
+          // Update display
+          document.getElementById('timeRemaining').textContent =
+            formatTime(timeRemaining);
+
+          // ✅ Winner price is now streamed every second!
+          if (currentWinningBid) {
+            updateWinnerDisplay(currentWinningBid);
+            // Log every 10 seconds to avoid spam
+            if (Math.floor(timeRemaining / 1000) % 10 === 0) {
+              log(
+                `⏱️ Time: ${formatTime(timeRemaining)} | 🏆 Winner: ${
+                  currentWinningBid.bidderName
+                } - $${currentWinningBid.amount.toLocaleString()}`,
+                'info'
+              );
+            }
+          }
+
+          if (nextMinimumBid) {
+            document.getElementById(
+              'nextMinBid'
+            ).textContent = `$${nextMinimumBid.toLocaleString()}`;
+          }
+
+          if (totalBids !== undefined) {
+            document.getElementById('totalBids').textContent = totalBids;
+          }
+
+          if (data.hasEnded) {
+            log('🏁 <strong>AUCTION HAS ENDED!</strong>', 'warning');
+          }
+        });
+
+        // Auction updates
+        socket.on('auctionUpdate', (data) => {
+          log(
+            `📢 <strong>Auction Update:</strong> ${JSON.stringify(data)}`,
+            'warning'
+          );
+          if (data.type === 'AUCTION_ENDED') {
+            log('🏁 Auction ended!', 'warning');
+          }
+          if (data.winningBid) {
+            log(
+              `🏆 Final Winner: ${data.winningBid.winnerName} - $${data.winningBid.amount}`,
+              'success'
+            );
+          }
+        });
+
+        // Bid denied
+        socket.on('bidDenied', (data) => {
+          log(`⛔ <strong>Bid Denied:</strong> ${data.deniedReason}`, 'error');
+        });
+
+        // Join confirmation
+        socket.on('joinedAuction', (data) => {
+          log(`✅ Joined auction: ${data.auctionId}`, 'success');
+        });
+
+        // Leave confirmation
+        socket.on('leftAuction', (data) => {
+          log(`👋 Left auction: ${data.auctionId}`, 'info');
+        });
+
+        // Error
+        socket.on('error', (data) => {
+          log(`❌ Error: ${data.message}`, 'error');
+        });
+      }
+
+      function disconnectSocket() {
+        if (socket) {
+          socket.disconnect();
+          log('Disconnected manually', 'info');
+          updateStatus(false);
+        }
+      }
+
+      function joinAuction() {
+        const auctionId = document.getElementById('auctionId').value;
+
+        if (!auctionId) {
+          log('❌ Please enter an auction ID', 'error');
+          return;
+        }
+
+        if (!socket || !socket.connected) {
+          log('❌ Not connected to server', 'error');
+          return;
+        }
+
+        currentAuctionId = auctionId;
+        log(`Joining auction: ${auctionId}`, 'info');
+        socket.emit('joinAuction', { auctionId });
+      }
+
+      function leaveAuction() {
+        if (!currentAuctionId) {
+          log('❌ Not in any auction', 'error');
+          return;
+        }
+
+        if (!socket || !socket.connected) {
+          log('❌ Not connected to server', 'error');
+          return;
+        }
+
+        log(`Leaving auction: ${currentAuctionId}`, 'info');
+        socket.emit('leaveAuction', currentAuctionId);
+        currentAuctionId = null;
+      }
+
+      function clearLogs() {
+        document.getElementById('logContainer').innerHTML = '';
+        log('Logs cleared', 'info');
+      }
+
+      // Auto-connect on load
+      window.addEventListener('load', () => {
+        log('🎯 WebSocket Testing Tool Ready', 'success');
+        log('Instructions:', 'info');
+        log('1. Enter auction ID', 'info');
+        log('2. Click "Connect"', 'info');
+        log('3. Click "Join Auction"', 'info');
+        log('4. Watch real-time updates!', 'info');
+      });
     </script>
-</body>
+  </body>
 </html>

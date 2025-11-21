@@ -3,6 +3,7 @@ import { RegisterToBidService } from './register-to-bid.service';
 import { PrismaModule } from '../../../prisma/prisma.module';
 import { PaymentModule } from '../../../payment/payment.module';
 import { EmailModule } from '../../../common/email/email.module';
+import { CloudinaryModule } from '../../../cloudinary/cloudinary.module';
 import {
   UserRegistrationService,
   AdminApprovalService,
@@ -15,7 +16,7 @@ import {
 } from './controllers';
 
 @Module({
-  imports: [PrismaModule, PaymentModule, EmailModule],
+  imports: [PrismaModule, PaymentModule, EmailModule, CloudinaryModule],
   controllers: [
     UserRegistrationController,
     AdminApprovalController,

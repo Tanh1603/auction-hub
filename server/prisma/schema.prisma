@@ -104,8 +104,6 @@ model Auction {
   startingPrice                  Decimal       @map("starting_price") @db.Decimal(18, 2)
   reservePrice                   Decimal?      @map("reserve_price") @db.Decimal(18, 2)
   bidIncrement                   Decimal       @map("bid_increment") @db.Decimal(18, 2)
-  hasMaxBidSteps                 Boolean       @map("has_max_bid_steps")
-  maxBidSteps                    Int?          @map("max_bid_steps")
   isActive                       Boolean       @default(true) @map("is_active")
   assetType                      AssetType     @map("asset_type")
   numberOfFollow                 Int           @default(0) @map("number_of_follow")
@@ -117,9 +115,11 @@ model Auction {
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  // Media stored as JsonB for flexibility
+  images           Json?                   @db.JsonB
+  attachments      Json?                   @db.JsonB
+
   owner            User                    @relation("AuctionOwner", fields: [propertyOwner], references: [id])
-  images           AuctionImage[]
-  attachments      AuctionAttachment[]
   participants     AuctionParticipant[]
   bids             AuctionBid[]
   contracts        Contract[]
@@ -151,40 +151,6 @@ enum AuctionStatus {
   cancelled
 
   @@map("auction_status")
-}
-
-model AuctionImage {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId String   @map("auction_id") @db.Uuid
-  url       String   @db.VarChar(255)
-  sortOrder Int      @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-
-  @@map("auction_images")
-}
-
-model AuctionAttachment {
-  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId String         @map("auction_id") @db.Uuid
-  url       String         @db.VarChar(255)
-  type      AttachmentType
-  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-
-  @@map("auction_attachments")
-}
-
-enum AttachmentType {
-  document
-  image
-  video
-
-  @@map("attachment_type")
 }
 
 model AuctionRelation {
@@ -246,8 +212,8 @@ model AuctionFinancialSummary {
   totalAuctionCosts        Decimal   @map("total_auction_costs") @db.Decimal(18, 2)
 
   // Totals
-  totalFeesToPropertyOwner Decimal   @map("total_fees_to_property_owner") @db.Decimal(18, 2) // Commission + Costs
-  netAmountToPropertyOwner Decimal   @map("net_amount_to_property_owner") @db.Decimal(18, 2) // FinalPrice - TotalFees
+  totalFeesToPropertyOwner Decimal   @default(0) @map("total_fees_to_property_owner") @db.Decimal(18, 2) // Commission + Costs
+  netAmountToPropertyOwner Decimal   @default(0) @map("net_amount_to_property_owner") @db.Decimal(18, 2) // FinalPrice - TotalFees
 
   // Calculation breakdown (JSON for transparency)
   calculationDetails       Json      @map("calculation_details")
@@ -298,7 +264,10 @@ model AuctionParticipant {
   documentsVerifiedBy     String?   @map("documents_verified_by") @db.Uuid
   documentsRejectedAt     DateTime? @map("documents_rejected_at") @db.Timestamptz(6)
   documentsRejectedReason String?   @map("documents_rejected_reason") @db.Text
-  documentUrls            Json?     @map("document_urls") // array of document URLs
+
+  // Documents and media stored as JsonB for flexibility (similar to Auction model)
+  documents               Json?     @map("documents") @db.JsonB // Array of document objects: [{ url, publicId, type, sortOrder }]
+  media                   Json?     @map("media") @db.JsonB // Array of media objects: [{ url, publicId, sortOrder }]
 
   // Two-tier approval: Tier 2 - Deposit verification
   depositPaidAt           DateTime? @map("deposit_paid_at") @db.Timestamptz(6)
@@ -388,7 +357,7 @@ model Contract {
   id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   auctionId           String         @map("auction_id") @db.Uuid
   winningBidId        String         @map("winning_bid_id") @db.Uuid
-  propertyOwnerUserId String         @map("property_owner_user_id") @db.Uuid
+  propertyOwnerUserId String?        @map("property_owner_user_id") @db.Uuid
   buyerUserId         String         @map("buyer_user_id") @db.Uuid
   createdBy           String         @map("created_by") @db.Uuid
   price               Decimal        @db.Decimal(18, 2)
@@ -402,7 +371,7 @@ model Contract {
   // Relations
   auction       Auction    @relation(fields: [auctionId], references: [id])
   winningBid    AuctionBid @relation(fields: [winningBidId], references: [id])
-  propertyOwner User       @relation("ContractPropertyOwner", fields: [propertyOwnerUserId], references: [id])
+  propertyOwner User?      @relation("ContractPropertyOwner", fields: [propertyOwnerUserId], references: [id])
   buyer         User       @relation("ContractBuyer", fields: [buyerUserId], references: [id])
   creator       User       @relation("ContractCreator", fields: [createdBy], references: [id])
 

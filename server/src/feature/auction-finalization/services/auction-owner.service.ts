@@ -152,7 +152,7 @@ export class AuctionOwnerService {
           data: {
             auctionId: auction.id,
             winningBidId: winningBid.id,
-            sellerUserId: auction.propertyOwner,
+            propertyOwnerUserId: auction.propertyOwner,
             buyerUserId: winningBid.participant.userId,
             createdBy: userId,
             price: winningBid.amount,
@@ -355,12 +355,12 @@ export class AuctionOwnerService {
             // Create new contract
             contract = await tx.contract.create({
               data: {
-                auctionId: auction.id,
-                winningBidId: winningBid.id,
-                sellerUserId: auction.propertyOwner,
-                buyerUserId: winningBid.participant.userId,
-                createdBy: adminId,
-                price: winningBid.amount,
+              auctionId: auction.id,
+              winningBidId: winningBid.id,
+              propertyOwnerUserId: auction.propertyOwner,
+              buyerUserId: winningBid.participant.userId,
+              createdBy: adminId,
+              price: winningBid.amount,
                 status: ContractStatus.draft,
               },
             });
