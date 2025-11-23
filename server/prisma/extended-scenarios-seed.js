@@ -82,14 +82,10 @@ const edgeAuctions = [
     startingPrice: 200000000,
     bidIncrement: 5000000,
     assetDescription: 'Tài sản cần bán gấp, cơ hội cuối cùng',
-    assetAddress: 'Địa chỉ khẩn cấp',
-    validCheckInBeforeStartMinutes: 15,
+    assetAddress: 'Địa chỉ không ai trả',
+    validCheckInBeforeStartMinutes: 20,
     validCheckInAfterStartMinutes: 10,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
     isActive: true,
-  },
-
   // Auction with maximum bid steps reached
   {
     code: 'MAXSTEP001',
@@ -110,8 +106,6 @@ const edgeAuctions = [
     assetAddress: 'Địa chỉ giới hạn bước',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    hasMaxBidSteps: true,
-    maxBidSteps: 5, // Will reach maximum
     isActive: true,
   },
 
@@ -133,10 +127,8 @@ const edgeAuctions = [
     bidIncrement: 50000000,
     assetDescription: 'Đấu giá bị hủy do lý do khách quan',
     assetAddress: 'Địa chỉ đã hủy',
-    validCheckInBeforeStartMinutes: 30,
-    validCheckInAfterStartMinutes: 15,
-    hasMaxBidSteps: false,
-    maxBidSteps: 0,
+    validCheckInBeforeStartMinutes: 20,
+    validCheckInAfterStartMinutes: 10,
     isActive: false,
   },
 

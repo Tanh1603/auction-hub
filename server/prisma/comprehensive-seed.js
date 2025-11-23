@@ -465,8 +465,6 @@ async function main() {
       prisma.auctionFinancialSummary.deleteMany(),
       prisma.auctionCost.deleteMany(),
       prisma.auctionRelation.deleteMany(),
-      prisma.auctionAttachment.deleteMany(),
-      prisma.auctionImage.deleteMany(),
       prisma.auction.deleteMany(),
       prisma.user.deleteMany(), // Delete users last
     ]);
@@ -494,10 +492,30 @@ async function main() {
     console.log('🏛️ Creating auctions...');
     const auctions = {};
     for (const auctionData of sampleAuctions) {
+      // Prepare images data
+      let imagesData = [];
+      if (auctionImages[auctionData.code]) {
+        imagesData = auctionImages[auctionData.code].map((url, index) => ({
+          url,
+          sortOrder: index,
+        }));
+      }
+
+      // Prepare attachments data
+      let attachmentsData = [];
+      if (auctionAttachments[auctionData.code]) {
+        attachmentsData = auctionAttachments[auctionData.code].map((att) => ({
+          url: att.url,
+          type: att.type,
+        }));
+      }
+
       const auction = await prisma.auction.create({
         data: {
           ...auctionData,
           propertyOwner: users.auctioneer.id,
+          images: imagesData.length > 0 ? imagesData : undefined,
+          attachments: attachmentsData.length > 0 ? attachmentsData : undefined,
         },
       });
       auctions[auctionData.code] = auction;
@@ -505,28 +523,11 @@ async function main() {
         `  ✓ Created auction: ${auctionData.code} - ${auctionData.name}`
       );
 
-      // Add images
-      if (auctionImages[auctionData.code]) {
-        const imageData = auctionImages[auctionData.code].map((url, index) => ({
-          auctionId: auction.id,
-          url,
-          sortOrder: index,
-        }));
-        await prisma.auctionImage.createMany({ data: imageData });
-        console.log(`    ✓ Added ${imageData.length} images`);
+      if (imagesData.length > 0) {
+        console.log(`    ✓ Added ${imagesData.length} images`);
       }
-
-      // Add attachments
-      if (auctionAttachments[auctionData.code]) {
-        const attachmentData = auctionAttachments[auctionData.code].map(
-          (att) => ({
-            auctionId: auction.id,
-            url: att.url,
-            type: att.type,
-          })
-        );
-        await prisma.auctionAttachment.createMany({ data: attachmentData });
-        console.log(`    ✓ Added ${attachmentData.length} attachments`);
+      if (attachmentsData.length > 0) {
+        console.log(`    ✓ Added ${attachmentsData.length} attachments`);
       }
     }
 
@@ -603,7 +604,7 @@ async function main() {
         auctionId: auctions['AUC001'].id,
         registeredAt: createDate(-1),
         submittedAt: createDate(-1, 2),
-        documentUrls: JSON.stringify(documentUrls),
+        documents: documentUrls,
       };
 
       // Two-Tier Approval: Tier 1 - Document Verification
@@ -631,11 +632,11 @@ async function main() {
             transactionId: `DEP-AUC001-${user.id.substring(0, 8)}`,
             bankCode: 'BIDV',
             paidAt: createDate(-1, 6),
-            paymentDetails: JSON.stringify({
+            paymentDetails: {
               auctionCode: 'AUC001',
               participantName: user.fullName,
               verifiedBy: users.admin.id,
-            }),
+            },
           },
         });
 
@@ -724,11 +725,11 @@ async function main() {
           transactionId: `DEP-AUC002-${user.id.substring(0, 8)}`,
           bankCode: 'VIETCOMBANK',
           paidAt: createDate(-6),
-          paymentDetails: JSON.stringify({
+          paymentDetails: {
             auctionCode: 'AUC002',
             participantName: user.fullName,
             verifiedBy: users.admin.id,
-          }),
+          },
         },
       });
 
@@ -738,7 +739,7 @@ async function main() {
           auctionId: auctions['AUC002'].id,
           registeredAt: createDate(-8),
           submittedAt: createDate(-7),
-          documentUrls: JSON.stringify(documentUrls),
+          documents: documentUrls,
           documentsVerifiedAt: createDate(-7, 2),
           documentsVerifiedBy: users.admin.id,
           depositPaidAt: createDate(-6),
@@ -847,11 +848,11 @@ async function main() {
           transactionId: `DEP-AUC003-${user.id.substring(0, 8)}`,
           bankCode: 'TECHCOMBANK',
           paidAt: createDate(-15),
-          paymentDetails: JSON.stringify({
+          paymentDetails: {
             auctionCode: 'AUC003',
             participantName: user.fullName,
             verifiedBy: users.admin.id,
-          }),
+          },
         },
       });
 
@@ -861,7 +862,7 @@ async function main() {
           auctionId: auctions['AUC003'].id,
           registeredAt: createDate(-18),
           submittedAt: createDate(-17),
-          documentUrls: JSON.stringify(documentUrls),
+          documents: documentUrls,
           documentsVerifiedAt: createDate(-16),
           documentsVerifiedBy: users.admin.id,
           depositPaidAt: createDate(-15),
@@ -924,7 +925,7 @@ async function main() {
           )}`,
           bankCode: 'VIETCOMBANK',
           paidAt: createDate(-3),
-          paymentDetails: JSON.stringify({
+          paymentDetails: {
             auctionCode: 'AUC003',
             winningBidAmount: winningBid.amount.toString(),
             depositAmount: auctions['AUC003'].depositAmountRequired.toString(),
@@ -933,7 +934,7 @@ async function main() {
             ).toString(),
             participantName: auc003ParticipantIds[2].user.fullName,
             verifiedBy: users.admin.id,
-          }),
+          },
         },
       });
 
@@ -941,7 +942,7 @@ async function main() {
         data: {
           auctionId: auctions['AUC003'].id,
           winningBidId: winningBid.id,
-          sellerUserId: users.auctioneer.id,
+          propertyOwnerUserId: users.auctioneer.id,
           buyerUserId: auc003ParticipantIds[2].user.id, // Winner
           createdBy: users.admin.id,
           price: winningBid.amount,
@@ -968,7 +969,7 @@ async function main() {
           venueRentalCost: 3000000, // 3M VND
           appraisalCost: 10000000, // 10M VND
           assetViewingCost: 2000000, // 2M VND
-          otherCosts: JSON.stringify([
+          otherCosts: [
             {
               description: 'Photography and documentation',
               amount: 1000000,
@@ -979,13 +980,13 @@ async function main() {
               amount: 5000000,
               documentUrl: 'https://example.com/docs/legal-receipt.pdf',
             },
-          ]),
+          ],
           totalCosts: 26000000, // 26M VND total
-          documents: JSON.stringify([
+          documents: [
             'https://example.com/docs/advertising-invoice.pdf',
             'https://example.com/docs/venue-rental-receipt.pdf',
             'https://example.com/docs/appraisal-report.pdf',
-          ]),
+          ],
         },
       });
       console.log(`    ✓ Created auction costs for AUC003`);
@@ -1008,9 +1009,9 @@ async function main() {
           dossierFee,
           depositAmount,
           totalAuctionCosts,
-          totalFeesToSeller,
-          netAmountToSeller,
-          calculationDetails: JSON.stringify({
+          totalFeesToPropertyOwner: totalFeesToSeller,
+          netAmountToPropertyOwner: netAmountToSeller,
+          calculationDetails: {
             breakdown: {
               finalSalePrice: finalSalePrice.toString(),
               commissionFee: commissionFee.toString(),
@@ -1045,7 +1046,7 @@ async function main() {
             },
             sellerReceives: netAmountToSeller.toString(),
             buyerPays: finalSalePrice.toString(),
-          }),
+          },
         },
       });
       console.log(`    ✓ Created financial summary for AUC003`);
@@ -1177,12 +1178,12 @@ async function main() {
     console.log('🧪 Creating additional test scenarios...');
 
     // Scenario 1: Rejected documents (can re-apply)
-    const rejectedDocUrls = JSON.stringify([
+    const rejectedDocUrls = [
       {
         type: 'identity_card',
         url: 'https://example.com/docs/rejected_id_blurry.pdf',
       },
-    ]);
+    ];
 
     const rejectedParticipant = await prisma.auctionParticipant.create({
       data: {
@@ -1190,7 +1191,7 @@ async function main() {
         auctionId: auctions['AUC005'].id,
         registeredAt: createDate(6),
         submittedAt: createDate(6, 1),
-        documentUrls: rejectedDocUrls,
+        documents: rejectedDocUrls,
         documentsRejectedAt: createDate(6, 3),
         documentsRejectedReason:
           'Documents are unclear. Please provide: clear ID photo, complete bank statement',
@@ -1201,7 +1202,7 @@ async function main() {
     );
 
     // Scenario 2: Withdrawn registration (can re-apply)
-    const withdrawnDocUrls = JSON.stringify([
+    const withdrawnDocUrls = [
       {
         type: 'identity_card',
         url: 'https://example.com/docs/withdrawn_id.pdf',
@@ -1210,7 +1211,7 @@ async function main() {
         type: 'financial_proof',
         url: 'https://example.com/docs/withdrawn_bank.pdf',
       },
-    ]);
+    ];
 
     const withdrawnParticipant = await prisma.auctionParticipant.create({
       data: {
@@ -1218,7 +1219,7 @@ async function main() {
         auctionId: auctions['AUC005'].id,
         registeredAt: createDate(6),
         submittedAt: createDate(6, 1),
-        documentUrls: withdrawnDocUrls,
+        documents: withdrawnDocUrls,
         withdrawnAt: createDate(6, 4),
         withdrawalReason: 'Changed my mind about participating',
       },
@@ -1237,11 +1238,11 @@ async function main() {
         currency: 'VND',
         status: 'pending',
         paymentMethod: 'bank_transfer',
-        paymentDetails: JSON.stringify({
+        paymentDetails: {
           auctionCode: 'AUC001',
           participantName: users.bidder3.fullName,
           deadlineApproaching: true,
-        }),
+        },
       },
     });
     console.log(`    ✓ Created pending deposit payment for deadline testing`);

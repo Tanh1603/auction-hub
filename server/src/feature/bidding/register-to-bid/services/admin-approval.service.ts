@@ -308,9 +308,9 @@ export class AdminApprovalService {
 
         this.logger.log(
           `[TIER 1 APPROVAL] Documents verified for registration ${registrationId} by admin ${adminId}.` +
-          ` State: documentsVerifiedAt=${updated.documentsVerifiedAt?.toISOString()},` +
-          ` documentsVerifiedBy=${updated.documentsVerifiedBy}.` +
-          ` User can now proceed to deposit payment.`
+            ` State: documentsVerifiedAt=${updated.documentsVerifiedAt?.toISOString()},` +
+            ` documentsVerifiedBy=${updated.documentsVerifiedBy}.` +
+            ` User can now proceed to deposit payment.`
         );
 
         return { updated, participant };
@@ -428,19 +428,27 @@ export class AdminApprovalService {
         // LOG: Full registration state before final approval
         this.logger.log(
           `[FINAL APPROVAL CHECK] Registration ${registrationId}:` +
-          ` documentsVerifiedAt=${participant.documentsVerifiedAt?.toISOString() || 'NULL'},` +
-          ` documentsVerifiedBy=${participant.documentsVerifiedBy || 'NULL'},` +
-          ` depositPaidAt=${participant.depositPaidAt?.toISOString() || 'NULL'},` +
-          ` depositAmount=${participant.depositAmount || 'NULL'},` +
-          ` withdrawnAt=${participant.withdrawnAt?.toISOString() || 'NULL'},` +
-          ` submittedAt=${participant.submittedAt?.toISOString() || 'NULL'}`
+            ` documentsVerifiedAt=${
+              participant.documentsVerifiedAt?.toISOString() || 'NULL'
+            },` +
+            ` documentsVerifiedBy=${
+              participant.documentsVerifiedBy || 'NULL'
+            },` +
+            ` depositPaidAt=${
+              participant.depositPaidAt?.toISOString() || 'NULL'
+            },` +
+            ` depositAmount=${participant.depositAmount || 'NULL'},` +
+            ` withdrawnAt=${
+              participant.withdrawnAt?.toISOString() || 'NULL'
+            },` +
+            ` submittedAt=${participant.submittedAt?.toISOString() || 'NULL'}`
         );
 
         // Check if documents are verified
         if (!participant.documentsVerifiedAt) {
           this.logger.error(
             `[FINAL APPROVAL FAILED] Registration ${registrationId}: documentsVerifiedAt is NULL!` +
-            ` Full state logged above. This means Tier 1 document verification was not completed.`
+              ` Full state logged above. This means Tier 1 document verification was not completed.`
           );
           throw new BadRequestException('Documents must be verified first');
         }
@@ -541,8 +549,16 @@ export class AdminApprovalService {
     documentsVerifiedBy: p.documentsVerifiedBy,
     documentsRejectedAt: p.documentsRejectedAt,
     documentsRejectedReason: p.documentsRejectedReason,
-    documents: p.documents ? JSON.parse(p.documents as string) : null,
-    media: p.media ? JSON.parse(p.media as string) : null,
+    documents: p.documents
+      ? typeof p.documents === 'string'
+        ? JSON.parse(p.documents)
+        : p.documents
+      : null,
+    media: p.media
+      ? typeof p.media === 'string'
+        ? JSON.parse(p.media)
+        : p.media
+      : null,
 
     // Two-tier approval: Tier 2 - Deposit verification
     depositPaidAt: p.depositPaidAt,
