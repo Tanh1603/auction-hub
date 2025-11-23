@@ -13,9 +13,10 @@ import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DecimalUtils } from '../../common/utils/decimal.utils';
 
+// Allow all origins for websocket (wildcard) per request
 @WebSocketGateway({
   cors: {
-    origin: '*', // Configure this properly in production
+    origin: '*', // allow any origin
   },
   namespace: '/bidding',
 })
