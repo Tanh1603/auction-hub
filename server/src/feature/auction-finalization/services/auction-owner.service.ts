@@ -62,10 +62,23 @@ export class AuctionOwnerService {
       throw new NotFoundException('Auction not found');
     }
 
-    // Verify that the user is the auction owner
-    if (auction.propertyOwner !== userId) {
+    // Fetch the user to check their role
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    // Verify that the user is the auction owner OR an admin/super admin
+    const isOwner = auction.propertyOwner === userId;
+    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+
+    if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
-        'Only the auction owner can finalize the auction'
+        'Only the auction owner, admin, or super admin can finalize the auction'
       );
     }
 
@@ -303,10 +316,23 @@ export class AuctionOwnerService {
       throw new NotFoundException('Auction not found');
     }
 
-    // Verify admin is the owner
-    if (auction.propertyOwner !== adminId) {
+    // Fetch the user to check their role
+    const user = await this.prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    // Verify that the user is the auction owner OR an admin/super admin
+    const isOwner = auction.propertyOwner === adminId;
+    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+
+    if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
-        'Only the auction owner can override auction status'
+        'Only the auction owner, admin, or super admin can override auction status'
       );
     }
 
@@ -487,10 +513,23 @@ export class AuctionOwnerService {
       throw new NotFoundException('Auction not found');
     }
 
-    // Only auction owner can view audit logs
-    if (auction.propertyOwner !== userId) {
+    // Fetch the user to check their role
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    // Only auction owner, admin, or super admin can view audit logs
+    const isOwner = auction.propertyOwner === userId;
+    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+
+    if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
-        'Only the auction owner can view audit logs'
+        'Only the auction owner, admin, or super admin can view audit logs'
       );
     }
 

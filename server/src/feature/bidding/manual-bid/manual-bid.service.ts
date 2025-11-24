@@ -231,9 +231,24 @@ export class ManualBidService {
       throw new NotFoundException('Bid not found');
     }
 
-    // Verify that the user is the auction owner (auctioneer)
-    if (bid.auction.propertyOwner !== auctioneerId) {
-      throw new ForbiddenException('Only the auction owner can deny bids');
+    // Fetch the user to check their role
+    const user = await this.prisma.user.findUnique({
+      where: { id: auctioneerId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    // Verify that the user is the auction owner (auctioneer) OR an admin/super admin
+    const isOwner = bid.auction.propertyOwner === auctioneerId;
+    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+
+    if (!isOwner && !isAdminOrSuperAdmin) {
+      throw new ForbiddenException(
+        'Only the auction owner, admin, or super admin can deny bids'
+      );
     }
 
     // Check if bid is already denied
