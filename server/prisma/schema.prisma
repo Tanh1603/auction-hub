@@ -119,6 +119,19 @@ model Auction {
   images           Json?                   @db.JsonB
   attachments      Json?                   @db.JsonB
 
+  // Financial summary (moved from AuctionFinancialSummary)
+  // These fields store frozen calculation results after auction finalization
+  finalSalePrice           Decimal?  @map("final_sale_price") @db.Decimal(18, 2)
+  commissionFee            Decimal?  @map("commission_fee") @db.Decimal(18, 2)
+  startingPriceSnapshot    Decimal?  @map("starting_price_snapshot") @db.Decimal(18, 2)
+  dossierFeeSnapshot       Decimal?  @map("dossier_fee_snapshot") @db.Decimal(18, 2)
+  depositAmountSnapshot    Decimal?  @map("deposit_amount_snapshot") @db.Decimal(18, 2)
+  totalAuctionCosts        Decimal?  @map("total_auction_costs") @db.Decimal(18, 2)
+  totalFeesToPropertyOwner Decimal?  @default(0) @map("total_fees_to_property_owner") @db.Decimal(18, 2)
+  netAmountToPropertyOwner Decimal?  @default(0) @map("net_amount_to_property_owner") @db.Decimal(18, 2)
+  calculationDetails       Json?     @map("calculation_details")
+  financialCalculatedAt    DateTime? @map("financial_calculated_at") @db.Timestamptz(6)
+
   owner            User                    @relation("AuctionOwner", fields: [propertyOwner], references: [id])
   participants     AuctionParticipant[]
   bids             AuctionBid[]
@@ -127,7 +140,6 @@ model Auction {
   relatedFrom      AuctionRelation[]       @relation("AuctionRelationFrom")
   relatedTo        AuctionRelation[]       @relation("AuctionRelationTo")
   costs            AuctionCost?
-  financialSummary AuctionFinancialSummary?
 
   @@map("auctions")
 }
@@ -194,38 +206,7 @@ model AuctionCost {
   @@map("auction_costs")
 }
 
-// Auction Financial Summary (Generated after auction finalization)
-model AuctionFinancialSummary {
-  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  auctionId             String    @unique @map("auction_id") @db.Uuid
 
-  // Sale information
-  finalSalePrice        Decimal   @map("final_sale_price") @db.Decimal(18, 2)
-  startingPrice         Decimal   @map("starting_price") @db.Decimal(18, 2)
-
-  // Calculated fees
-  commissionFee         Decimal   @map("commission_fee") @db.Decimal(18, 2)
-  dossierFee            Decimal   @map("dossier_fee") @db.Decimal(18, 2)
-  depositAmount         Decimal   @map("deposit_amount") @db.Decimal(18, 2)
-
-  // Costs
-  totalAuctionCosts        Decimal   @map("total_auction_costs") @db.Decimal(18, 2)
-
-  // Totals
-  totalFeesToPropertyOwner Decimal   @default(0) @map("total_fees_to_property_owner") @db.Decimal(18, 2) // Commission + Costs
-  netAmountToPropertyOwner Decimal   @default(0) @map("net_amount_to_property_owner") @db.Decimal(18, 2) // FinalPrice - TotalFees
-
-  // Calculation breakdown (JSON for transparency)
-  calculationDetails       Json      @map("calculation_details")
-
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  auction               Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-
-  @@map("auction_financial_summaries")
-}
 
 // ============================================
 // SYSTEM CONFIGURATION

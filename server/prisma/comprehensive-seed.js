@@ -451,27 +451,6 @@ async function main() {
         update: { value: variable.value },
       });
     }
-
-    console.log(`✅ Seeded ${systemVariables.length} system variables`);
-    console.log('🧹 Cleaning any leftover data...');
-    await prisma.$transaction([
-      // Delete in correct order to respect foreign key constraints
-      prisma.payment.deleteMany(), // Delete payments first (references users)
-      prisma.contract.deleteMany(),
-      prisma.auctionAuditLog.deleteMany(),
-      prisma.autoBidSetting.deleteMany(),
-      prisma.auctionBid.deleteMany(),
-      prisma.auctionParticipant.deleteMany(),
-      prisma.auctionFinancialSummary.deleteMany(),
-      prisma.auctionCost.deleteMany(),
-      prisma.auctionRelation.deleteMany(),
-      prisma.auction.deleteMany(),
-      prisma.user.deleteMany(), // Delete users last
-    ]);
-
-    // Create users
-    console.log('👥 Creating users...');
-    const users = {};
     for (const userData of sampleUsers) {
       // Extract roleKey for internal logic, don't send to Prisma
       const { roleKey, ...userDataForPrisma } = userData;
@@ -1000,14 +979,15 @@ async function main() {
       const totalFeesToSeller = commissionFee + totalAuctionCosts;
       const netAmountToSeller = finalSalePrice - totalFeesToSeller;
 
-      const financialSummary = await prisma.auctionFinancialSummary.create({
+      // Update Auction with Financial Summary directly
+      await prisma.auction.update({
+        where: { id: auctions['AUC003'].id },
         data: {
-          auctionId: auctions['AUC003'].id,
           finalSalePrice,
-          startingPrice: auctions['AUC003'].startingPrice,
           commissionFee,
-          dossierFee,
-          depositAmount,
+          startingPriceSnapshot: auctions['AUC003'].startingPrice,
+          dossierFeeSnapshot: dossierFee,
+          depositAmountSnapshot: depositAmount,
           totalAuctionCosts,
           totalFeesToPropertyOwner: totalFeesToSeller,
           netAmountToPropertyOwner: netAmountToSeller,
@@ -1047,9 +1027,10 @@ async function main() {
             sellerReceives: netAmountToSeller.toString(),
             buyerPays: finalSalePrice.toString(),
           },
+          financialCalculatedAt: new Date(),
         },
       });
-      console.log(`    ✓ Created financial summary for AUC003`);
+      console.log(`    ✓ Updated auction AUC003 with financial summary`);
     }
 
     // Create auto-bid settings for some participants

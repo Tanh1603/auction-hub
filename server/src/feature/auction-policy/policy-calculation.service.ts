@@ -359,30 +359,20 @@ export class PolicyCalculationService {
         },
       };
 
-      // 7. Save or update financial summary
-      await this.prisma.auctionFinancialSummary.upsert({
-        where: { auctionId },
-        create: {
-          auctionId,
+      // 7. Update auction record directly with financial data
+      await this.prisma.auction.update({
+        where: { id: auctionId },
+        data: {
           finalSalePrice,
-          startingPrice: parseFloat(auction.startingPrice.toString()),
           commissionFee,
-          dossierFee,
-          depositAmount,
+          startingPriceSnapshot: parseFloat(auction.startingPrice.toString()),
+          dossierFeeSnapshot: dossierFee,
+          depositAmountSnapshot: depositAmount,
           totalAuctionCosts,
           totalFeesToPropertyOwner: totalFeesToSeller,
           netAmountToPropertyOwner: netAmountToSeller,
           calculationDetails: JSON.stringify(calculationDetails),
-        },
-        update: {
-          finalSalePrice,
-          commissionFee,
-          dossierFee,
-          depositAmount,
-          totalAuctionCosts,
-          totalFeesToPropertyOwner: totalFeesToSeller,
-          netAmountToPropertyOwner: netAmountToSeller,
-          calculationDetails: JSON.stringify(calculationDetails),
+          financialCalculatedAt: new Date(),
         },
       });
 

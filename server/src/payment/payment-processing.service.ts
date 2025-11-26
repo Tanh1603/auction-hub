@@ -167,11 +167,10 @@ export class PaymentProcessingService {
         `Calculating winner payment for auction ${auctionId}, winner ${winnerId}`
       );
 
-      // Get auction with financial summary
+      // Get auction with financial data
       const auction = await this.prisma.auction.findUnique({
         where: { id: auctionId },
         include: {
-          financialSummary: true,
           participants: {
             where: { userId: winnerId },
           },

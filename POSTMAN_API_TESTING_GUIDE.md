@@ -304,14 +304,14 @@ This endpoint uses `multipart/form-data` for file uploads. Configure in Postman:
 2. Select **form-data** radio button
 3. Add the following fields:
 
-| Key | Type | Value |
-|-----|------|-------|
-| `auctionId` | Text | `auction-uuid-here` |
-| `documents` | File | Select PDF/DOC file (identity card) |
-| `documents` | File | Select PDF/DOC file (financial proof) |
+| Key         | Type | Value                                  |
+| ----------- | ---- | -------------------------------------- |
+| `auctionId` | Text | `auction-uuid-here`                    |
+| `documents` | File | Select PDF/DOC file (identity card)    |
+| `documents` | File | Select PDF/DOC file (financial proof)  |
 | `documents` | File | Select PDF/DOC file (business license) |
-| `media` | File | Select image/video file (optional) |
-| `media` | File | Select image/video file (optional) |
+| `media`     | File | Select image/video file (optional)     |
+| `media`     | File | Select image/video file (optional)     |
 
 **File Requirements**:
 
@@ -519,12 +519,12 @@ This endpoint uses the same format as the initial registration. Configure in Pos
 2. Select **form-data** radio button
 3. Add the following fields:
 
-| Key | Type | Value |
-|-----|------|-------|
-| `auctionId` | Text | `auction-uuid-here` |
-| `documents` | File | Select updated PDF/DOC file |
-| `documents` | File | Select updated PDF/DOC file |
-| `media` | File | Select updated image/video (optional) |
+| Key         | Type | Value                                 |
+| ----------- | ---- | ------------------------------------- |
+| `auctionId` | Text | `auction-uuid-here`                   |
+| `documents` | File | Select updated PDF/DOC file           |
+| `documents` | File | Select updated PDF/DOC file           |
+| `media`     | File | Select updated image/video (optional) |
 
 **Expected Response**:
 
@@ -846,19 +846,34 @@ http://localhost:3000/api/register-to-bid/admin/registrations?page=1&limit=20&st
 - `userId`: The user who made this registration
 - `currentState`: Current registration status
 
-### 14. Get User's Registrations (Admin Only)
+### 14. Get User's Registrations
 
 **Method**: `GET`  
-**URL**: `http://localhost:3000/api/register-to-bid/admin/users/{userId}/registrations`  
+**URL**: `http://localhost:3000/api/register-to-bid/users/{userId}/registrations`  
 **Headers**:
 
 ```json
 {
-  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
 }
 ```
 
 **Expected Response**: Array of registration objects for the specified user.
+**Note**: Admins can view any user's registrations. Users can only view their own.
+
+### 14a. Get Registration for Auction
+
+**Method**: `GET`
+**URL**: `http://localhost:3000/api/register-to-bid/auctions/{auctionId}/registration`
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**: Registration object for the specified auction.
 
 ## 💰 Manual Bidding Flow
 
@@ -926,7 +941,7 @@ http://localhost:3000/api/register-to-bid/admin/registrations?page=1&limit=20&st
 
 **Solution**: Call the check-in endpoint (Section 12) before attempting to bid.
 
-### 16. Deny Bid (Auctioneer Only)
+### 16. Deny Bid (Auctioneer, Admin)
 
 **Admin/Auctioneer can deny suspicious or fraudulent bids.**
 
@@ -991,7 +1006,7 @@ After auction finalization, the winner must complete payment within 7 days:
   - Property offered to 2nd highest bidder
   - If no 2nd bidder: Auction marked as "no_bid"
 
-### 17. Evaluate Auction Status (Admin Only)
+### 17. Evaluate Auction Status (Admin Auctioneer Only)
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/auction-finalization/evaluate/{auctionId}`  

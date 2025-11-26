@@ -149,9 +149,13 @@ export class UserRegistrationService {
           if (existing.withdrawnAt) {
             this.logger.log(
               `[RE-REGISTRATION] User ${currentUser.id} re-registering after withdrawal for auction ${dto.auctionId}.` +
-              ` Previous state: documentsVerifiedAt=${existing.documentsVerifiedAt?.toISOString() || 'NULL'},` +
-              ` depositPaidAt=${existing.depositPaidAt?.toISOString() || 'NULL'}.` +
-              ` Resetting all previous state to start fresh registration.`
+                ` Previous state: documentsVerifiedAt=${
+                  existing.documentsVerifiedAt?.toISOString() || 'NULL'
+                },` +
+                ` depositPaidAt=${
+                  existing.depositPaidAt?.toISOString() || 'NULL'
+                }.` +
+                ` Resetting all previous state to start fresh registration.`
             );
             const updated = await tx.auctionParticipant.update({
               where: { id: existing.id },
@@ -191,10 +195,12 @@ export class UserRegistrationService {
 
             this.logger.log(
               `[RE-REGISTRATION COMPLETE] User ${currentUser.id}, Registration ${existing.id}.` +
-              ` New state: submittedAt=${updated.submittedAt?.toISOString()},` +
-              ` documentsVerifiedAt=${updated.documentsVerifiedAt || 'NULL'},` +
-              ` depositPaidAt=${updated.depositPaidAt || 'NULL'}.` +
-              ` Ready for fresh Tier 1 document verification.`
+                ` New state: submittedAt=${updated.submittedAt?.toISOString()},` +
+                ` documentsVerifiedAt=${
+                  updated.documentsVerifiedAt || 'NULL'
+                },` +
+                ` depositPaidAt=${updated.depositPaidAt || 'NULL'}.` +
+                ` Ready for fresh Tier 1 document verification.`
             );
 
             return this.toDto(updated);
@@ -391,6 +397,26 @@ export class UserRegistrationService {
       );
       throw err;
     }
+  }
+
+  /**
+   * Get registration for a specific auction and user
+   */
+  async getRegistrationForAuction(userId: string, auctionId: string) {
+    const participant = await this.prisma.auctionParticipant.findUnique({
+      where: {
+        auctionId_userId: {
+          auctionId: auctionId,
+          userId: userId,
+        },
+      },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('Registration not found for this auction');
+    }
+
+    return this.toDto(participant);
   }
 
   /**

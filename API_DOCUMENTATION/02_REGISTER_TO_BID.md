@@ -20,10 +20,12 @@ media?: File[] (max 10 files, 10MB each)
 ```
 
 **Supported File Types**:
+
 - **documents**: PDF, DOC, DOCX
 - **media**: Images (JPG, PNG, GIF), Videos
 
 **File Upload Process**:
+
 - Files are uploaded to Cloudinary automatically
 - Uploaded files are stored as JSONB in database
 - Each file entry contains: url, publicId, sortOrder
@@ -209,11 +211,13 @@ media?: File[] (max 10 files, 10MB each)
 ```
 
 **Error Responses**:
+
 - 403: Registration not confirmed, check-in window not open, or auction ended
 - 404: Auction or registration not found
 - 409: Already checked in
 
 **Business Logic**:
+
 - Check-in window opens 24 hours before auction starts
 - User must have CONFIRMED status (Tier 1 + Tier 2 complete)
 - User cannot check in after auction has ended
@@ -233,9 +237,17 @@ media?: File[] (max 10 files, 10MB each)
 
 ### 10. List User Registrations
 
-**Endpoint**: `GET /register-to-bid/admin/users/:userId/registrations`
-**Access**: Admin/Auctioneer
-**Returns**: Array of user's registrations
+**Endpoint**: `GET /register-to-bid/users/:userId/registrations`
+**Access**: Admin/Auctioneer/User (own)
+**Returns**: Array of user's registrations. Users can only see their own registrations.
+
+---
+
+### 11. Get Registration for Auction
+
+**Endpoint**: `GET /register-to-bid/auctions/:auctionId/registration`
+**Access**: Admin/Auctioneer/User (own)
+**Returns**: Registration details for the specified auction.
 
 ---
 

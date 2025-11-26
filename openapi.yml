@@ -1082,12 +1082,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedResponse'
 
-  /register-to-bid/admin/users/{userId}/registrations:
+  /register-to-bid/users/{userId}/registrations:
     get:
       tags:
         - Registration
       summary: List user registrations
-      description: Get all registrations for a specific user
+      description: Get all registrations for a specific user. Users can only see their own registrations.
       operationId: getUserRegistrations
       security:
         - bearerAuth: []
@@ -1107,6 +1107,36 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Registration'
+
+  /register-to-bid/auctions/{auctionId}/registration:
+    get:
+      tags:
+        - Registration
+      summary: Get registration for auction
+      description: Get registration details for the current user for a specific auction
+      operationId: getRegistrationForAuction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Registration details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   # ==================== BIDDING ====================
   /manual-bid:

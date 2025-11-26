@@ -54,7 +54,6 @@ export class AuctionResultsService {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
-        financialSummary: true,
       },
     });
 
@@ -153,34 +152,36 @@ export class AuctionResultsService {
     }
 
     // Include financial summary if available
-    if (auction.financialSummary) {
+    if (auction.finalSalePrice) {
       result.financialSummary = {
-        finalSalePrice: parseFloat(
-          auction.financialSummary.finalSalePrice.toString()
-        ),
+        finalSalePrice: parseFloat(auction.finalSalePrice.toString()),
         startingPrice: parseFloat(
-          auction.financialSummary.startingPrice.toString()
+          auction.startingPriceSnapshot?.toString() ||
+            auction.startingPrice.toString()
         ),
-        commissionFee: parseFloat(
-          auction.financialSummary.commissionFee.toString()
+        commissionFee: parseFloat(auction.commissionFee.toString()),
+        dossierFee: parseFloat(
+          auction.dossierFeeSnapshot?.toString() ||
+            auction.dossierFee?.toString() ||
+            '0'
         ),
-        dossierFee: parseFloat(auction.financialSummary.dossierFee.toString()),
         depositAmount: parseFloat(
-          auction.financialSummary.depositAmount.toString()
+          auction.depositAmountSnapshot?.toString() ||
+            auction.depositAmountRequired.toString()
         ),
         totalAuctionCosts: parseFloat(
-          auction.financialSummary.totalAuctionCosts.toString()
+          auction.totalAuctionCosts?.toString() || '0'
         ),
         totalFeesToSeller: parseFloat(
-          auction.financialSummary.totalFeesToPropertyOwner.toString()
+          auction.totalFeesToPropertyOwner?.toString() || '0'
         ),
         netAmountToSeller: parseFloat(
-          auction.financialSummary.netAmountToPropertyOwner.toString()
+          auction.netAmountToPropertyOwner?.toString() || '0'
         ),
-        calculationDetails: auction.financialSummary.calculationDetails
-          ? JSON.parse(auction.financialSummary.calculationDetails as string)
+        calculationDetails: auction.calculationDetails
+          ? JSON.parse(auction.calculationDetails as string)
           : null,
-        calculatedAt: auction.financialSummary.createdAt,
+        calculatedAt: auction.financialCalculatedAt || auction.updatedAt,
       };
     }
 

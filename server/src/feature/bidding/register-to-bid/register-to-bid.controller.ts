@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Query,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { RegisterToBidService } from './register-to-bid.service';
 import { CreateRegisterToBidDto } from './dto/create-register-to-bid.dto';
@@ -101,12 +102,18 @@ export class RegisterToBidController {
     return this.svc.withdraw(dto, user);
   }
 
-  @Get('admin/users/:userId/registrations')
+  @Get('users/:userId/registrations')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.AUCTIONEER,
+    UserRole.SUPER_ADMIN,
+    UserRole.BIDDER
+  )
   @ApiOperation({
-    summary: 'List all registrations for a user (admin)',
-    description: 'Retrieve all auction registrations for a specific user.',
+    summary: 'List all registrations for a user',
+    description:
+      'Retrieve all auction registrations for a specific user. Users can only see their own registrations.',
   })
   @ApiResponse({
     status: 200,
@@ -116,9 +123,49 @@ export class RegisterToBidController {
   @ApiResponse({ status: 404, description: 'User has no registrations' })
   @ApiBearerAuth()
   async listForUser(
-    @Param('userId') userId: string
+    @Param('userId') userId: string,
+    @CurrentUser() user: CurrentUserData
   ): Promise<AuctionParticipantResponseDto[]> {
+    // If not admin/auctioneer, ensure user is requesting their own data
+    if (
+      user.role !== UserRole.ADMIN &&
+      user.role !== UserRole.SUPER_ADMIN &&
+      user.role !== UserRole.AUCTIONEER
+    ) {
+      if (user.id !== userId) {
+        throw new ForbiddenException(
+          'You can only view your own registrations'
+        );
+      }
+    }
     return this.svc.getRegistrationStatusOfOneUserForAdmin(userId);
+  }
+
+  @Get('auctions/:auctionId/registration')
+  @UseGuards(RolesGuard)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.AUCTIONEER,
+    UserRole.SUPER_ADMIN,
+    UserRole.BIDDER
+  )
+  @ApiOperation({
+    summary: 'Get registration for a specific auction',
+    description:
+      'Retrieve the registration details for the current user for a specific auction.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Registration details',
+    type: AuctionParticipantResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Registration not found' })
+  @ApiBearerAuth()
+  async getRegistrationForAuction(
+    @Param('auctionId') auctionId: string,
+    @CurrentUser() user: CurrentUserData
+  ): Promise<AuctionParticipantResponseDto> {
+    return this.svc.getRegistrationForAuction(user.id, auctionId);
   }
 
   @Get('admin/registrations')

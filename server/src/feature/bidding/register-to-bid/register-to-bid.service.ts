@@ -54,8 +54,23 @@ export class RegisterToBidService {
    * Check in for auction
    * Delegates to UserRegistrationService
    */
+  /**
+   * Check in for auction
+   * Delegates to UserRegistrationService
+   */
   async checkIn(auctionId: string, userId: string) {
     return this.userRegistrationService.checkIn(auctionId, userId);
+  }
+
+  /**
+   * Get registration for a specific auction and user
+   * Delegates to UserRegistrationService
+   */
+  async getRegistrationForAuction(userId: string, auctionId: string) {
+    return this.userRegistrationService.getRegistrationForAuction(
+      userId,
+      auctionId
+    );
   }
 
   // ========================================

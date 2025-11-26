@@ -42,7 +42,6 @@ export class WinnerPaymentService {
       const auction = await this.prisma.auction.findUnique({
         where: { id: auctionId },
         include: {
-          financialSummary: true,
           participants: true,
         },
       });
@@ -128,16 +127,16 @@ export class WinnerPaymentService {
           totalDue,
           paymentDeadline: paymentDeadline.toISOString(),
         },
-        financialSummary: auction.financialSummary
+        financialSummary: auction.netAmountToPropertyOwner
           ? {
               netAmountToSeller: parseFloat(
-                auction.financialSummary.netAmountToPropertyOwner.toString()
+                auction.netAmountToPropertyOwner.toString()
               ),
               totalCommission: parseFloat(
-                auction.financialSummary.commissionFee.toString()
+                auction.commissionFee?.toString() || '0'
               ),
               totalCosts: parseFloat(
-                auction.financialSummary.totalAuctionCosts.toString()
+                auction.totalAuctionCosts?.toString() || '0'
               ),
             }
           : null,
