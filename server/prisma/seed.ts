@@ -58,7 +58,7 @@ async function main() {
     images: item.auctionImages.map((image: any) => ({
       publicId: null,
       url: 'https://storage.daugiavietnam.com/' + image.url,
-      sortOrder: image.sortOrder,
+      // sortOrder: image.sortOrder,
     })),
     attachments: item.auctionAttachments.map((attachment: any) => ({
       publicId: null,

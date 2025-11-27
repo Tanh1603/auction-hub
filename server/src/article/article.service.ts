@@ -1,16 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '../../generated';
+import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { getPaginationOptions } from '../common/utils/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { ArticleQueryDto } from './dto/article-query.dto';
+import { ArticleDto } from './dto/article.dto';
 import { CreateArticleDto } from './dto/create-article.dto';
-import { ResourceDto } from './dto/resource.dto';
 import {
   UpdateArticleDto,
   UpdateArticleRelationsDto,
 } from './dto/update-article.dto';
-import { ArticleDto } from './dto/article.dto';
-import { ArticleQueryDto } from './dto/article-query.dto';
-import { getPaginationOptions } from '../common/utils/pagination.util';
-import { Prisma } from '../../generated';
 
 @Injectable()
 export class ArticleService {
@@ -129,7 +129,7 @@ export class ArticleService {
     } catch (error) {
       if (createArticleDto.image) {
         await this.cloudinary.deleteFile(
-          (createArticleDto.image as unknown as ResourceDto).publicId
+          (createArticleDto.image as unknown as CloudinaryResponse).publicId
         );
       }
       throw new BadRequestException(error);
@@ -138,13 +138,13 @@ export class ArticleService {
 
   async update(id: string, updateArticleDto: UpdateArticleDto) {
     try {
-      let oldImage: ResourceDto;
+      let oldImage: CloudinaryResponse;
       const exisitingArticle = await this.prisma.article.findUniqueOrThrow({
         where: { id },
       });
 
       if (exisitingArticle) {
-        oldImage = exisitingArticle.image as unknown as ResourceDto;
+        oldImage = exisitingArticle.image as unknown as CloudinaryResponse;
       }
 
       const article = await this.prisma.$transaction((db) => {
@@ -181,7 +181,7 @@ export class ArticleService {
       // when error rollbacks and deletes new upload image from update dto
       if (updateArticleDto.image) {
         await this.cloudinary.deleteFile(
-          (updateArticleDto.image as unknown as ResourceDto).publicId
+          (updateArticleDto.image as unknown as CloudinaryResponse).publicId
         );
       }
 
@@ -262,10 +262,23 @@ export class ArticleService {
   }
 
   async remove(id: string) {
+    let oldImageId: string;
     try {
+      const exsitingArticle = await this.prisma.article.findUniqueOrThrow({
+        where: {
+          id,
+        },
+      });
+      if (exsitingArticle) {
+        oldImageId = (exsitingArticle.image as unknown as CloudinaryResponse)
+          .publicId;
+      }
       await this.prisma.article.delete({
         where: { id },
       });
+      if (oldImageId) {
+        await this.cloudinary.deleteFile(oldImageId);
+      }
       return {
         message: 'Delete article successfully!',
       };

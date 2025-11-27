@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsString, ValidateNested } from 'class-validator';
 import { ArticleType, Prisma } from '../../../generated';
-import { ResourceDto } from './resource.dto';
+import { CloudinaryResponse } from '../../cloudinary/cloudinary-response';
 
 export class CreateArticleDto implements Prisma.ArticleCreateInput {
   @IsString()
@@ -27,9 +27,9 @@ export class CreateArticleDto implements Prisma.ArticleCreateInput {
   content: string;
 
   @ValidateNested()
-  @Type(() => ResourceDto)
+  @Type(() => CloudinaryResponse)
   @ApiProperty({
-    type: ResourceDto,
+    type: CloudinaryResponse,
     required: true,
   })
   image: Prisma.InputJsonValue;

@@ -12,6 +12,7 @@ import {
   ImageDto,
 } from './dto/create-auction.dto';
 import { UpdateAuctionDto } from './dto/update-auction.dto';
+import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 
 @Injectable()
 export class AuctionService {
@@ -220,7 +221,7 @@ export class AuctionService {
     imageFiles: Express.Multer.File[],
     attachmentFiles: Express.Multer.File[]
   ) {
-    let uploadImages: ImageDto[] = [];
+    let uploadImages: CloudinaryResponse[] = [];
     let uploadAttachments: AttachmentDto[] = [];
 
     try {
