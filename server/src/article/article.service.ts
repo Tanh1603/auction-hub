@@ -1,0 +1,276 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateArticleDto } from './dto/create-article.dto';
+import { ResourceDto } from './dto/resource.dto';
+import {
+  UpdateArticleDto,
+  UpdateArticleRelationsDto,
+} from './dto/update-article.dto';
+import { ArticleDto } from './dto/article.dto';
+import { ArticleQueryDto } from './dto/article-query.dto';
+import { getPaginationOptions } from '../common/utils/pagination.util';
+import { Prisma } from '../../generated';
+
+@Injectable()
+export class ArticleService {
+  constructor(
+    private prisma: PrismaService,
+    private cloudinary: CloudinaryService
+  ) {}
+
+  private toDto(entity): ArticleDto {
+    const from = entity.relatedFrom.map((ra) => ra.relatedArticle);
+    const to = entity.relatedTo.map((ra) => ra.article);
+
+    return {
+      id: entity.id,
+      title: entity.title,
+      author: entity.author,
+      content: entity.content,
+      image: entity.image,
+      type: entity.type,
+      createdAt: entity.createdAt,
+      relatedArticles: [...from, ...to].map((a) => ({
+        id: a.id,
+        title: a.title,
+        author: a.author,
+        content: a.content,
+        image: a.image,
+        type: a.type,
+        createdAt: a.createdAt,
+        relatedArticles: undefined,
+      })),
+    };
+  }
+
+  async findAll(query: ArticleQueryDto) {
+    const pagination = getPaginationOptions(query);
+    const where: Prisma.ArticleWhereInput = {
+      title: query.title
+        ? { contains: query.title, mode: 'insensitive' }
+        : undefined,
+      type: query.type ? query.type : undefined,
+    };
+    const articles = await this.prisma.article.findMany({
+      where,
+      ...pagination,
+      include: {
+        relatedFrom: {
+          include: {
+            relatedArticle: true,
+          },
+        },
+        relatedTo: {
+          include: {
+            article: true,
+          },
+        },
+      },
+    });
+
+    return {
+      data: articles,
+    };
+  }
+
+  async findOne(id: string) {
+    try {
+      const article = await this.prisma.article.findUniqueOrThrow({
+        where: { id },
+        include: {
+          relatedFrom: {
+            include: {
+              relatedArticle: true,
+            },
+          },
+          relatedTo: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      });
+
+      return {
+        data: this.toDto(article),
+      };
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  async create(createArticleDto: CreateArticleDto) {
+    try {
+      const article = await this.prisma.$transaction(async (db) => {
+        return await db.article.create({
+          data: {
+            ...createArticleDto,
+          },
+          include: {
+            relatedFrom: {
+              include: {
+                relatedArticle: true,
+              },
+            },
+            relatedTo: {
+              include: {
+                article: true,
+              },
+            },
+          },
+        });
+      });
+
+      return {
+        data: this.toDto(article),
+        message: 'Create article successfully!',
+      };
+    } catch (error) {
+      if (createArticleDto.image) {
+        await this.cloudinary.deleteFile(
+          (createArticleDto.image as unknown as ResourceDto).publicId
+        );
+      }
+      throw new BadRequestException(error);
+    }
+  }
+
+  async update(id: string, updateArticleDto: UpdateArticleDto) {
+    try {
+      let oldImage: ResourceDto;
+      const exisitingArticle = await this.prisma.article.findUniqueOrThrow({
+        where: { id },
+      });
+
+      if (exisitingArticle) {
+        oldImage = exisitingArticle.image as unknown as ResourceDto;
+      }
+
+      const article = await this.prisma.$transaction((db) => {
+        return db.article.update({
+          data: {
+            ...updateArticleDto,
+          },
+          where: { id },
+          include: {
+            relatedFrom: {
+              include: {
+                relatedArticle: true,
+              },
+            },
+            relatedTo: {
+              include: {
+                article: true,
+              },
+            },
+          },
+        });
+      });
+
+      // If Update success , delete old image
+      if (exisitingArticle) {
+        await this.cloudinary.deleteFile(oldImage.publicId);
+      }
+
+      return {
+        data: this.toDto(article),
+        message: 'Update article successfully!',
+      };
+    } catch (error) {
+      // when error rollbacks and deletes new upload image from update dto
+      if (updateArticleDto.image) {
+        await this.cloudinary.deleteFile(
+          (updateArticleDto.image as unknown as ResourceDto).publicId
+        );
+      }
+
+      throw new BadRequestException(error);
+    }
+  }
+
+  async updateRelations(articleId: string, dto: UpdateArticleRelationsDto) {
+    const { relatedIds } = dto;
+
+    try {
+      return await this.prisma.$transaction(async (db) => {
+        // 1. Lấy tất cả quan hệ hiện tại liên quan đến articleId (cả 2 chiều)
+        const existingPairs = await db.articleRelation.findMany({
+          where: {
+            OR: relatedIds
+              .map((rid) => [
+                { articleId, relatedArticleId: rid },
+                { articleId: rid, relatedArticleId: articleId },
+              ])
+              .flat(),
+          },
+        });
+
+        const existingSet = new Set(
+          existingPairs.map((e) => `${e.articleId}_${e.relatedArticleId}`)
+        );
+
+        // 2. Chuẩn bị danh sách quan hệ mới (chỉ thêm nếu chưa tồn tại)
+        const toCreate = relatedIds
+          .filter(
+            (rid) =>
+              !existingSet.has(`${articleId}_${rid}`) &&
+              !existingSet.has(`${rid}_${articleId}`)
+          )
+          .map((rid) => ({ articleId, relatedArticleId: rid }));
+
+        // 3. Xóa các quan hệ cũ của articleId không còn trong relatedIds
+        if (!relatedIds || relatedIds.length === 0) {
+          // xóa tất cả quan hệ
+          await db.articleRelation.deleteMany({
+            where: {
+              OR: [{ articleId: articleId }, { relatedArticleId: articleId }],
+            },
+          });
+        } else {
+          // xóa các quan hệ không còn trong relatedIds
+          await db.articleRelation.deleteMany({
+            where: {
+              articleId,
+              NOT: { relatedArticleId: { in: relatedIds } },
+            },
+          });
+        }
+
+        // 4. Thêm các quan hệ mới
+        if (toCreate.length) {
+          await db.articleRelation.createMany({
+            data: toCreate,
+            skipDuplicates: true,
+          });
+        }
+
+        // 5. Lấy lại bài viết + các quan hệ để trả về
+        const article = await db.article.findUnique({
+          where: { id: articleId },
+          include: {
+            relatedFrom: { include: { relatedArticle: true } },
+            relatedTo: { include: { article: true } },
+          },
+        });
+
+        return this.toDto(article); // chuyển sang ArticleDto
+      });
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  async remove(id: string) {
+    try {
+      await this.prisma.article.delete({
+        where: { id },
+      });
+      return {
+        message: 'Delete article successfully!',
+      };
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+}

@@ -280,3 +280,43 @@ model Payment {
 
   @@map("payments")
 }
+
+// ============================================
+// ARTICLES
+// ============================================
+model Article {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type      ArticleType
+  title     String      @db.VarChar(255)
+  image     Json?       @db.JsonB
+  author    String      @db.VarChar(255)
+  content   String      @db.Text
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  relatedFrom ArticleRelation[] @relation("ArticleRelationFrom")
+  relatedTo   ArticleRelation[] @relation("ArticleRelationTo")
+
+  @@map("articles")
+}
+
+model ArticleRelation {
+  articleId        String @db.Uuid
+  relatedArticleId String @db.Uuid
+
+  article        Article @relation("ArticleRelationFrom", fields: [articleId], references: [id], onDelete: Cascade)
+  relatedArticle Article @relation("ArticleRelationTo", fields: [relatedArticleId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, relatedArticleId])
+  @@index([articleId])
+  @@index([relatedArticleId])
+
+  @@map("article_relations")
+}
+
+enum ArticleType {
+  news
+  auction_notice
+  auction_report
+  legal_document
+}
