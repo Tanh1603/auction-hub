@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  ArticleType,
   AuctionStatus,
   Prisma,
   PrismaClient,
@@ -17,6 +18,8 @@ async function main() {
     prisma.auctionBid.deleteMany(),
     prisma.auction.deleteMany(),
     prisma.location.deleteMany(),
+    prisma.article.deleteMany(),
+    prisma.articleRelation.deleteMany(),
   ]);
 
   console.log('📦 Đang đọc dữ liệu JSON...');
@@ -110,7 +113,87 @@ async function main() {
   if (relations.length)
     await prisma.auctionRelation.createMany({ data: relations });
 
+  await seedArticles();
+
   console.log('✅ Seed hoàn tất!');
+}
+
+function mapCategoryToArticleType(name: string): ArticleType {
+  switch (name) {
+    case 'Tin tức':
+      return ArticleType.news;
+    case 'Thông báo đấu giá':
+      return ArticleType.auction_notice;
+    case 'Điểm tin đấu giá':
+      return ArticleType.auction_report;
+    case 'Văn bản pháp luật':
+      return ArticleType.legal_document;
+    default:
+      throw new Error(`Unknown category name: ${name}`);
+  }
+}
+
+async function seedArticles() {
+  const data = JSON.parse(fs.readFileSync('./article.json', 'utf8'));
+
+  console.log('🚀 Chuẩn bị dữ liệu article...');
+
+  const articlesData: Prisma.ArticleCreateInput[] = data.data.map(
+    (item: any) => ({
+      title: item.title,
+      description: item.description || '',
+      author: item.author || 'Unknown',
+      content: item.content || '',
+      image: item.image || null,
+      type: mapCategoryToArticleType(item.category.name), // map sang enum
+      createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+    })
+  );
+
+  console.log('🚀 Tạo articles (createMany)...');
+  await prisma.article.createMany({
+    data: articlesData,
+    skipDuplicates: true,
+  });
+
+  // Lấy lại article vừa tạo để map title -> id
+  const articles = await prisma.article.findMany({
+    select: { id: true, title: true },
+  });
+  const articleMap = Object.fromEntries(articles.map((a) => [a.title, a.id]));
+
+  console.log('🔗 Tạo quan hệ related articles (1 chiều)...');
+  const relations: { articleId: string; relatedArticleId: string }[] = [];
+
+  for (const item of data.data) {
+    const articleId = articleMap[item.title];
+    if (!articleId || !item.relatedArticles?.length) continue;
+
+    // Chỉ tạo 1 chiều: articleId -> relatedArticleId
+    for (const rel of item.relatedArticles) {
+      const relatedId = articleMap[rel.title];
+      if (relatedId && relatedId !== articleId) {
+        relations.push({ articleId, relatedArticleId: relatedId });
+      }
+    }
+  }
+
+  if (relations.length) {
+    // Loại bỏ trùng lặp
+    const uniqueRelations = Array.from(
+      new Set(relations.map((r) => `${r.articleId}_${r.relatedArticleId}`))
+    ).map((s) => {
+      const [articleId, relatedArticleId] = s.split('_');
+      return { articleId, relatedArticleId };
+    });
+
+    await prisma.articleRelation.createMany({
+      data: uniqueRelations,
+      skipDuplicates: true,
+    });
+  }
+
+  console.log('✅ Seed articles hoàn tất!');
 }
 
 main()

@@ -145,9 +145,9 @@ enum AssetType {
 enum AuctionStatus {
   scheduled
   live
+  awaiting_result
   success
-  no_bid
-  cancelled
+  failed
 
   @@map("auction_status")
 }
@@ -306,14 +306,15 @@ model Payment {
 // ARTICLES
 // ============================================
 model Article {
-  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type      ArticleType
-  title     String      @db.VarChar(255)
-  image     Json?       @db.JsonB
-  author    String      @db.VarChar(255)
-  content   String      @db.Text
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        ArticleType
+  title       String      @db.VarChar(255)
+  description String      @db.Text
+  image       Json?       @db.JsonB
+  author      String      @db.VarChar(255)
+  content     String      @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   relatedFrom ArticleRelation[] @relation("ArticleRelationFrom")
   relatedTo   ArticleRelation[] @relation("ArticleRelationTo")
@@ -339,4 +340,6 @@ enum ArticleType {
   auction_notice
   auction_report
   legal_document
+
+  @@map("article_type")
 }

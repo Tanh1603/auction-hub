@@ -40,4 +40,11 @@ export class CreateArticleDto implements Prisma.ArticleCreateInput {
     required: true,
   })
   type: ArticleType;
+
+  @IsString()
+  @ApiProperty({
+    type: String,
+    required: true,
+  })
+  description: string;
 }

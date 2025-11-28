@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated';
 import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
@@ -17,30 +16,7 @@ export class ArticleService {
     private cloudinary: CloudinaryService
   ) {}
 
-  private toDto(entity, relatedRelations: any[] = []): ArticleDto {
-    const relatedArticlesMap = new Map<string, any>();
-
-    (relatedRelations ?? []).forEach((r) => {
-      if (r.articleId === entity.id) {
-        relatedArticlesMap.set(r.relatedArticle.id, r.relatedArticle);
-      } else {
-        relatedArticlesMap.set(r.article.id, r.article);
-      }
-    });
-
-    const relatedArticles = Array.from(relatedArticlesMap.values()).map(
-      (a) => ({
-        id: a.id,
-        title: a.title,
-        author: a.author,
-        content: a.content,
-        image: a.image,
-        type: a.type,
-        createdAt: a.createdAt,
-        relatedArticles: undefined,
-      })
-    );
-
+  private toDto(entity): ArticleDto {
     return {
       id: entity.id,
       title: entity.title,
@@ -49,7 +25,16 @@ export class ArticleService {
       image: entity.image,
       type: entity.type,
       createdAt: entity.createdAt,
-      relatedArticles,
+      description: entity.description,
+      relatedArticles: (entity.relatedFrom ?? []).map((ra) => ({
+        id: ra.relatedArticle.id,
+        title: ra.relatedArticle.title,
+        author: ra.relatedArticle.author,
+        description: ra.relatedArticle.description,
+        image: ra.relatedArticle.image,
+        type: ra.relatedArticle.type,
+        createdAt: ra.relatedArticle.createdAt,
+      })),
     };
   }
 
@@ -66,17 +51,14 @@ export class ArticleService {
       this.prisma.article.findMany({
         where,
         ...pagination,
-        include: {
-          relatedFrom: {
-            include: {
-              relatedArticle: true,
-            },
-          },
-          relatedTo: {
-            include: {
-              article: true,
-            },
-          },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          author: true,
+          image: true,
+          createdAt: true,
         },
       }),
       this.prisma.article.count({ where }),
@@ -97,21 +79,28 @@ export class ArticleService {
     try {
       const article = await this.prisma.article.findUniqueOrThrow({
         where: { id },
+        include: {
+          relatedFrom: {
+            include: {
+              relatedArticle: true,
+            },
+          },
+        },
       });
 
       // Lấy các quan hệ 2 chiều
-      const relatedRelations = await this.prisma.articleRelation.findMany({
-        where: {
-          OR: [{ articleId: id }, { relatedArticleId: id }],
-        },
-        include: {
-          article: true,
-          relatedArticle: true,
-        },
-      });
+      // const relatedRelations = await this.prisma.articleRelation.findMany({
+      //   where: {
+      //     OR: [{ articleId: id }, { relatedArticleId: id }],
+      //   },
+      //   include: {
+      //     article: true,
+      //     relatedArticle: true,
+      //   },
+      // });
 
       return {
-        data: this.toDto(article, relatedRelations),
+        data: this.toDto(article),
       };
     } catch (error) {
       throw new BadRequestException(error);
@@ -207,139 +196,36 @@ export class ArticleService {
     }
   }
 
-  // async updateRelations(articleId: string, dto: UpdateArticleRelationsDto) {
-  //   const { relatedIds } = dto;
-
-  //   try {
-  //     return await this.prisma.$transaction(async (db) => {
-  //       // 1. Lấy tất cả quan hệ hiện tại liên quan đến articleId (cả 2 chiều)
-  //       const existingPairs = await db.articleRelation.findMany({
-  //         where: {
-  //           OR: relatedIds
-  //             .map((rid) => [
-  //               { articleId, relatedArticleId: rid },
-  //               { articleId: rid, relatedArticleId: articleId },
-  //             ])
-  //             .flat(),
-  //         },
-  //       });
-
-  //       const existingSet = new Set(
-  //         existingPairs.map((e) => `${e.articleId}_${e.relatedArticleId}`)
-  //       );
-
-  //       // 2. Chuẩn bị danh sách quan hệ mới (chỉ thêm nếu chưa tồn tại)
-  //       const toCreate = relatedIds
-  //         .filter(
-  //           (rid) =>
-  //             !existingSet.has(`${articleId}_${rid}`) &&
-  //             !existingSet.has(`${rid}_${articleId}`)
-  //         )
-  //         .map((rid) => ({ articleId, relatedArticleId: rid }));
-
-  //       // 3. Xóa các quan hệ cũ của articleId không còn trong relatedIds
-  //       if (!relatedIds || relatedIds.length === 0) {
-  //         // xóa tất cả quan hệ
-  //         await db.articleRelation.deleteMany({
-  //           where: {
-  //             OR: [{ articleId: articleId }, { relatedArticleId: articleId }],
-  //           },
-  //         });
-  //       } else {
-  //         // xóa các quan hệ không còn trong relatedIds
-  //         await db.articleRelation.deleteMany({
-  //           where: {
-  //             articleId,
-  //             NOT: { relatedArticleId: { in: relatedIds } },
-  //           },
-  //         });
-  //       }
-
-  //       // 4. Thêm các quan hệ mới
-  //       if (toCreate.length) {
-  //         await db.articleRelation.createMany({
-  //           data: toCreate,
-  //           skipDuplicates: true,
-  //         });
-  //       }
-
-  //       // 5. Lấy lại bài viết + các quan hệ để trả về
-  //       const article = await db.article.findUnique({
-  //         where: { id: articleId },
-  //         include: {
-  //           relatedFrom: { include: { relatedArticle: true } },
-  //           relatedTo: { include: { article: true } },
-  //         },
-  //       });
-
-  //       return this.toDto(article); // chuyển sang ArticleDto
-  //     });
-  //   } catch (error) {
-  //     throw new BadRequestException(error);
-  //   }
-  // }
-
   async updateRelations(articleId: string, newRelatedIds: string[]) {
     try {
       // Loại bỏ self-relation
       const filteredIds = newRelatedIds.filter((id) => id !== articleId);
 
       await this.prisma.$transaction(async (db) => {
-        // 1. Lấy tất cả quan hệ hiện tại của article (cả hai chiều)
+        // 1. Lấy quan hệ hiện tại của articleId
         const existingRelations = await db.articleRelation.findMany({
-          where: {
-            OR: [{ articleId }, { relatedArticleId: articleId }],
-          },
+          where: { articleId },
+          select: { relatedArticleId: true },
         });
 
-        // 2. Tạo cặp khóa cho quan hệ hiện tại
-        const existingPairs = new Set(
-          existingRelations.map((r) =>
-            r.articleId < r.relatedArticleId
-              ? `${r.articleId}_${r.relatedArticleId}`
-              : `${r.relatedArticleId}_${r.articleId}`
-          )
-        );
+        const existingIds = existingRelations.map((r) => r.relatedArticleId);
 
-        // 3. Tạo cặp khóa mới từ danh sách gửi lên
-        const newPairs = new Set(
-          filteredIds.map((id) =>
-            articleId < id ? `${articleId}_${id}` : `${id}_${articleId}`
-          )
-        );
-
-        // 4. Xác định các quan hệ cần xóa
-        const toRemove = Array.from(existingPairs).filter(
-          (pair) => !newPairs.has(pair)
-        );
-
+        // 2. Xóa các quan hệ không còn trong filteredIds
+        const toRemove = existingIds.filter((id) => !filteredIds.includes(id));
         if (toRemove.length) {
           await db.articleRelation.deleteMany({
             where: {
-              OR: toRemove.map((pair) => {
-                const [a, b] = pair.split('_');
-                return {
-                  OR: [
-                    { articleId: a, relatedArticleId: b },
-                    { articleId: b, relatedArticleId: a },
-                  ],
-                };
-              }),
+              articleId,
+              relatedArticleId: { in: toRemove },
             },
           });
         }
 
-        // 5. Xác định các quan hệ cần thêm
-        const toAdd = Array.from(newPairs).filter(
-          (pair) => !existingPairs.has(pair)
-        );
-
+        // 3. Thêm các quan hệ mới chưa tồn tại
+        const toAdd = filteredIds.filter((id) => !existingIds.includes(id));
         if (toAdd.length) {
           await db.articleRelation.createMany({
-            data: toAdd.map((pair) => {
-              const [a, b] = pair.split('_');
-              return { articleId: a, relatedArticleId: b };
-            }),
+            data: toAdd.map((id) => ({ articleId, relatedArticleId: id })),
             skipDuplicates: true,
           });
         }

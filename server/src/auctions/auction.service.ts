@@ -21,22 +21,7 @@ export class AuctionService {
     private readonly cloudinary: CloudinaryService
   ) {}
 
-  private toAuctionDetail(
-    entity,
-    relatedRelations: any[] = []
-  ): AuctionDetailDto {
-    const relatedAuctionsMap = new Map<string, any>();
-
-    (relatedRelations ?? []).forEach((r) => {
-      if (r.auctionId === entity.id) {
-        relatedAuctionsMap.set(r.relatedAuction.id, r.relatedAuction);
-      } else {
-        relatedAuctionsMap.set(r.auction.id, r.auction);
-      }
-    });
-
-    const relatedAuctions = Array.from(relatedAuctionsMap.values());
-
+  private toAuctionDetail(entity): AuctionDetailDto {
     return {
       id: entity.id,
       code: entity.code,
@@ -58,7 +43,9 @@ export class AuctionService {
       propertyOwner: entity.propertyOwner,
       images: entity.images,
       attachments: entity.attachments,
-      relatedAuctions,
+      relatedAuctions: (entity.relatedFrom ?? []).map((r) => ({
+        ...r.relatedAuction,
+      })),
     };
   }
 
@@ -166,41 +153,25 @@ export class AuctionService {
       include: {
         participants: true,
         bids: true,
-      },
-    });
-
-    const relatedRelations = await this.prisma.auctionRelation.findMany({
-      where: {
-        OR: [{ auctionId: auction.id }, { relatedAuctionId: auction.id }],
-      },
-      include: {
-        auction: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            images: true,
-            startingPrice: true,
-            depositAmountRequired: true,
-            saleStartAt: true,
-          },
-        },
-        relatedAuction: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            images: true,
-            startingPrice: true,
-            depositAmountRequired: true,
-            saleStartAt: true,
+        relatedFrom: {
+          include: {
+            relatedAuction: {
+              select: {
+                id: true,
+                name: true,
+                images: true,
+                startingPrice: true,
+                depositAmountRequired: true,
+                saleStartAt: true,
+              },
+            },
           },
         },
       },
     });
 
     return {
-      data: this.toAuctionDetail(auction, relatedRelations),
+      data: this.toAuctionDetail(auction),
     };
   }
 
@@ -314,64 +285,39 @@ export class AuctionService {
     }
   }
 
-  // Update Auction Relation
   async updateRelations(auctionId: string, newRelatedIds: string[]) {
     try {
       const filteredIds = newRelatedIds.filter((id) => id !== auctionId);
 
       await this.prisma.$transaction(async (db) => {
-        // Lấy tất cả quan hệ hiện tại của auction chính
+        // 1. Lấy quan hệ hiện tại của auctionId
         const existingRelations = await db.auctionRelation.findMany({
           where: {
-            OR: [{ auctionId }, { relatedAuctionId: auctionId }],
+            auctionId: auctionId,
+          },
+          select: {
+            relatedAuctionId: true,
           },
         });
 
-        // Tạo Set để dễ tính toán
-        const existingPairs = new Set(
-          existingRelations.map((r) =>
-            r.auctionId < r.relatedAuctionId
-              ? `${r.auctionId}_${r.relatedAuctionId}`
-              : `${r.relatedAuctionId}_${r.auctionId}`
-          )
-        );
+        const existingIds = existingRelations.map((r) => r.relatedAuctionId);
 
-        const newPairs = new Set(
-          filteredIds.map((id) =>
-            auctionId < id ? `${auctionId}_${id}` : `${id}_${auctionId}`
-          )
-        );
-
-        // Xóa các quan hệ cũ không còn trong newRelatedIds
-        const toRemove = Array.from(existingPairs).filter(
-          (pair) => !newPairs.has(pair)
-        );
+        // 2. Xóa các quan hệ không còn trong filteredIds
+        const toRemove = existingIds.filter((id) => !filteredIds.includes(id));
         if (toRemove.length) {
           await db.auctionRelation.deleteMany({
             where: {
-              OR: toRemove.map((pair) => {
-                const [a, b] = pair.split('_');
-                return {
-                  OR: [
-                    { auctionId: a, relatedAuctionId: b },
-                    { auctionId: b, relatedAuctionId: a },
-                  ],
-                };
-              }),
+              auctionId,
+              relatedAuctionId: { in: toRemove },
             },
           });
         }
 
-        // Thêm các quan hệ mới
-        const toAdd = Array.from(newPairs).filter(
-          (pair) => !existingPairs.has(pair)
-        );
+        // 3. Thêm các quan hệ mới chưa tồn tại
+        const toAdd = filteredIds.filter((id) => !existingIds.includes(id));
         if (toAdd.length) {
           await db.auctionRelation.createMany({
-            data: toAdd.map((pair) => {
-              const [a, b] = pair.split('_');
-              return { auctionId: a, relatedAuctionId: b };
-            }),
+            data: toAdd.map((id) => ({ auctionId, relatedAuctionId: id })),
             skipDuplicates: true,
           });
         }
