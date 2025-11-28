@@ -1,18 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../generated';
+import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { getPaginationOptions } from '../common/utils/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuctionDetailDto } from './dto/auction-detail.dto';
 import { AuctionQueryDto } from './dto/auction-query.dto';
-import {
-  AttachmentDto,
-  CreateAuctionDto,
-  ImageDto,
-} from './dto/create-auction.dto';
+import { AttachmentDto, CreateAuctionDto } from './dto/create-auction.dto';
 import { UpdateAuctionDto } from './dto/update-auction.dto';
-import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 
 @Injectable()
 export class AuctionService {

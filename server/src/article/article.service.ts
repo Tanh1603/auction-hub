@@ -52,25 +52,35 @@ export class ArticleService {
         : undefined,
       type: query.type ? query.type : undefined,
     };
-    const articles = await this.prisma.article.findMany({
-      where,
-      ...pagination,
-      include: {
-        relatedFrom: {
-          include: {
-            relatedArticle: true,
+
+    const [items, total] = await Promise.all([
+      this.prisma.article.findMany({
+        where,
+        ...pagination,
+        include: {
+          relatedFrom: {
+            include: {
+              relatedArticle: true,
+            },
+          },
+          relatedTo: {
+            include: {
+              article: true,
+            },
           },
         },
-        relatedTo: {
-          include: {
-            article: true,
-          },
-        },
-      },
-    });
+      }),
+      this.prisma.article.count({ where }),
+    ]);
 
     return {
-      data: articles,
+      data: items,
+      meta: {
+        total,
+        page: query.page ?? 1,
+        limit: query.limit ?? 10,
+        totalPages: Math.ceil(total / (query.limit ?? 10)),
+      },
     };
   }
 
