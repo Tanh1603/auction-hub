@@ -92,9 +92,9 @@ export class ArticleController {
   })
   updateRelation(
     @Param('id') id: string,
-    @Body() relation: UpdateArticleRelationsDto
+    @Body() request: UpdateArticleRelationsDto
   ) {
-    return this.articleService.updateRelations(id, relation);
+    return this.articleService.updateRelations(id, request.relatedIds);
   }
 
   @Delete(':id')
