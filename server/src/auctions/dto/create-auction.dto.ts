@@ -1,35 +1,44 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsDate,
+  IsEmail,
   IsEnum,
+  IsInt,
   IsNotEmpty,
+  IsObject,
   IsOptional,
-  IsUUID,
+  IsString,
+  Matches,
+  ValidateNested,
 } from 'class-validator';
-import { AssetType } from '../../../generated';
+import { AssetType, Prisma } from '../../../generated';
 import { Decimal } from '../../../generated/runtime/library';
+import { CloudinaryResponse } from '../../cloudinary/cloudinary-response';
 
-export class ImageDto {
+export class PropertyOwnerDto {
   @IsNotEmpty()
-  publicId: string;
+  @IsString()
+  @ApiProperty()
+  name: string;
 
   @IsNotEmpty()
-  url: string;
+  @IsEmail()
+  @ApiProperty()
+  email: string;
 
-  @IsNotEmpty()
-  sortOrder: number;
+  @Matches(/^[0-9]{9,15}$/, {
+    message: 'Phone must be a valid number with 9-15 digits',
+  })
+  @ApiProperty()
+  phone: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty()
+  organization?: string;
 }
-
-export class AttachmentDto {
-  @IsNotEmpty()
-  publicId: string;
-
-  @IsNotEmpty()
-  url: string;
-}
-
 export class CreateAuctionDto {
   @ApiProperty({ description: 'Auction code' })
   @IsNotEmpty()
@@ -139,24 +148,43 @@ export class CreateAuctionDto {
   @Transform(({ value }) => (value ? Number(value) : value))
   validCheckInAfterStartMinutes: number;
 
-  @ApiProperty({ description: 'Property owner ID', type: String })
-  @IsUUID()
-  propertyOwnerId: string;
+  @IsInt()
+  @IsNotEmpty()
+  @ApiProperty({ type: Number, required: true })
+  assetWardId: number;
 
-  @ApiPropertyOptional({
-    description: 'List of related auction IDs',
-    type: [String],
+  @IsInt()
+  @IsNotEmpty()
+  @ApiProperty({ type: Number, required: true })
+  assetProvinceId: number;
+
+  @ValidateNested({ each: true })
+  @Type(() => CloudinaryResponse)
+  @ApiProperty({
+    type: CloudinaryResponse,
+    required: true,
+    isArray: true,
   })
   @IsArray()
-  @IsUUID('all', { each: true })
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (!value) return [];
-    try {
-      return typeof value === 'string' ? JSON.parse(value) : value;
-    } catch {
-      return [];
-    }
+  images: Prisma.InputJsonValue[];
+
+  @ValidateNested({ each: true })
+  @Type(() => CloudinaryResponse)
+  @IsArray()
+  @ApiProperty({
+    type: CloudinaryResponse,
+    required: true,
+    isArray: true,
   })
-  relatedAuctions?: string[];
+  attachments: Prisma.InputJsonValue[];
+
+  @IsObject()
+  @IsNotEmpty()
+  @ApiProperty({
+    type: PropertyOwnerDto,
+    required: true,
+  })
+  @ValidateNested()
+  @Type(() => PropertyOwnerDto)
+  propertyOwner: Prisma.InputJsonValue;
 }

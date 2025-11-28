@@ -16,28 +16,40 @@ async function main() {
     prisma.auctionRelation.deleteMany(),
     prisma.auctionBid.deleteMany(),
     prisma.auction.deleteMany(),
+    prisma.location.deleteMany(),
   ]);
 
   console.log('📦 Đang đọc dữ liệu JSON...');
   const data = JSON.parse(fs.readFileSync('./auction-upcoming.json', 'utf8'));
 
-  console.log('👤 Đảm bảo user tồn tại...');
-  const user = await prisma.user.upsert({
-    where: { email: 'tanh@gm.com' },
-    update: {},
-    create: {
-      fullName: 'Nguyễn Lê Tuấn Anh',
-      email: 'tanh@gm.com',
-      userType: 'individual',
-      updatedAt: new Date(),
-    },
+  console.log('⚙️ Chuẩn bị dữ liệu address...');
+  const locations: Prisma.LocationCreateInput[] = await JSON.parse(
+    fs.readFileSync('./address.json', 'utf8')
+  ).map((location) => {
+    return {
+      id: location.id,
+      name: location.label,
+      value: Number(location.value),
+      sortOrder: location.sortOrder,
+      parentId: location.parentId,
+    };
+  });
+
+  console.log('🚀 Tạo address (createMany)...');
+  await prisma.location.createMany({
+    data: locations,
   });
 
   console.log('⚙️ Chuẩn bị dữ liệu auction...');
   const auctionsData = data.data.map((item: any) => ({
     code: item.code,
     name: item.name,
-    propertyOwner: user.id,
+    propertyOwner: {
+      name: 'Nguyễn Lê Tuấn Anh',
+      email: 'tanh@gm.com',
+      phone: '123456789',
+      organization: 'UIT',
+    },
     assetType: item.assetType.value,
     status: item.status as AuctionStatus,
     saleStartAt: new Date(item.saleStartAt),
@@ -51,19 +63,19 @@ async function main() {
     bidIncrement: new Prisma.Decimal(item.bidIncrement),
     assetDescription: item.assetDescription,
     assetAddress: item.assetAddress,
-    isActive: true,
     validCheckInBeforeStartMinutes: item.validCheckInBeforeStartMinutes,
     validCheckInAfterStartMinutes: item.validCheckInAfterStartMinutes,
     depositEndAt: item.depositEndAt ? new Date(item.depositEndAt) : null,
     images: item.auctionImages.map((image: any) => ({
       publicId: null,
       url: 'https://storage.daugiavietnam.com/' + image.url,
-      // sortOrder: image.sortOrder,
     })),
     attachments: item.auctionAttachments.map((attachment: any) => ({
       publicId: null,
       url: 'https://storage.daugiavietnam.com/' + attachment.url,
     })),
+    assetWardId: item.assetWardId,
+    assetProvinceId: item.assetProvinceId,
   }));
 
   console.log('🚀 Tạo auctions (createMany)...');

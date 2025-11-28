@@ -42,6 +42,7 @@ export class CloudinaryService {
   }
 
   async deleteFile(publicId: string): Promise<void> {
+    if(!publicId) return;
     await cloudinary.uploader.destroy(publicId);
   }
 }

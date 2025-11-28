@@ -1,7 +1,8 @@
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
-import { Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { AssetType } from '../../../generated';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export enum AuctionQueryStatus {
   COMPLETED = 'completed',
@@ -19,15 +20,33 @@ export class AuctionQueryDto extends PaginationQueryDto {
   status?: AuctionQueryStatus;
 
   @ApiPropertyOptional({
-    description: 'Whether the auction is active',
-    type: Boolean,
+    description: 'Search by auction name',
+    type: String,
   })
-  @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({
+    enum: AssetType,
   })
-  active: boolean;
+  @IsOptional()
+  @IsEnum(AssetType)
+  auctionType?: AssetType;
+
+  @ApiPropertyOptional({
+    type: Number,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  assetWardId?: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  assetProvinceId?: number;
 }

@@ -61,7 +61,7 @@ model User {
   deletedAt       DateTime? @map("deleted_at") @db.Timestamp
 
   // Relations
-  ownedAuctions     Auction[]            @relation("AuctionOwner")
+  // ownedAuctions     Auction[]            @relation("AuctionOwner")
   participations    AuctionParticipant[]
   deniedBids        AuctionBid[]         @relation("BidDenier")
   contractsAsSeller Contract[]           @relation("ContractSeller")
@@ -75,7 +75,8 @@ model User {
 // AUCTIONS
 model Auction {
   id                             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  propertyOwner                  String        @map("property_owner") @db.Uuid
+  // propertyOwner                  String        @map("property_owner") @db.Uuid
+  propertyOwner                  Json          @map("property_owner") @db.JsonB
   name                           String        @db.VarChar(255)
   code                           String        @unique @db.VarChar(55)
   saleStartAt                    DateTime      @map("sale_start_at") @db.Timestamptz(6)
@@ -92,22 +93,42 @@ model Auction {
   validCheckInAfterStartMinutes  Int           @map("valid_check_in_after_start_minutes")
   startingPrice                  Decimal       @map("starting_price") @db.Decimal(18, 2)
   bidIncrement                   Decimal       @map("bid_increment") @db.Decimal(18, 2)
-  isActive                       Boolean       @map("is_active") @default(true)
+  // isActive                       Boolean       @default(true) @map("is_active")
   assetType                      AssetType     @map("asset_type")
   status                         AuctionStatus @default(scheduled)
-  images                         Json?          @db.JsonB
-  attachments                    Json?          @db.JsonB
+  images                         Json?         @db.JsonB
+  attachments                    Json?         @db.JsonB
+  assetWardId                    Int           @map("asset_ward_id") @db.Integer
+  assetProvinceId                Int           @map("asset_province_id") @db.Integer
   createdAt                      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  owner        User                 @relation("AuctionOwner", fields: [propertyOwner], references: [id])
+  // owner        User                 @relation("AuctionOwner", fields: [propertyOwner], references: [id])
   participants AuctionParticipant[]
   bids         AuctionBid[]
   contracts    Contract[]
   relatedFrom  AuctionRelation[]    @relation("AuctionRelationFrom")
   relatedTo    AuctionRelation[]    @relation("AuctionRelationTo")
 
+  assetWard     Location @relation(name: "AuctionWard", fields: [assetWardId], references: [id])
+  assetProvince Location @relation(name: "AuctionProvince", fields: [assetProvinceId], references: [id])
+
   @@map("auctions")
+}
+
+model Location {
+  id        Int        @id
+  name      String
+  value     Int
+  sortOrder Int        @map("sort_order")
+  parentId  Int?
+  parent    Location?  @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children  Location[] @relation("LocationHierarchy")
+
+  wardAuctions     Auction[] @relation("AuctionWard")
+  provinceAuctions Auction[] @relation("AuctionProvince")
+
+  @@map("locations")
 }
 
 enum AssetType {
@@ -310,7 +331,6 @@ model ArticleRelation {
   @@id([articleId, relatedArticleId])
   @@index([articleId])
   @@index([relatedArticleId])
-
   @@map("article_relations")
 }
 
