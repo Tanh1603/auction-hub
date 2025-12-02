@@ -15,23 +15,29 @@ export class AuthService {
   ) {}
 
   async register(request: RegisterRequestDto): Promise<RegisterResponseDto> {
-    let newSupabaseUser = null;
+    let newSupabaseUserId: string | null = null;
 
     try {
-      // === PHASE 1: CREATE SUPABASE AUTH USER (using admin client) ===
-      const { data, error: authError } =
-        await this.supabaseService.authAdmin.createUser({
+      // Check for existing users with same unique fields BEFORE creating
+      await this.validateUniqueFields(request);
+
+      // === PHASE 1: CREATE SUPABASE AUTH USER (using signUp - sends verification email automatically) ===
+      const { data, error: authError } = await this.supabaseService.auth.signUp(
+        {
           email: request.email,
           password: request.password,
-          email_confirm: false, // Will require email verification
-          user_metadata: {
-            full_name: request.full_name,
-            phone_number: request.phone_number,
-            identity_number: request.identity_number,
-            user_type: request.user_type,
-            tax_id: request.tax_id,
+          options: {
+            emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+            data: {
+              full_name: request.full_name,
+              phone_number: request.phone_number,
+              identity_number: request.identity_number,
+              user_type: request.user_type,
+              tax_id: request.tax_id,
+            },
           },
-        });
+        }
+      );
 
       if (authError || !data.user) {
         throw new BadRequestException(
@@ -40,16 +46,18 @@ export class AuthService {
         );
       }
 
-      newSupabaseUser = data.user;
+      // Check if user already exists (signUp returns existing user without error in some cases)
+      if (data.user.identities && data.user.identities.length === 0) {
+        throw new BadRequestException('User with this email already exists');
+      }
 
-      // Check for existing users with same unique fields BEFORE creating
-      await this.validateUniqueFields(request);
+      newSupabaseUserId = data.user.id;
 
       // === PHASE 2: CREATE LOCAL DB USER ===
       const localUser = await this.prisma.user.create({
         data: {
-          id: newSupabaseUser.id, // Use Supabase user ID
-          email: newSupabaseUser.email || request.email,
+          id: data.user.id, // Use Supabase user ID
+          email: data.user.email || request.email,
           phoneNumber: request.phone_number,
           fullName: request.full_name || '',
           identityNumber: request.identity_number,
@@ -68,9 +76,9 @@ export class AuthService {
     } catch (error) {
       // === ROLLBACK ===
       // If local DB creation fails, delete the Supabase user to prevent orphaned accounts
-      if (newSupabaseUser) {
+      if (newSupabaseUserId) {
         try {
-          await this.supabaseService.authAdmin.deleteUser(newSupabaseUser.id);
+          await this.supabaseService.authAdmin.deleteUser(newSupabaseUserId);
         } catch (rollbackError) {
           // Log the rollback error but don't throw it
           console.error('Failed to rollback Supabase user:', rollbackError);
