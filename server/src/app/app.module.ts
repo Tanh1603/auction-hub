@@ -7,9 +7,10 @@ import { PaymentModule } from '../payment/payment.module';
 import { AuctionModule } from '../auctions/auction.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { ArticleModule } from '../article/article.module';
+import { LocationModule } from '../location/location.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, PaymentModule, AuctionModule, CloudinaryModule, ArticleModule],
+  imports: [PrismaModule, AuthModule, PaymentModule, AuctionModule, CloudinaryModule, ArticleModule, LocationModule],
   controllers: [AppController],
   providers: [AppService],
 })

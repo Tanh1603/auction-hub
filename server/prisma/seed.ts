@@ -144,7 +144,10 @@ async function seedArticles() {
       description: item.description || '',
       author: item.author || 'Unknown',
       content: item.content || '',
-      image: item.image || null,
+      image: {
+        publicId: null,
+        url: 'https://storage.daugiavietnam.com/' + item.image,
+      },
       type: mapCategoryToArticleType(item.category.name), // map sang enum
       createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
     })
