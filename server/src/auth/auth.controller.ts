@@ -9,7 +9,10 @@ import {
   Headers,
   Put,
   Param,
+  Query,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { UserService } from './user.service';
 import { RegisterRequestDto } from './dto/register.dto';
@@ -80,6 +83,43 @@ export class AuthController {
     return {
       message: 'Email verified successfully',
     };
+  }
+
+  /**
+   * GET endpoint for email verification link clicks
+   * Handles: /auth/verify?token=xxx&email=xxx
+   */
+  @Public()
+  @Get('verify')
+  async verifyEmailFromLink(
+    @Query('token') token: string,
+    @Query('email') email: string,
+    @Res() res: Response
+  ) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    try {
+      if (!token || !email) {
+        return res.redirect(
+          `${frontendUrl}/auth/verify-result?success=false&error=Missing token or email`
+        );
+      }
+
+      await this.authService.verifyEmail({ token, email });
+
+      // Redirect to frontend success page
+      return res.redirect(
+        `${frontendUrl}/auth/verify-result?success=true&message=Email verified successfully`
+      );
+    } catch (error) {
+      // Redirect to frontend with error
+      const errorMessage = error.message || 'Verification failed';
+      return res.redirect(
+        `${frontendUrl}/auth/verify-result?success=false&error=${encodeURIComponent(
+          errorMessage
+        )}`
+      );
+    }
   }
 
   @Get('me')

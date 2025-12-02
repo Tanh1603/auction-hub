@@ -451,6 +451,10 @@ async function main() {
         update: { value: variable.value },
       });
     }
+
+    // Create users
+    console.log('👥 Creating users...');
+    const users = {};
     for (const userData of sampleUsers) {
       // Extract roleKey for internal logic, don't send to Prisma
       const { roleKey, ...userDataForPrisma } = userData;
