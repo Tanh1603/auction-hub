@@ -14,6 +14,7 @@ import { CancelContractDto } from './dto/cancel-contract.dto';
 import { ContractDetailDto, ContractListItemDto } from './dto/contract-detail.dto';
 import { Prisma } from '../../generated';
 import { getPaginationOptions } from '../common/utils/pagination.util';
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class ContractService {
@@ -311,7 +312,7 @@ export class ContractService {
     };
   }
 
-  async exportToPdf(id: string, userId: string): Promise<PDFKit.PDFDocument> {
+  async exportToPdf(id: string, userId: string): Promise<PDFDocument> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -337,7 +338,7 @@ export class ContractService {
     return this.pdfGenerator.generateContractPdf(contractForPdf);
   }
 
-  async exportToPdfEnglish(id: string, userId: string): Promise<PDFKit.PDFDocument> {
+    async exportToPdfEnglish(id: string, userId: string): Promise<PDFDocument> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {

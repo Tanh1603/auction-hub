@@ -15,8 +15,6 @@ import { AuctionPolicyModule } from '../feature/auction-policy/auction-policy.mo
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 import { ContractModule } from '../contracts/contract.module';
-import { PaymentModule } from '../payment/payment.module';
-import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -32,8 +30,8 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     AuctionFinalizationModule,
     AuctionPolicyModule,
     CloudinaryModule,
+    ContractModule,
   ],
-  imports: [PrismaModule, AuthModule, AuctionModule, ContractModule, PaymentModule, CloudinaryModule],
   controllers: [AppController],
   providers: [
     AppService,

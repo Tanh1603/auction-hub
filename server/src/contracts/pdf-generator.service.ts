@@ -26,7 +26,7 @@ interface ContractWithRelations {
 
 @Injectable()
 export class PdfGeneratorService {
-  generateContractPdf(contract: ContractWithRelations): PDFKit.PDFDocument {
+  generateContractPdf(contract: ContractWithRelations): PDFDocument {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const projectRoot = path.join(__dirname, '..', '..');
     const fontPath = path.join(projectRoot, 'server', 'src', 'assets', 'font', 'Inter', 'static');
@@ -42,8 +42,8 @@ export class PdfGeneratorService {
       normalFont = 'Inter-Regular';
       boldFont = 'Inter-Bold';
       semiBoldFont = 'Inter-SemiBold';
-    } catch (e) {
-      console.warn('Inter fonts not found — using Helvetica fallback.');
+    } catch (error) {
+      console.warn('Inter fonts not found — using Helvetica fallback. Error: ', error);
     }
 
     const drawSeparator = (yOffset = 10) => {
@@ -185,7 +185,7 @@ export class PdfGeneratorService {
     return doc;
   }
 
-  generateContractPdfEnglish(contract: ContractWithRelations): PDFKit.PDFDocument {
+  generateContractPdfEnglish(contract: ContractWithRelations): PDFDocument {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
     const projectRoot = path.join(__dirname, '..', '..');
@@ -202,8 +202,8 @@ export class PdfGeneratorService {
       normalFont = 'Inter-Regular';
       boldFont = 'Inter-Bold';
       semiBoldFont = 'Inter-SemiBold';
-    } catch (e) {
-      console.warn('Inter fonts not found - using Helvetica fallback.');
+    } catch (error) {
+      console.warn('Inter fonts not found - using Helvetica fallback. Error: ', error);
     }
 
     const drawSeparator = (yOffset = 10) => {
