@@ -26,8 +26,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 420000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -220,8 +218,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 48000000,
       "bidIncrement": 500000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -396,8 +392,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 96000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -590,8 +584,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 400000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -745,8 +737,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 200000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -916,8 +906,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 6391677600,
       "bidIncrement": 10000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -1031,8 +1019,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 150000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -1241,8 +1227,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 50000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -1438,8 +1422,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 60000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -1617,8 +1599,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 120000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -1850,8 +1830,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 56000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -2065,8 +2043,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 4660128050,
       "bidIncrement": 10000000,
-      "hasMaxBidSteps": true,
-      "maxBidSteps": 93,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -2238,8 +2214,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 980270000,
       "bidIncrement": 10000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -2846,8 +2820,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 206949600,
       "bidIncrement": 5000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -3562,8 +3534,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 130000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -3821,8 +3791,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 160000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -4000,8 +3968,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 200270000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -4168,8 +4134,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 1344095000,
       "bidIncrement": 2000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -4302,8 +4266,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 210432000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -4441,8 +4403,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 511824000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -4580,8 +4540,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 11014780000,
       "bidIncrement": 10000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -4725,8 +4683,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 3631857285,
       "bidIncrement": 50000000,
-      "hasMaxBidSteps": true,
-      "maxBidSteps": 10,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5030,8 +4986,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 13886494,
       "bidIncrement": 3000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5201,8 +5155,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 268000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5316,8 +5268,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 131500000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5431,8 +5381,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 194400000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5546,8 +5494,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 352000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5675,8 +5621,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 300000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5804,8 +5748,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 180000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -5919,8 +5861,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 55907360,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6034,8 +5974,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 558000,
       "bidIncrement": 4500,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6173,8 +6111,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 445000,
       "bidIncrement": 4500,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6312,8 +6248,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 90000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6427,8 +6361,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 535986000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6542,8 +6474,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 480000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6657,8 +6587,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 12444210000,
       "bidIncrement": 10000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6772,8 +6700,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 12977820000,
       "bidIncrement": 5000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -6994,8 +6920,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 1088340000,
       "bidIncrement": 2000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -7202,8 +7126,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 370860000,
       "bidIncrement": 500000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -7424,8 +7346,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 1675500000,
       "bidIncrement": 2000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -7646,8 +7566,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 1151160000,
       "bidIncrement": 2000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {
@@ -7868,8 +7786,6 @@
       "assetCountry": "Vietnam",
       "startingPrice": 150000000,
       "bidIncrement": 1000000,
-      "hasMaxBidSteps": false,
-      "maxBidSteps": 0,
       "status": "scheduled",
       "isActive": true,
       "assetType": {

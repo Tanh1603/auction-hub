@@ -9,86 +9,137 @@ import { ResendVerificationEmailRequestDto } from './dto/resend-verification-ema
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private supabaseService: SupabaseService) {}
+  constructor(
+    private prisma: PrismaService,
+    private supabaseService: SupabaseService
+  ) {}
 
   async register(request: RegisterRequestDto): Promise<RegisterResponseDto> {
-    const existingUser = await this.prisma.user.findUnique({
+    let newSupabaseUserId: string | null = null;
+
+    try {
+      // Check for existing users with same unique fields BEFORE creating
+      await this.validateUniqueFields(request);
+
+      // === PHASE 1: CREATE SUPABASE AUTH USER (using signUp - sends verification email automatically) ===
+      const { data, error: authError } = await this.supabaseService.auth.signUp(
+        {
+          email: request.email,
+          password: request.password,
+          options: {
+            emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+            data: {
+              full_name: request.full_name,
+              phone_number: request.phone_number,
+              identity_number: request.identity_number,
+              user_type: request.user_type,
+              tax_id: request.tax_id,
+            },
+          },
+        }
+      );
+
+      if (authError || !data.user) {
+        throw new BadRequestException(
+          'Failed to create user in Supabase: ' +
+            (authError?.message || 'No user data returned')
+        );
+      }
+
+      // Check if user already exists (signUp returns existing user without error in some cases)
+      if (data.user.identities && data.user.identities.length === 0) {
+        throw new BadRequestException('User with this email already exists');
+      }
+
+      newSupabaseUserId = data.user.id;
+
+      // === PHASE 2: CREATE LOCAL DB USER ===
+      const localUser = await this.prisma.user.create({
+        data: {
+          id: data.user.id, // Use Supabase user ID
+          email: data.user.email || request.email,
+          phoneNumber: request.phone_number,
+          fullName: request.full_name || '',
+          identityNumber: request.identity_number,
+          userType: request.user_type || 'individual',
+          taxId: request.tax_id,
+          role: 'bidder', // Everyone starts as bidder
+        },
+      });
+
+      // === SUCCESS ===
+      return {
+        user_id: localUser.id,
+        email: localUser.email,
+        verification_required: true,
+      };
+    } catch (error) {
+      // === ROLLBACK ===
+      // If local DB creation fails, delete the Supabase user to prevent orphaned accounts
+      if (newSupabaseUserId) {
+        try {
+          await this.supabaseService.authAdmin.deleteUser(newSupabaseUserId);
+        } catch (rollbackError) {
+          // Log the rollback error but don't throw it
+          console.error('Failed to rollback Supabase user:', rollbackError);
+        }
+      }
+
+      // Re-throw the original error
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException('Signup failed. Please try again.');
+    }
+  }
+
+  private async validateUniqueFields(
+    request: RegisterRequestDto
+  ): Promise<void> {
+    // Check for existing email
+    const existingEmail = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
-
-
-    if (existingUser) {
+    if (existingEmail) {
       throw new BadRequestException('User with this email already exists');
     }
 
+    // Check for existing phone number
     if (request.phone_number) {
-      const existingPhoneNumber = await this.prisma.user.findUnique({
+      const existingPhone = await this.prisma.user.findUnique({
         where: { phoneNumber: request.phone_number },
       });
-
-      if (existingPhoneNumber) {
-        throw new BadRequestException('User with this phone number already exists');
+      if (existingPhone) {
+        throw new BadRequestException(
+          'User with this phone number already exists'
+        );
       }
     }
 
+    // Check for existing identity number
     if (request.identity_number) {
-      const existingIdentityNumber = await this.prisma.user.findUnique({
+      const existingIdentity = await this.prisma.user.findUnique({
         where: { identityNumber: request.identity_number },
       });
-
-      if (existingIdentityNumber) {
-        throw new BadRequestException('User with this identity number already exists');
+      if (existingIdentity) {
+        throw new BadRequestException(
+          'User with this identity number already exists'
+        );
       }
     }
-
-      const { data, error } = await this.supabaseService.auth.signUp({
-        email: request.email,
-        password: request.password,
-        options: {
-          data: {
-            full_name: request.full_name,
-            phone_number: request.phone_number,
-            identity_number: request.identity_number,
-            user_type: request.user_type,
-          },
-          emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
-        },
-      });
-      
-    if (error) {
-      throw new BadRequestException('Failed to create user in Supabase. ' + error.message);
-    }
-
-
-    const user = await this.prisma.user.create({
-      data: {
-        id: data.user.id,
-        email: request.email,
-        phoneNumber: request.phone_number,
-        fullName: request.full_name || '',
-        identityNumber: request.identity_number,
-        userType: request.user_type || 'individual',
-        taxId: request.tax_id,
-      },
-    });
-
-    return {
-      user_id: user.id,
-      email: user.email,
-      verification_required: true,
-    };
   }
 
   async login(request: LoginRequestDto): Promise<LoginResponseDto> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
-    
+
     if (!existingUser) {
       throw new BadRequestException('User not found');
     }
 
-    const {data, error } = await this.supabaseService.auth.signInWithPassword({
+    const { data, error } = await this.supabaseService.auth.signInWithPassword({
       email: request.email,
       password: request.password,
     });
@@ -109,30 +160,38 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
-      const { error } = await this.supabaseService.auth.resetPasswordForEmail(request.email, {
-          redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
-        });
-      if (error) {
-      throw new BadRequestException('Failed to send reset password email. ' + error.message);
+    const { error } = await this.supabaseService.auth.resetPasswordForEmail(
+      request.email,
+      {
+        redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
+      }
+    );
+    if (error) {
+      throw new BadRequestException(
+        'Failed to send reset password email. ' + error.message
+      );
     }
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
-
   }
 
-  async resendVerificationEmail(request: ResendVerificationEmailRequestDto): Promise<void> {
+  async resendVerificationEmail(
+    request: ResendVerificationEmailRequestDto
+  ): Promise<void> {
     const { error } = await this.supabaseService.auth.resend({
       type: 'signup',
       email: request.email,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`
-      }
-    })
+        emailRedirectTo: `${process.env.FRONTEND_URL}/auth/verify`,
+      },
+    });
 
     if (error) {
-      throw new BadRequestException('Failed to resend verification email. ' + error.message);
+      throw new BadRequestException(
+        'Failed to resend verification email. ' + error.message
+      );
     }
   }
 
@@ -147,6 +206,4 @@ export class AuthService {
       throw new BadRequestException('Failed to verify email. ' + error.message);
     }
   }
-
-
 }

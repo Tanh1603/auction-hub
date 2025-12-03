@@ -1,0 +1,747 @@
+asyncapi: 3.0.0
+info:
+  title: Auction Hub WebSocket API
+  version: 3.0.0
+  description: |
+    Real-time bidding WebSocket API for Auction Hub.
+
+    ## Overview
+    The WebSocket gateway provides real-time updates for auction participants during live auctions.
+    Clients connect to the `/bidding` namespace and join auction-specific rooms to receive updates.
+
+    ## Connection Flow
+    1. Connect to WebSocket endpoint with authentication
+    2. Emit `joinAuction` event with auction ID
+    3. Receive `auctionState` event with current state
+    4. Receive periodic `timeUpdate` events (every 1 second)
+    5. Receive `newBid` events when bids are placed
+    6. Receive `bidDenied` events when bids are rejected
+    7. Emit `leaveAuction` when done
+
+    ## Authentication
+    WebSocket connections require JWT authentication passed in the connection handshake.
+
+    ## Room Pattern
+    Each auction has its own room: `auction:{auctionId}`
+
+  contact:
+    name: Auction Hub Support
+    email: support@auctionhub.com
+  license:
+    name: MIT
+
+servers:
+  development:
+    host: localhost:3000
+    protocol: ws
+    description: Development WebSocket server
+    security:
+      - $ref: '#/components/securitySchemes/jwtAuth'
+  production:
+    host: api.auctionhub.com
+    protocol: wss
+    description: Production WebSocket server (secure)
+    security:
+      - $ref: '#/components/securitySchemes/jwtAuth'
+
+defaultContentType: application/json
+
+channels:
+  biddingNamespace:
+    address: /bidding
+    title: Bidding Namespace
+    description: Real-time bidding WebSocket namespace for auction updates
+    messages:
+      joinAuction:
+        $ref: '#/components/messages/joinAuction'
+      joinedAuction:
+        $ref: '#/components/messages/joinedAuction'
+      leaveAuction:
+        $ref: '#/components/messages/leaveAuction'
+      leftAuction:
+        $ref: '#/components/messages/leftAuction'
+      auctionState:
+        $ref: '#/components/messages/auctionState'
+      newBid:
+        $ref: '#/components/messages/newBid'
+      bidDenied:
+        $ref: '#/components/messages/bidDenied'
+      timeUpdate:
+        $ref: '#/components/messages/timeUpdate'
+      auctionUpdate:
+        $ref: '#/components/messages/auctionUpdate'
+      error:
+        $ref: '#/components/messages/error'
+
+operations:
+  joinAuction:
+    action: send
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Join Auction
+    summary: Join an auction room to receive real-time updates
+    description: |
+      Client emits this event to join a specific auction room.
+      After joining, the server will respond with a `joinedAuction` confirmation
+      and immediately send the current `auctionState`.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/joinAuction'
+    reply:
+      messages:
+        - $ref: '#/channels/biddingNamespace/messages/joinedAuction'
+        - $ref: '#/channels/biddingNamespace/messages/auctionState'
+
+  leaveAuction:
+    action: send
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Leave Auction
+    summary: Leave an auction room
+    description: |
+      Client emits this event to leave the auction room and stop receiving updates.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/leaveAuction'
+    reply:
+      messages:
+        - $ref: '#/channels/biddingNamespace/messages/leftAuction'
+
+  receiveJoinedAuction:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Joined Confirmation
+    summary: Server confirms successful join
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/joinedAuction'
+
+  receiveLeftAuction:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Leave Confirmation
+    summary: Server confirms successful leave
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/leftAuction'
+
+  receiveAuctionState:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Auction State
+    summary: Receive complete auction state
+    description: |
+      Sent immediately after joining an auction room.
+      Contains all current auction information including bids, participants, and timing.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/auctionState'
+
+  receiveNewBid:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive New Bid
+    summary: Broadcast when a new bid is placed
+    description: |
+      Sent to all clients in the auction room when any participant places a bid.
+      Includes updated auction state with the new winning bid.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/newBid'
+
+  receiveBidDenied:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Bid Denied
+    summary: Broadcast when a bid is denied by admin
+    description: |
+      Sent to all clients when an admin denies a bid.
+      The previous winning bid becomes current again.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/bidDenied'
+
+  receiveTimeUpdate:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Time Update
+    summary: Periodic time remaining updates
+    description: |
+      Sent every 1 second to all clients in the auction room.
+      Provides countdown timer information.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/timeUpdate'
+
+  receiveAuctionUpdate:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Auction Update
+    summary: General auction status updates
+    description: |
+      Sent when auction status changes (e.g., auction ended, status changed manually).
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/auctionUpdate'
+
+  receiveError:
+    action: receive
+    channel:
+      $ref: '#/channels/biddingNamespace'
+    title: Receive Error
+    summary: Error notifications
+    description: |
+      Sent when an error occurs during WebSocket operations.
+    messages:
+      - $ref: '#/channels/biddingNamespace/messages/error'
+
+components:
+  messages:
+    joinAuction:
+      name: joinAuction
+      title: Join Auction Request
+      summary: Client requests to join an auction room
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/JoinAuctionPayload'
+      examples:
+        - name: JoinAuctionExample
+          summary: Example of joining an auction
+          payload:
+            auctionId: '550e8400-e29b-41d4-a716-446655440000'
+
+    joinedAuction:
+      name: joinedAuction
+      title: Joined Auction Confirmation
+      summary: Server confirms client joined auction room
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/JoinedAuctionPayload'
+      examples:
+        - name: JoinedAuctionExample
+          summary: Successful join confirmation
+          payload:
+            event: joinedAuction
+            data:
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+              message: 'Successfully joined auction'
+
+    leaveAuction:
+      name: leaveAuction
+      title: Leave Auction Request
+      summary: Client requests to leave an auction room
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LeaveAuctionPayload'
+      examples:
+        - name: LeaveAuctionExample
+          summary: Example of leaving an auction
+          payload:
+            auctionId: '550e8400-e29b-41d4-a716-446655440000'
+
+    leftAuction:
+      name: leftAuction
+      title: Left Auction Confirmation
+      summary: Server confirms client left auction room
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LeftAuctionPayload'
+      examples:
+        - name: LeftAuctionExample
+          summary: Successful leave confirmation
+          payload:
+            event: leftAuction
+            data:
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+
+    auctionState:
+      name: auctionState
+      title: Auction State
+      summary: Complete current state of the auction
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AuctionStatePayload'
+      examples:
+        - name: AuctionStateExample
+          summary: Example auction state
+          payload:
+            event: auctionState
+            data:
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+              name: 'Luxury Villa in District 2'
+              code: 'AUC-2024-001'
+              status: live
+              startingPrice: 5000000000
+              bidIncrement: 100000000
+              reservePrice: 7000000000
+              auctionStartAt: '2024-11-18T10:00:00.000Z'
+              auctionEndAt: '2024-11-18T12:00:00.000Z'
+              timeRemaining: 3600000
+              hasStarted: true
+              hasEnded: false
+              isActive: true
+              currentWinningBid:
+                bidId: 'bid-uuid'
+                amount: 5500000000
+                bidAt: '2024-11-18T10:30:00.000Z'
+                participantId: 'participant-uuid'
+                bidderName: 'Nguyen Van A'
+                isWinningBid: true
+              nextMinimumBid: 5600000000
+              totalBids: 15
+              totalParticipants: 8
+              bidHistory:
+                - bidId: 'bid-uuid-1'
+                  amount: 5500000000
+                  bidAt: '2024-11-18T10:30:00.000Z'
+                  bidderName: 'Nguyen Van A'
+                - bidId: 'bid-uuid-2'
+                  amount: 5400000000
+                  bidAt: '2024-11-18T10:28:00.000Z'
+                  bidderName: 'Tran Thi B'
+
+    newBid:
+      name: newBid
+      title: New Bid Placed
+      summary: Broadcast when a new bid is placed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AuctionStatePayload'
+      examples:
+        - name: NewBidExample
+          summary: Example of new bid broadcast
+          payload:
+            event: newBid
+            data:
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+              currentWinningBid:
+                bidId: 'new-bid-uuid'
+                amount: 5700000000
+                bidAt: '2024-11-18T10:35:00.000Z'
+                participantId: 'participant-uuid-2'
+                bidderName: 'Le Van C'
+                isWinningBid: true
+              nextMinimumBid: 5800000000
+              totalBids: 16
+
+    bidDenied:
+      name: bidDenied
+      title: Bid Denied
+      summary: Broadcast when admin denies a bid
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/BidDeniedPayload'
+      examples:
+        - name: BidDeniedExample
+          summary: Example of denied bid
+          payload:
+            event: bidDenied
+            data:
+              bidId: 'denied-bid-uuid'
+              reason: 'Bid increment not followed'
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+              currentWinningBid:
+                bidId: 'previous-winning-bid-uuid'
+                amount: 5500000000
+                bidderName: 'Nguyen Van A'
+                isWinningBid: true
+
+    timeUpdate:
+      name: timeUpdate
+      title: Time Update
+      summary: Periodic countdown update
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TimeUpdatePayload'
+      examples:
+        - name: TimeUpdateExample
+          summary: Example time update
+          payload:
+            event: timeUpdate
+            data:
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+              timeRemaining: 3540000
+              hasStarted: true
+              hasEnded: false
+
+    auctionUpdate:
+      name: auctionUpdate
+      title: Auction Update
+      summary: General auction status change
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AuctionUpdatePayload'
+      examples:
+        - name: AuctionEndedExample
+          summary: Auction ended update
+          payload:
+            event: auctionUpdate
+            data:
+              type: AUCTION_ENDED
+              auctionId: '550e8400-e29b-41d4-a716-446655440000'
+              status: ended
+              timeRemaining: 0
+              hasEnded: true
+
+    error:
+      name: error
+      title: Error
+      summary: Error notification
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ErrorPayload'
+      examples:
+        - name: ErrorExample
+          summary: Example error
+          payload:
+            event: error
+            data:
+              message: 'Auction not found'
+              code: 'AUCTION_NOT_FOUND'
+
+  schemas:
+    JoinAuctionPayload:
+      type: object
+      required:
+        - auctionId
+      properties:
+        auctionId:
+          type: string
+          format: uuid
+          description: UUID of the auction to join
+
+    JoinedAuctionPayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          const: joinedAuction
+        data:
+          type: object
+          required:
+            - auctionId
+            - message
+          properties:
+            auctionId:
+              type: string
+              format: uuid
+            message:
+              type: string
+              example: 'Successfully joined auction'
+
+    LeaveAuctionPayload:
+      type: object
+      required:
+        - auctionId
+      properties:
+        auctionId:
+          type: string
+          format: uuid
+          description: UUID of the auction to leave
+
+    LeftAuctionPayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          const: leftAuction
+        data:
+          type: object
+          required:
+            - auctionId
+          properties:
+            auctionId:
+              type: string
+              format: uuid
+
+    AuctionStatePayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          enum: [auctionState, newBid]
+        data:
+          type: object
+          required:
+            - auctionId
+            - name
+            - code
+            - status
+            - startingPrice
+            - bidIncrement
+            - auctionStartAt
+            - auctionEndAt
+            - timeRemaining
+            - hasStarted
+            - hasEnded
+            - isActive
+            - nextMinimumBid
+            - totalBids
+            - totalParticipants
+            - bidHistory
+          properties:
+            auctionId:
+              type: string
+              format: uuid
+            name:
+              type: string
+              description: Auction name/title
+            code:
+              type: string
+              description: Unique auction code
+            status:
+              type: string
+              enum:
+                [
+                  draft,
+                  scheduled,
+                  registration_open,
+                  registration_closed,
+                  live,
+                  ended,
+                  success,
+                  no_bid,
+                  cancelled,
+                ]
+              description: Current auction status
+            startingPrice:
+              type: number
+              description: Starting price in VND
+            bidIncrement:
+              type: number
+              description: Minimum bid increment in VND
+            reservePrice:
+              type: number
+              nullable: true
+              description: Reserve price in VND (optional)
+            auctionStartAt:
+              type: string
+              format: date-time
+              description: Auction start time
+            auctionEndAt:
+              type: string
+              format: date-time
+              description: Auction end time
+            timeRemaining:
+              type: integer
+              description: Milliseconds remaining until auction ends
+            hasStarted:
+              type: boolean
+              description: Whether auction has started
+            hasEnded:
+              type: boolean
+              description: Whether auction has ended
+            isActive:
+              type: boolean
+              description: Whether auction is currently active
+            currentWinningBid:
+              type: object
+              nullable: true
+              description: Current highest bid (null if no bids)
+              properties:
+                bidId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  description: Bid amount in VND
+                bidAt:
+                  type: string
+                  format: date-time
+                participantId:
+                  type: string
+                  format: uuid
+                bidderName:
+                  type: string
+                  description: Anonymized bidder name
+                isWinningBid:
+                  type: boolean
+            nextMinimumBid:
+              type: number
+              description: Next valid bid amount in VND
+            totalBids:
+              type: integer
+              description: Total number of bids placed
+            totalParticipants:
+              type: integer
+              description: Total number of participants
+            bidHistory:
+              type: array
+              description: Top 5 recent bids
+              maxItems: 5
+              items:
+                type: object
+                required:
+                  - bidId
+                  - amount
+                  - bidAt
+                  - bidderName
+                properties:
+                  bidId:
+                    type: string
+                    format: uuid
+                  amount:
+                    type: number
+                  bidAt:
+                    type: string
+                    format: date-time
+                  bidderName:
+                    type: string
+
+    BidDeniedPayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          const: bidDenied
+        data:
+          type: object
+          required:
+            - bidId
+          properties:
+            bidId:
+              type: string
+              format: uuid
+              description: ID of the denied bid
+            reason:
+              type: string
+              nullable: true
+              description: Reason for denial
+            auctionId:
+              type: string
+              format: uuid
+            currentWinningBid:
+              type: object
+              nullable: true
+              description: Previous winning bid that becomes current again
+              properties:
+                bidId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                bidderName:
+                  type: string
+                isWinningBid:
+                  type: boolean
+
+    TimeUpdatePayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          const: timeUpdate
+        data:
+          type: object
+          required:
+            - auctionId
+            - timeRemaining
+            - hasStarted
+            - hasEnded
+          properties:
+            auctionId:
+              type: string
+              format: uuid
+            timeRemaining:
+              type: integer
+              description: Milliseconds remaining
+            hasStarted:
+              type: boolean
+            hasEnded:
+              type: boolean
+
+    AuctionUpdatePayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          const: auctionUpdate
+        data:
+          type: object
+          required:
+            - type
+            - auctionId
+          properties:
+            type:
+              type: string
+              enum: [AUCTION_ENDED, STATUS_CHANGED, AUCTION_STARTED]
+              description: Type of update
+            auctionId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum:
+                [
+                  draft,
+                  scheduled,
+                  registration_open,
+                  registration_closed,
+                  live,
+                  ended,
+                  success,
+                  no_bid,
+                  cancelled,
+                ]
+            timeRemaining:
+              type: integer
+              nullable: true
+            hasStarted:
+              type: boolean
+            hasEnded:
+              type: boolean
+            message:
+              type: string
+              nullable: true
+              description: Optional message about the update
+
+    ErrorPayload:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          const: error
+        data:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+              description: Error message
+            code:
+              type: string
+              nullable: true
+              description: Error code
+            details:
+              type: object
+              nullable: true
+              description: Additional error details
+
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from the REST API login endpoint.
+        Include in WebSocket connection handshake.

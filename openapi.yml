@@ -1,0 +1,2521 @@
+openapi: 3.0.3
+info:
+  title: Auction Hub API
+  description: |
+    Complete API documentation for the Auction Hub backend system.
+
+    ## Features
+    - User authentication and role-based access control
+    - Two-tier auction registration approval system
+    - Real-time bidding via WebSocket
+    - Stripe payment integration for deposits and winner payments
+    - Auction policy management and fee calculations
+    - Comprehensive audit trails
+
+    ## Authentication
+    Most endpoints require JWT Bearer token authentication.
+    Include the token in the Authorization header: `Bearer <token>`
+
+    ## User Roles
+    - `bidder` - Default role, can bid on auctions
+    - `auctioneer` - Can manage auctions and registrations
+    - `admin` - Full access except super admin functions
+    - `super_admin` - Complete system access
+
+  version: 3.0.0
+  contact:
+    name: Auction Hub Support
+    email: support@auctionhub.com
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.auctionhub.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User registration, login, and verification
+  - name: Registration
+    description: Two-tier auction registration approval system
+  - name: Bidding
+    description: Manual bidding endpoints (WebSocket documented separately)
+  - name: Finalization
+    description: Auction finalization and winner payment processing
+  - name: Auctions
+    description: Browse and view auction listings
+  - name: Auction Policy
+    description: Policy validation and fee calculations
+  - name: System Variables
+    description: Admin configuration for system-wide settings
+  - name: Auction Costs
+    description: Track operational expenses per auction
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        phoneNumber:
+          type: string
+          pattern: '^0[0-9]{9}$'
+        identityNumber:
+          type: string
+        userType:
+          type: string
+          enum: [individual, business]
+        taxId:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [bidder, auctioneer, admin, super_admin]
+        isBanned:
+          type: boolean
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Auction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Unique auction code
+        name:
+          type: string
+          description: Auction name
+        assetType:
+          type: string
+          enum:
+            [
+              secured_asset,
+              land_use_rights,
+              administrative_violation_asset,
+              state_asset,
+              enforcement_asset,
+              other_asset,
+            ]
+          description: Type of asset being auctioned
+        assetAddress:
+          type: string
+          description: Physical address of the asset
+        assetDescription:
+          type: string
+          description: Detailed description of the asset
+        status:
+          type: string
+          enum: [scheduled, live, success, no_bid, cancelled]
+          description: Current status of the auction
+        startingPrice:
+          type: number
+          description: Opening bid price
+        bidIncrement:
+          type: number
+          description: Minimum increment for each bid
+        reservePrice:
+          type: number
+          nullable: true
+          description: Minimum acceptable price (optional)
+        depositAmountRequired:
+          type: number
+          description: Required deposit amount to participate
+        saleFee:
+          type: number
+          description: Fee for purchasing auction documents
+        viewTime:
+          type: string
+          description: Schedule for viewing the asset
+        dossierFee:
+          type: number
+          nullable: true
+          description: Administrative fee (validated against policy)
+        depositPercentage:
+          type: number
+          nullable: true
+          description: Deposit as percentage of starting price (validated against policy)
+        saleStartAt:
+          type: string
+          format: date-time
+          description: When document sales begin
+        saleEndAt:
+          type: string
+          format: date-time
+          description: When document sales end
+        auctionStartAt:
+          type: string
+          format: date-time
+          description: When bidding begins
+        auctionEndAt:
+          type: string
+          format: date-time
+          description: When bidding ends
+        depositEndAt:
+          type: string
+          format: date-time
+          description: Deadline for deposit payment
+        validCheckInBeforeStartMinutes:
+          type: integer
+          description: Minutes allowed to check in before auction starts
+        validCheckInAfterStartMinutes:
+          type: integer
+          description: Minutes allowed to check in after auction starts
+        isActive:
+          type: boolean
+          description: Whether auction is active
+        numberOfFollow:
+          type: integer
+          description: Number of users following this auction
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+              sortOrder:
+                type: integer
+          description: Auction images stored as JSON
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+          description: Auction documents/attachments stored as JSON
+        owner:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            fullName:
+              type: string
+            email:
+              type: string
+            avatarUrl:
+              type: string
+              nullable: true
+          description: Property owner information
+        relatedAuctions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              code:
+                type: string
+              images:
+                type: array
+              startingPrice:
+                type: number
+              depositAmountRequired:
+                type: number
+              saleStartAt:
+                type: string
+                format: date-time
+          description: Related auctions
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Registration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        auctionId:
+          type: string
+          format: uuid
+        registeredAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+        documentsVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When documents were verified (Tier 1)
+        documentsVerifiedBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: Admin who verified documents
+        documentsRejectedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When documents were rejected (Tier 1)
+        documentsRejectedReason:
+          type: string
+          nullable: true
+          description: Reason for document rejection
+        documents:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+                format: uri
+              type:
+                type: string
+              sortOrder:
+                type: integer
+          description: Registration documents stored as JSON (Cloudinary URLs)
+        media:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              publicId:
+                type: string
+              url:
+                type: string
+                format: uri
+              sortOrder:
+                type: integer
+          description: Registration media files stored as JSON (Cloudinary URLs)
+        depositPaidAt:
+          type: string
+          format: date-time
+          nullable: true
+        depositAmount:
+          type: number
+          nullable: true
+        depositPaymentId:
+          type: string
+          nullable: true
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        confirmedBy:
+          type: string
+          format: uuid
+          nullable: true
+        checkedInAt:
+          type: string
+          format: date-time
+          nullable: true
+        currentState:
+          type: string
+          enum:
+            [
+              REGISTERED,
+              PENDING_DOCUMENT_REVIEW,
+              DOCUMENTS_VERIFIED,
+              DOCUMENTS_REJECTED,
+              DEPOSIT_PAID,
+              CONFIRMED,
+              WITHDRAWN,
+              REJECTED,
+              CHECKED_IN,
+            ]
+
+    Bid:
+      type: object
+      properties:
+        bidId:
+          type: string
+          format: uuid
+        auctionId:
+          type: string
+          format: uuid
+        participantId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        bidAt:
+          type: string
+          format: date-time
+        bidType:
+          type: string
+          enum: [manual, auto]
+        isWinningBid:
+          type: boolean
+        isDenied:
+          type: boolean
+        deniedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deniedReason:
+          type: string
+          nullable: true
+
+    StripePaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          description: Stripe session ID
+        amount:
+          type: number
+        paymentUrl:
+          type: string
+          format: uri
+        qrCode:
+          type: string
+          description: Data URL of QR code
+        deadline:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        message:
+          type: string
+
+    AuctionCosts:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        auctionId:
+          type: string
+          format: uuid
+        advertisingCost:
+          type: number
+        venueRentalCost:
+          type: number
+        appraisalCost:
+          type: number
+        assetViewingCost:
+          type: number
+        otherCosts:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              amount:
+                type: number
+        totalCost:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            totalPages:
+              type: integer
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account with email verification required
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  description: Must contain uppercase, lowercase, and number
+                phone_number:
+                  type: string
+                  pattern: '^0[0-9]{9}$'
+                  description: Vietnamese phone format
+                full_name:
+                  type: string
+                identity_number:
+                  type: string
+                  description: Vietnamese ID card format
+                user_type:
+                  type: string
+                  enum: [individual, business]
+                  default: individual
+                tax_id:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                  verification_required:
+                    type: boolean
+        '400':
+          description: Invalid input or duplicate email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive JWT token
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-email:
+    post:
+      tags:
+        - Authentication
+      summary: Verify email with OTP
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - token
+              properties:
+                email:
+                  type: string
+                  format: email
+                token:
+                  type: string
+                  description: OTP from email
+      responses:
+        '200':
+          description: Email verified successfully
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/resend-verification-email:
+    post:
+      tags:
+        - Authentication
+      summary: Resend verification email
+      operationId: resendVerificationEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Verification email sent
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset code sent to email
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user info
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/admin/users/{userId}/promote:
+    put:
+      tags:
+        - Authentication
+      summary: Promote user role
+      description: Admin/Super Admin can promote users to different roles
+      operationId: promoteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum: [bidder, auctioneer, admin, super_admin]
+      responses:
+        '200':
+          description: User promoted successfully
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== REGISTRATION ====================
+  /register-to-bid:
+    post:
+      tags:
+        - Registration
+      summary: Register for auction with document/media upload
+      description: Submit registration to participate in an auction with document and media files. Files are uploaded to Cloudinary automatically.
+      operationId: registerForAuction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - auctionId
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+                  description: ID of the auction to register for
+                documents:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Array of document files (PDF, DOC, DOCX). Max 10 files, 10MB each.
+                  maxItems: 10
+                media:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Array of media files (images, videos). Max 10 files, 10MB each.
+                  maxItems: 10
+      responses:
+        '201':
+          description: Registration created with files uploaded to Cloudinary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '400':
+          description: Bad request - file upload failed or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/withdraw:
+    post:
+      tags:
+        - Registration
+      summary: Withdraw registration
+      description: Withdraw from auction before it starts
+      operationId: withdrawRegistration
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - auctionId
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Registration withdrawn
+        '403':
+          description: Cannot withdraw after check-in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/admin/verify-documents:
+    post:
+      tags:
+        - Registration
+      summary: Verify documents (Tier 1)
+      description: Admin approves submitted documents
+      operationId: verifyDocuments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - registrationId
+              properties:
+                registrationId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Documents verified
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/admin/reject-documents:
+    post:
+      tags:
+        - Registration
+      summary: Reject documents (Tier 1)
+      description: Admin rejects submitted documents with reason
+      operationId: rejectDocuments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - registrationId
+                - reason
+              properties:
+                registrationId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Documents rejected
+
+  /register-to-bid/submit-deposit:
+    post:
+      tags:
+        - Registration
+      summary: Submit deposit (Tier 2)
+      description: Initiate deposit payment via Stripe
+      operationId: submitDeposit
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - registrationId
+                - auctionId
+                - amount
+              properties:
+                registrationId:
+                  type: string
+                  format: uuid
+                auctionId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Stripe payment session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StripePaymentResponse'
+        '403':
+          description: Documents not verified yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/verify-deposit-payment:
+    post:
+      tags:
+        - Registration
+      summary: Verify deposit payment
+      description: Verify Stripe payment completion
+      operationId: verifyDepositPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - registrationId
+              properties:
+                sessionId:
+                  type: string
+                  description: Stripe session ID
+                registrationId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Payment verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified:
+                    type: boolean
+                  paymentId:
+                    type: string
+                  sessionId:
+                    type: string
+                  amount:
+                    type: number
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid session or payment not completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/admin/final-approval:
+    post:
+      tags:
+        - Registration
+      summary: Final approval
+      description: Admin gives final approval after deposit paid
+      operationId: finalApproval
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - registrationId
+              properties:
+                registrationId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Registration confirmed
+        '403':
+          description: Deposit not paid yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/check-in:
+    post:
+      tags:
+        - Registration
+      summary: Check in for auction
+      description: Check in 24 hours before auction starts
+      operationId: checkIn
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - auctionId
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Checked in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '403':
+          description: Check-in window not open or not confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /register-to-bid/admin/registrations:
+    get:
+      tags:
+        - Registration
+      summary: List all registrations (paginated)
+      description: Admin can view all auction registrations
+      operationId: listRegistrations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              [
+                REGISTERED,
+                PENDING_DOCUMENT_REVIEW,
+                DOCUMENTS_VERIFIED,
+                DOCUMENTS_REJECTED,
+                DEPOSIT_PAID,
+                CONFIRMED,
+                WITHDRAWN,
+                REJECTED,
+                CHECKED_IN,
+              ]
+        - name: auctionId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated registrations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /register-to-bid/users/{userId}/registrations:
+    get:
+      tags:
+        - Registration
+      summary: List user registrations
+      description: Get all registrations for a specific user. Users can only see their own registrations.
+      operationId: getUserRegistrations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User registrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Registration'
+
+  /register-to-bid/auctions/{auctionId}/registration:
+    get:
+      tags:
+        - Registration
+      summary: Get registration for auction
+      description: Get registration details for the current user for a specific auction
+      operationId: getRegistrationForAuction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Registration details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== BIDDING ====================
+  /manual-bid:
+    post:
+      tags:
+        - Bidding
+      summary: Place bid
+      description: Place a manual bid on a live auction
+      operationId: placeBid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - auctionId
+                - amount
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  minimum: 0.01
+      responses:
+        '201':
+          description: Bid placed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+        '400':
+          description: Bid too low or auction not live
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: User not confirmed or not checked in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /manual-bid/deny:
+    post:
+      tags:
+        - Bidding
+      summary: Deny bid
+      description: Admin can deny a bid after placement
+      operationId: denyBid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bidId
+              properties:
+                bidId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Bid denied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bidId:
+                    type: string
+                  isDenied:
+                    type: boolean
+                  deniedAt:
+                    type: string
+                    format: date-time
+                  deniedReason:
+                    type: string
+
+  # ==================== FINALIZATION ====================
+  /auction-finalization/evaluate/{auctionId}:
+    get:
+      tags:
+        - Finalization
+      summary: Evaluate auction
+      description: Check if auction can be finalized
+      operationId: evaluateAuction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Evaluation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auctionId:
+                    type: string
+                  currentStatus:
+                    type: string
+                  recommendedStatus:
+                    type: string
+                  isAlreadyFinalized:
+                    type: boolean
+                  meetsReservePrice:
+                    type: boolean
+                  hasMinimumParticipants:
+                    type: boolean
+                  hasValidBids:
+                    type: boolean
+                  totalValidBids:
+                    type: integer
+                  totalParticipants:
+                    type: integer
+                  highestBidAmount:
+                    type: string
+                    nullable: true
+                  canFinalize:
+                    type: boolean
+                  evaluatedAt:
+                    type: string
+                    format: date-time
+
+  /auction-finalization/finalize:
+    post:
+      tags:
+        - Finalization
+      summary: Finalize auction
+      description: Finalize auction and determine winner
+      operationId: finalizeAuction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - auctionId
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+                winningBidId:
+                  type: string
+                  format: uuid
+                notes:
+                  type: string
+                skipAutoEvaluation:
+                  type: boolean
+      responses:
+        '200':
+          description: Auction finalized
+
+  /auction-finalization/override:
+    post:
+      tags:
+        - Finalization
+      summary: Override auction status
+      description: Super Admin can manually override auction status
+      operationId: overrideAuctionStatus
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - auctionId
+                - newStatus
+                - reason
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+                newStatus:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Status overridden
+
+  /auction-finalization/results/{auctionId}:
+    get:
+      tags:
+        - Finalization
+      summary: Get auction results
+      description: View auction results from user perspective
+      operationId: getAuctionResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Auction results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auctionId:
+                    type: string
+                  status:
+                    type: string
+                  isWinner:
+                    type: boolean
+                  winningBid:
+                    type: object
+                  userBids:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bid'
+
+  /auction-finalization/audit-logs/{auctionId}:
+    get:
+      tags:
+        - Finalization
+      summary: Get audit logs
+      description: View complete audit trail for auction
+      operationId: getAuditLogs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /auction-finalization/winner-payment-requirements/{auctionId}:
+    get:
+      tags:
+        - Finalization
+      summary: Get winner payment requirements
+      description: View payment breakdown for auction winner
+      operationId: getWinnerPaymentRequirements
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment requirements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auctionId:
+                    type: string
+                  winningBidAmount:
+                    type: number
+                  depositPaid:
+                    type: number
+                  remainingAmount:
+                    type: number
+                  totalAmount:
+                    type: number
+                  commissionFee:
+                    type: number
+                  otherFees:
+                    type: number
+                  paymentDeadline:
+                    type: string
+                    format: date-time
+                  paymentStatus:
+                    type: string
+                    enum: [pending, paid, overdue]
+
+  /auction-finalization/submit-winner-payment:
+    post:
+      tags:
+        - Finalization
+      summary: Submit winner payment
+      description: Initiate final winner payment via Stripe
+      operationId: submitWinnerPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - auctionId
+              properties:
+                auctionId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Payment session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StripePaymentResponse'
+        '403':
+          description: User is not the winner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auction-finalization/verify-winner-payment:
+    post:
+      tags:
+        - Finalization
+      summary: Verify winner payment
+      description: Verify winner payment completion via Stripe
+      operationId: verifyWinnerPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - auctionId
+              properties:
+                sessionId:
+                  type: string
+                auctionId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Payment verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified:
+                    type: boolean
+                  paymentId:
+                    type: string
+                  sessionId:
+                    type: string
+                  auctionId:
+                    type: string
+                  amount:
+                    type: number
+                  status:
+                    type: string
+                  paidAt:
+                    type: string
+                    format: date-time
+                  message:
+                    type: string
+
+  # ==================== AUCTIONS ====================
+  /auctions:
+    get:
+      tags:
+        - Auctions
+      summary: Get all auctions
+      description: Browse auctions with filtering and pagination
+      operationId: getAuctions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [completed, now, upcoming]
+          description: Filter by auction status (completed=ended, now=currently active, upcoming=future)
+        - name: active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Items per page
+      responses:
+        '200':
+          description: Paginated auction list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        startingPrice:
+                          type: number
+                        depositAmountRequired:
+                          type: number
+                        auctionStartAt:
+                          type: string
+                          format: date-time
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+    post:
+      tags:
+        - Auctions
+      summary: Create new auction
+      description: Create a new auction (Admin/Auctioneer only)
+      operationId: createAuction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - name
+                - assetType
+                - assetAddress
+                - assetDescription
+                - saleStartAt
+                - saleEndAt
+                - auctionStartAt
+                - auctionEndAt
+                - depositEndAt
+                - startingPrice
+                - bidIncrement
+                - depositAmountRequired
+                - saleFee
+                - viewTime
+                - validCheckInBeforeStartMinutes
+                - validCheckInAfterStartMinutes
+                - propertyOwnerId
+              properties:
+                code:
+                  type: string
+                  description: Unique auction code
+                name:
+                  type: string
+                  description: Auction name
+                assetType:
+                  type: string
+                  enum:
+                    [
+                      secured_asset,
+                      land_use_rights,
+                      administrative_violation_asset,
+                      state_asset,
+                      enforcement_asset,
+                      other_asset,
+                    ]
+                  description: Type of asset being auctioned
+                assetAddress:
+                  type: string
+                  description: Physical address of the asset
+                assetDescription:
+                  type: string
+                  description: Detailed description of the asset
+                saleStartAt:
+                  type: string
+                  format: date-time
+                  description: When document sales begin
+                saleEndAt:
+                  type: string
+                  format: date-time
+                  description: When document sales end
+                auctionStartAt:
+                  type: string
+                  format: date-time
+                  description: When bidding begins
+                auctionEndAt:
+                  type: string
+                  format: date-time
+                  description: When bidding ends
+                depositEndAt:
+                  type: string
+                  format: date-time
+                  description: Deadline for deposit payment
+                startingPrice:
+                  type: number
+                  description: Opening bid price
+                bidIncrement:
+                  type: number
+                  description: Minimum increment for each bid
+                depositAmountRequired:
+                  type: number
+                  description: Required deposit amount to participate
+                saleFee:
+                  type: number
+                  description: Fee for purchasing auction documents
+                viewTime:
+                  type: string
+                  description: Schedule for viewing the asset
+                validCheckInBeforeStartMinutes:
+                  type: integer
+                  description: Minutes allowed to check in before auction starts
+                validCheckInAfterStartMinutes:
+                  type: integer
+                  description: Minutes allowed to check in after auction starts
+                propertyOwnerId:
+                  type: string
+                  format: uuid
+                  description: Property owner user ID
+                relatedAuctions:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: List of related auction IDs (optional)
+      responses:
+        '201':
+          description: Auction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+                  message:
+                    type: string
+                    example: Create auction successfully!
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auctions/{id}:
+    get:
+      tags:
+        - Auctions
+      summary: Get single auction
+      description: View detailed auction information
+      operationId: getAuction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Auction details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+        '404':
+          description: Auction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Auctions
+      summary: Update auction
+      description: Update auction details (Admin/Auctioneer only)
+      operationId: updateAuction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+                assetType:
+                  type: string
+                  enum:
+                    [
+                      secured_asset,
+                      land_use_rights,
+                      administrative_violation_asset,
+                      state_asset,
+                      enforcement_asset,
+                      other_asset,
+                    ]
+                assetAddress:
+                  type: string
+                assetDescription:
+                  type: string
+                saleStartAt:
+                  type: string
+                  format: date-time
+                saleEndAt:
+                  type: string
+                  format: date-time
+                auctionStartAt:
+                  type: string
+                  format: date-time
+                auctionEndAt:
+                  type: string
+                  format: date-time
+                depositEndAt:
+                  type: string
+                  format: date-time
+                startingPrice:
+                  type: number
+                bidIncrement:
+                  type: number
+                depositAmountRequired:
+                  type: number
+                saleFee:
+                  type: number
+                viewTime:
+                  type: string
+                validCheckInBeforeStartMinutes:
+                  type: integer
+                validCheckInAfterStartMinutes:
+                  type: integer
+                propertyOwnerId:
+                  type: string
+                  format: uuid
+                relatedAuctions:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                isActive:
+                  type: boolean
+                  description: Toggle auction active status
+      responses:
+        '200':
+          description: Auction updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+                  message:
+                    type: string
+                    example: Update auction successfully!
+        '404':
+          description: Auction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auctions/{id}/resources:
+    patch:
+      tags:
+        - Auctions
+      summary: Update auction resources
+      description: Upload or update images and attachments for an auction (Admin/Auctioneer only)
+      operationId: updateAuctionResources
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files (max 10, max size 10MB each)
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Attachment files (max 10, max size 10MB each)
+      responses:
+        '200':
+          description: Resources updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Auction'
+                  message:
+                    type: string
+                    example: Updated resource successfully!
+        '404':
+          description: Auction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== AUCTION POLICY ====================
+  /auction-policy/validate/dossier-fee:
+    post:
+      tags:
+        - Auction Policy
+      summary: Validate dossier fee
+      description: Check if dossier fee is within policy limits
+      operationId: validateDossierFee
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dossierFee
+                - startingPrice
+              properties:
+                dossierFee:
+                  type: number
+                startingPrice:
+                  type: number
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  maxAllowedFee:
+                    type: number
+                  providedFee:
+                    type: number
+                  message:
+                    type: string
+
+  /auction-policy/validate/deposit-percentage:
+    post:
+      tags:
+        - Auction Policy
+      summary: Validate deposit percentage
+      description: Check if deposit percentage is within policy range
+      operationId: validateDepositPercentage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - percentage
+                - assetCategory
+              properties:
+                percentage:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                assetCategory:
+                  type: string
+                  enum: [general, land_use_right]
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  minPercentage:
+                    type: number
+                  maxPercentage:
+                    type: number
+                  providedPercentage:
+                    type: number
+                  message:
+                    type: string
+
+  /auction-policy/calculate/commission:
+    post:
+      tags:
+        - Auction Policy
+      summary: Calculate commission
+      description: Calculate commission fee based on final price
+      operationId: calculateCommission
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - finalPrice
+                - assetCategory
+              properties:
+                finalPrice:
+                  type: number
+                assetCategory:
+                  type: string
+                  enum: [general, land_use_right]
+      responses:
+        '200':
+          description: Commission calculation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  finalPrice:
+                    type: number
+                  assetCategory:
+                    type: string
+                  commissionFee:
+                    type: number
+                  calculation:
+                    type: object
+                    properties:
+                      min:
+                        type: number
+                      max:
+                        type: number
+                      appliedFee:
+                        type: number
+
+  /auction-policy/calculate/deposit:
+    post:
+      tags:
+        - Auction Policy
+      summary: Calculate deposit
+      description: Calculate deposit amount based on configuration
+      operationId: calculateDeposit
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - depositType
+                - startingPrice
+              properties:
+                depositType:
+                  type: string
+                  enum: [percentage, fixed]
+                startingPrice:
+                  type: number
+                percentage:
+                  type: number
+                  description: Required if depositType is percentage
+                fixedAmount:
+                  type: number
+                  description: Required if depositType is fixed
+                assetCategory:
+                  type: string
+                  enum: [general, land_use_right]
+                  description: Required if depositType is percentage
+      responses:
+        '200':
+          description: Deposit calculation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  depositType:
+                    type: string
+                  startingPrice:
+                    type: number
+                  percentage:
+                    type: number
+                  assetCategory:
+                    type: string
+                  fixedAmount:
+                    type: number
+                  depositAmount:
+                    type: number
+                  message:
+                    type: string
+
+  # ==================== SYSTEM VARIABLES ====================
+  /system-variables:
+    get:
+      tags:
+        - System Variables
+      summary: Get all system variables
+      description: View all system configuration variables
+      operationId: getAllSystemVariables
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+      responses:
+        '200':
+          description: System variables
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - System Variables
+      summary: Create system variable
+      description: Create a new system configuration variable
+      operationId: createSystemVariable
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+                - key
+                - value
+                - dataType
+              properties:
+                category:
+                  type: string
+                key:
+                  type: string
+                value:
+                  type: string
+                dataType:
+                  type: string
+                  enum: [number, boolean, string, json]
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Variable created
+        '409':
+          description: Variable already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /system-variables/{category}/{key}:
+    get:
+      tags:
+        - System Variables
+      summary: Get single variable
+      description: Get a specific system variable value
+      operationId: getSystemVariable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Variable value
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  category:
+                    type: string
+                  key:
+                    type: string
+                  value:
+                    type: string
+
+    patch:
+      tags:
+        - System Variables
+      summary: Update variable
+      description: Update system variable value
+      operationId: updateSystemVariable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - value
+              properties:
+                value:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Variable updated
+
+  /system-variables/category/{category}:
+    get:
+      tags:
+        - System Variables
+      summary: Get category variables
+      description: Get all variables in a category
+      operationId: getCategoryVariables
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category variables
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /system-variables/cache/clear:
+    post:
+      tags:
+        - System Variables
+      summary: Clear cache
+      description: Clear system variables cache
+      operationId: clearCache
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Clear cache for specific category only
+      responses:
+        '200':
+          description: Cache cleared
+
+  /system-variables/cache/stats:
+    get:
+      tags:
+        - System Variables
+      summary: Get cache statistics
+      description: View cache performance metrics
+      operationId: getCacheStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalEntries:
+                    type: integer
+                  validEntries:
+                    type: integer
+                  expiredEntries:
+                    type: integer
+                  cacheTTL:
+                    type: integer
+
+  # ==================== AUCTION COSTS ====================
+  /auction-costs/auction/{auctionId}:
+    get:
+      tags:
+        - Auction Costs
+      summary: Get auction costs
+      description: View cost breakdown for an auction
+      operationId: getAuctionCosts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Auction costs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionCosts'
+        '404':
+          description: Costs not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Auction Costs
+      summary: Create or update auction costs
+      description: Create new or update existing cost record
+      operationId: createOrUpdateAuctionCosts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                advertisingCost:
+                  type: number
+                  minimum: 0
+                venueRentalCost:
+                  type: number
+                  minimum: 0
+                appraisalCost:
+                  type: number
+                  minimum: 0
+                assetViewingCost:
+                  type: number
+                  minimum: 0
+                otherCosts:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - description
+                      - amount
+                    properties:
+                      description:
+                        type: string
+                      amount:
+                        type: number
+                        minimum: 0
+      responses:
+        '201':
+          description: Costs created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionCosts'
+
+    patch:
+      tags:
+        - Auction Costs
+      summary: Update specific cost fields
+      description: Partially update cost record
+      operationId: updateAuctionCosts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                advertisingCost:
+                  type: number
+                venueRentalCost:
+                  type: number
+                appraisalCost:
+                  type: number
+                assetViewingCost:
+                  type: number
+                otherCosts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      description:
+                        type: string
+                      amount:
+                        type: number
+      responses:
+        '200':
+          description: Costs updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionCosts'
+
+    delete:
+      tags:
+        - Auction Costs
+      summary: Delete auction costs
+      description: Remove cost record for auction
+      operationId: deleteAuctionCosts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Costs deleted
+        '404':
+          description: Costs not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auction-costs/auction/{auctionId}/other-cost:
+    post:
+      tags:
+        - Auction Costs
+      summary: Add individual other cost
+      description: Append a single item to otherCosts array
+      operationId: addOtherCost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - description
+                - amount
+              properties:
+                description:
+                  type: string
+                amount:
+                  type: number
+                  minimum: 0
+      responses:
+        '201':
+          description: Cost item added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionCosts'
