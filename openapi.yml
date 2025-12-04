@@ -1087,7 +1087,7 @@ paths:
       tags:
         - Registration
       summary: List user registrations
-      description: Get all registrations for a specific user. Users can only see their own registrations.
+      description: Get all registrations for a specific user. Bidders can only view their own registrations. Admins and auctioneers can view any user's registrations.
       operationId: getUserRegistrations
       security:
         - bearerAuth: []
@@ -1107,6 +1107,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Registration'
+        '403':
+          description: Forbidden - Bidders can only view their own registrations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /register-to-bid/auctions/{auctionId}/registration:
     get:

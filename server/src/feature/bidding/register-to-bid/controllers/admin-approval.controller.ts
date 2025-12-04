@@ -42,23 +42,6 @@ import { UserRole } from '../../../../common/enums/roles.enum';
 export class AdminApprovalController {
   constructor(private readonly svc: RegisterToBidService) {}
 
-  @Get('users/:userId/registrations')
-  @ApiOperation({
-    summary: 'List all registrations for a user (admin)',
-    description: 'Retrieve all auction registrations for a specific user.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of registrations',
-    type: [AuctionParticipantResponseDto],
-  })
-  @ApiResponse({ status: 404, description: 'User has no registrations' })
-  async listForUser(
-    @Param('userId') userId: string
-  ): Promise<AuctionParticipantResponseDto[]> {
-    return this.svc.getRegistrationStatusOfOneUserForAdmin(userId);
-  }
-
   @Get('registrations')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

@@ -14,10 +14,12 @@ import {
   AdminApprovalController,
   RegistrationPaymentController,
 } from './controllers';
+import { RegisterToBidController } from './register-to-bid.controller';
 
 @Module({
   imports: [PrismaModule, PaymentModule, EmailModule, CloudinaryModule],
   controllers: [
+    RegisterToBidController,
     UserRegistrationController,
     AdminApprovalController,
     RegistrationPaymentController,
