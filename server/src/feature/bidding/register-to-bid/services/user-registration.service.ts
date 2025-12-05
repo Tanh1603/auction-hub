@@ -72,13 +72,13 @@ export class UserRegistrationService {
         );
       }
     } catch (uploadError) {
+      const errorMessage = (uploadError as Error)?.message || 'Unknown error';
+      const errorDetails = (uploadError as any)?.error || uploadError;
       this.logger.error(
-        `Failed to upload files to Cloudinary for user ${currentUser.id}`,
-        (uploadError as Error)?.stack
+        `Failed to upload files to Cloudinary for user ${currentUser.id}: ${errorMessage}`,
+        JSON.stringify(errorDetails, null, 2)
       );
-      throw new BadRequestException(
-        'Failed to upload files. Please try again.'
-      );
+      throw new BadRequestException(`Failed to upload files: ${errorMessage}`);
     }
 
     try {

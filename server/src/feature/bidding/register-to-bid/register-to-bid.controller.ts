@@ -11,7 +11,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { RegisterToBidService } from './register-to-bid.service';
-import { CreateRegisterToBidDto } from './dto/create-register-to-bid.dto';
 import { WithdrawRegistrationDto } from './dto/withdraw-registration.dto';
 import { ApproveRegistrationDto } from './dto/approve-registration.dto';
 import { RejectRegistrationDto } from './dto/reject-registration.dto';
@@ -43,32 +42,8 @@ import { UserRole } from '../../../common/enums/roles.enum';
 export class RegisterToBidController {
   constructor(private readonly svc: RegisterToBidService) {}
 
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Register or resubmit for auction',
-    description:
-      'Register to bid on an auction. Can resubmit if rejected or re-apply if withdrawn.',
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Registration created or resubmitted',
-    type: AuctionParticipantResponseDto,
-  })
-  @ApiResponse({ status: 400, description: 'Registration period closed' })
-  @ApiResponse({ status: 403, description: 'User banned or not eligible' })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
-  @ApiResponse({
-    status: 409,
-    description: 'Already confirmed or under review',
-  })
-  @ApiBearerAuth()
-  create(
-    @Body() dto: CreateRegisterToBidDto,
-    @CurrentUser() user: CurrentUserData
-  ) {
-    return this.svc.create(dto, user);
-  }
+  // NOTE: The @Post() create endpoint is handled by UserRegistrationController
+  // which supports multipart/form-data with file uploads (documents & media)
 
   @Post('withdraw')
   @HttpCode(HttpStatus.OK)
