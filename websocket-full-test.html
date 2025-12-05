@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎯 Complete WebSocket Auction Testing - All 8 Events</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        min-height: 100vh;
+        color: #e4e4e4;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      h1 {
+        text-align: center;
+        color: #00d9ff;
+        margin-bottom: 10px;
+        text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+      }
+      .subtitle {
+        text-align: center;
+        color: #888;
+        margin-bottom: 30px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      @media (max-width: 1000px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: rgba(30, 30, 50, 0.9);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(100, 100, 150, 0.3);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      }
+      .panel h2 {
+        margin-top: 0;
+        color: #00d9ff;
+        border-bottom: 2px solid rgba(0, 217, 255, 0.3);
+        padding-bottom: 10px;
+        font-size: 18px;
+      }
+      .connection-status {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+      .connected {
+        background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+        color: #a5d6a7;
+        border: 1px solid #4caf50;
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+      }
+      .disconnected {
+        background: linear-gradient(135deg, #b71c1c 0%, #c62828 100%);
+        color: #ef9a9a;
+        border: 1px solid #f44336;
+        box-shadow: 0 0 20px rgba(244, 67, 54, 0.3);
+      }
+      .input-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #aaa;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid rgba(100, 100, 150, 0.3);
+        border-radius: 8px;
+        font-size: 14px;
+        background: rgba(20, 20, 40, 0.8);
+        color: #e4e4e4;
+        transition: border-color 0.3s;
+      }
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #00d9ff;
+        box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+      }
+      .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 15px 0;
+      }
+      button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #00d9ff 0%, #0099cc 100%);
+        color: #000;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+      }
+      .btn-success {
+        background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+        color: white;
+      }
+      .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+      }
+      .btn-danger {
+        background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+        color: white;
+      }
+      .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(244, 67, 54, 0.4);
+      }
+      .btn-warning {
+        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        color: #000;
+      }
+      .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(255, 152, 0, 0.4);
+      }
+      .btn-info {
+        background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+        color: white;
+      }
+      .btn-info:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(156, 39, 176, 0.4);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+      .log-container {
+        background: #0a0a15;
+        border-radius: 10px;
+        height: 300px;
+        overflow-y: auto;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        border: 1px solid rgba(100, 100, 150, 0.3);
+      }
+      .log-entry {
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(50, 50, 80, 0.5);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .log-entry:hover {
+        background: rgba(0, 217, 255, 0.05);
+      }
+      .log-time {
+        color: #666;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .log-event {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .log-message {
+        flex: 1;
+        word-break: break-word;
+      }
+      .event-connect {
+        background: #4caf50;
+        color: white;
+      }
+      .event-disconnect {
+        background: #f44336;
+        color: white;
+      }
+      .event-joinAuction {
+        background: #2196f3;
+        color: white;
+      }
+      .event-leaveAuction {
+        background: #9c27b0;
+        color: white;
+      }
+      .event-auctionState {
+        background: #00bcd4;
+        color: white;
+      }
+      .event-newBid {
+        background: #ff9800;
+        color: black;
+      }
+      .event-timeUpdate {
+        background: #607d8b;
+        color: white;
+      }
+      .event-bidDenied {
+        background: #e91e63;
+        color: white;
+      }
+      .event-auctionUpdate {
+        background: #673ab7;
+        color: white;
+      }
+      .event-error {
+        background: #b71c1c;
+        color: white;
+      }
+      .event-api {
+        background: #795548;
+        color: white;
+      }
+      .event-info {
+        background: #37474f;
+        color: white;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+      .stat-card {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid rgba(100, 100, 150, 0.2);
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #00d9ff;
+      }
+      .winner-card {
+        background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 20px;
+        display: none;
+      }
+      .winner-card.active {
+        display: block;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        50% {
+          box-shadow: 0 0 40px rgba(255, 215, 0, 0.8);
+        }
+      }
+      .winner-card .label {
+        color: rgba(0, 0, 0, 0.6);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .winner-card .value {
+        color: #000;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .events-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+      }
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+      }
+
+      .event-counter {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .counter-item {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .counter-item .count {
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .counter-item .name {
+        font-size: 10px;
+        color: #888;
+        text-transform: uppercase;
+      }
+
+      .bid-section {
+        background: rgba(255, 193, 7, 0.1);
+        border: 2px solid rgba(255, 193, 7, 0.3);
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+      .bid-section h3 {
+        color: #ffc107;
+        margin-top: 0;
+      }
+
+      .quick-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .quick-bid-btn {
+        padding: 8px 15px;
+        border: 2px solid #ffc107;
+        background: transparent;
+        color: #ffc107;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      .quick-bid-btn:hover {
+        background: #ffc107;
+        color: #000;
+      }
+
+      pre {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        font-size: 12px;
+        margin: 0;
+      }
+
+      .tab-container {
+        margin-top: 20px;
+      }
+      .tabs {
+        display: flex;
+        gap: 5px;
+        margin-bottom: -1px;
+      }
+      .tab {
+        padding: 10px 20px;
+        background: rgba(30, 30, 50, 0.5);
+        border: 1px solid rgba(100, 100, 150, 0.3);
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        color: #888;
+        transition: all 0.3s;
+      }
+      .tab.active {
+        background: rgba(30, 30, 50, 0.9);
+        color: #00d9ff;
+        border-color: rgba(0, 217, 255, 0.3);
+      }
+      .tab-content {
+        display: none;
+        background: rgba(30, 30, 50, 0.9);
+        border: 1px solid rgba(100, 100, 150, 0.3);
+        border-radius: 0 8px 8px 8px;
+        padding: 20px;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Complete WebSocket Auction Testing</h1>
+      <p class="subtitle">
+        Test all 8 WebSocket events: joinAuction, leaveAuction, auctionState,
+        newBid, timeUpdate, bidDenied, auctionUpdate, error
+      </p>
+
+      <!-- Connection Status -->
+      <div id="connectionStatus" class="connection-status disconnected">
+        ❌ Disconnected - Click "Connect" to start
+      </div>
+
+      <div class="grid">
+        <!-- Left Panel: Configuration & Controls -->
+        <div class="panel">
+          <h2>🔧 Configuration & Connection</h2>
+
+          <div class="input-group">
+            <label>WebSocket Server URL</label>
+            <input
+              type="text"
+              id="serverUrl"
+              value="http://localhost:3000/bidding"
+            />
+          </div>
+
+          <div class="input-group">
+            <label>API Base URL (for placing bids)</label>
+            <input type="text" id="apiUrl" value="http://localhost:3000/api" />
+          </div>
+
+          <div class="input-group">
+            <label>JWT Access Token (Bearer Token)</label>
+            <textarea
+              id="accessToken"
+              rows="3"
+              placeholder="Paste your JWT access token here..."
+            ></textarea>
+          </div>
+
+          <div class="input-group">
+            <label>Auction ID</label>
+            <input
+              type="text"
+              id="auctionId"
+              placeholder="Enter auction UUID"
+            />
+          </div>
+
+          <div class="btn-group">
+            <button class="btn-primary" onclick="connectSocket()">
+              🔌 Connect
+            </button>
+            <button class="btn-danger" onclick="disconnectSocket()">
+              ❌ Disconnect
+            </button>
+          </div>
+
+          <div class="btn-group">
+            <button class="btn-success" onclick="joinAuction()">
+              🎯 Join Auction
+            </button>
+            <button class="btn-warning" onclick="leaveAuction()">
+              👋 Leave Auction
+            </button>
+          </div>
+
+          <!-- Login Helper -->
+          <div class="tab-container">
+            <div class="tabs">
+              <div class="tab active" onclick="showTab('login-tab')">
+                🔑 Login
+              </div>
+              <div class="tab" onclick="showTab('register-tab')">
+                📝 Register
+              </div>
+            </div>
+            <div id="login-tab" class="tab-content active">
+              <div class="input-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  id="loginEmail"
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div class="input-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  id="loginPassword"
+                  placeholder="password"
+                />
+              </div>
+              <button class="btn-info" onclick="login()">
+                🔐 Login & Get Token
+              </button>
+            </div>
+            <div id="register-tab" class="tab-content">
+              <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" id="regName" placeholder="John Doe" />
+              </div>
+              <div class="input-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  id="regEmail"
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div class="input-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  id="regPassword"
+                  placeholder="password"
+                />
+              </div>
+              <button class="btn-info" onclick="register()">📝 Register</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Auction State -->
+        <div class="panel">
+          <h2>📊 Live Auction State</h2>
+
+          <div class="winner-card" id="winnerCard">
+            <div class="label">🏆 Current Winning Bid</div>
+            <div class="value" id="winnerAmount">$0</div>
+            <div class="label">by</div>
+            <div class="value" id="winnerName" style="font-size: 18px">--</div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">⏱️ Time Left</div>
+              <div class="stat-value" id="timeRemaining">--:--:--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">📈 Total Bids</div>
+              <div class="stat-value" id="totalBids">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">💰 Min Next Bid</div>
+              <div class="stat-value" id="nextMinBid">$0</div>
+            </div>
+          </div>
+
+          <!-- Bid Section -->
+          <div class="bid-section">
+            <h3>💸 Place a Bid (via REST API)</h3>
+            <div class="input-group">
+              <label>Bid Amount ($)</label>
+              <input
+                type="number"
+                id="bidAmount"
+                placeholder="Enter bid amount"
+                step="0.01"
+              />
+            </div>
+            <div class="quick-actions">
+              <button class="quick-bid-btn" onclick="quickBid(100)">
+                +$100
+              </button>
+              <button class="quick-bid-btn" onclick="quickBid(500)">
+                +$500
+              </button>
+              <button class="quick-bid-btn" onclick="quickBid(1000)">
+                +$1000
+              </button>
+              <button class="quick-bid-btn" onclick="setMinBid()">
+                Min Bid
+              </button>
+            </div>
+            <div class="btn-group" style="margin-top: 15px">
+              <button class="btn-success" onclick="placeBid()">
+                🎯 Place Bid
+              </button>
+            </div>
+          </div>
+
+          <!-- Auction Info -->
+          <div id="auctionInfo" style="margin-top: 20px; display: none">
+            <h4 style="color: #00d9ff; margin-bottom: 10px">
+              📋 Auction Details
+            </h4>
+            <pre id="auctionDetails"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Counters -->
+      <div class="panel">
+        <h2>📈 Event Statistics</h2>
+        <div class="event-counter">
+          <div class="counter-item">
+            <div class="count" id="count-auctionState">0</div>
+            <div class="name">auctionState</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-newBid">0</div>
+            <div class="name">newBid</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-timeUpdate">0</div>
+            <div class="name">timeUpdate</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-bidDenied">0</div>
+            <div class="name">bidDenied</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-auctionUpdate">0</div>
+            <div class="name">auctionUpdate</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-joinedAuction">0</div>
+            <div class="name">joinedAuction</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-leftAuction">0</div>
+            <div class="name">leftAuction</div>
+          </div>
+          <div class="counter-item">
+            <div class="count" id="count-error">0</div>
+            <div class="name">error</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Panel -->
+      <div class="panel full-width">
+        <h2>📝 Real-time Event Logs</h2>
+
+        <div class="events-legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #4caf50"></div>
+            Connect
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #f44336"></div>
+            Disconnect
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #2196f3"></div>
+            Join
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #9c27b0"></div>
+            Leave
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #00bcd4"></div>
+            State
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #ff9800"></div>
+            NewBid
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #607d8b"></div>
+            TimeUpdate
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #e91e63"></div>
+            BidDenied
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #673ab7"></div>
+            AuctionUpdate
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #b71c1c"></div>
+            Error
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn-danger" onclick="clearLogs()">
+            🗑️ Clear Logs
+          </button>
+          <button class="btn-primary" onclick="exportLogs()">
+            📥 Export Logs
+          </button>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              margin-left: 20px;
+            "
+          >
+            <input type="checkbox" id="autoScroll" checked />
+            Auto-scroll
+          </label>
+          <label style="display: flex; align-items: center; gap: 5px">
+            <input type="checkbox" id="showTimeUpdate" />
+            Show timeUpdate (every second)
+          </label>
+        </div>
+
+        <div class="log-container" id="logContainer"></div>
+      </div>
+    </div>
+
+    <script>
+      let socket = null;
+      let currentAuctionId = null;
+      let currentMinBid = 0;
+      let logs = [];
+      let eventCounts = {
+        auctionState: 0,
+        newBid: 0,
+        timeUpdate: 0,
+        bidDenied: 0,
+        auctionUpdate: 0,
+        joinedAuction: 0,
+        leftAuction: 0,
+        error: 0,
+      };
+
+      // Tab functionality
+      function showTab(tabId) {
+        document
+          .querySelectorAll('.tab')
+          .forEach((t) => t.classList.remove('active'));
+        document
+          .querySelectorAll('.tab-content')
+          .forEach((t) => t.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+      }
+
+      // Logging
+      function log(eventType, message, data = null) {
+        const timestamp = new Date().toLocaleTimeString('en-US', {
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          fractionalSecondDigits: 3,
+        });
+        const logEntry = { timestamp, eventType, message, data };
+        logs.push(logEntry);
+
+        // Don't show timeUpdate unless checkbox is checked
+        if (
+          eventType === 'timeUpdate' &&
+          !document.getElementById('showTimeUpdate').checked
+        ) {
+          return;
+        }
+
+        const logContainer = document.getElementById('logContainer');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+
+        let dataStr = '';
+        if (data) {
+          try {
+            dataStr = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+          } catch (e) {
+            dataStr = `<pre>${String(data)}</pre>`;
+          }
+        }
+
+        entry.innerHTML = `
+          <span class="log-time">${timestamp}</span>
+          <span class="log-event event-${eventType}">${eventType}</span>
+          <span class="log-message">${message}${dataStr}</span>
+        `;
+        logContainer.appendChild(entry);
+
+        if (document.getElementById('autoScroll').checked) {
+          logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Update event counter
+        if (eventCounts.hasOwnProperty(eventType)) {
+          eventCounts[eventType]++;
+          document.getElementById(`count-${eventType}`).textContent =
+            eventCounts[eventType];
+        }
+      }
+
+      function clearLogs() {
+        document.getElementById('logContainer').innerHTML = '';
+        logs = [];
+        // Reset counters
+        Object.keys(eventCounts).forEach((key) => {
+          eventCounts[key] = 0;
+          document.getElementById(`count-${key}`).textContent = '0';
+        });
+        log('info', '🗑️ Logs cleared');
+      }
+
+      function exportLogs() {
+        const blob = new Blob([JSON.stringify(logs, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `websocket-logs-${new Date().toISOString()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        log('info', '📥 Logs exported');
+      }
+
+      // Connection status
+      function updateStatus(connected) {
+        const status = document.getElementById('connectionStatus');
+        if (connected) {
+          status.className = 'connection-status connected';
+          status.innerHTML = `✅ Connected <small>(Socket ID: ${socket.id})</small>`;
+        } else {
+          status.className = 'connection-status disconnected';
+          status.textContent = '❌ Disconnected - Click "Connect" to start';
+        }
+      }
+
+      // Format time
+      function formatTime(ms) {
+        if (ms <= 0) return '00:00:00';
+        const seconds = Math.floor((ms / 1000) % 60);
+        const minutes = Math.floor((ms / (1000 * 60)) % 60);
+        const hours = Math.floor(ms / (1000 * 60 * 60));
+        return `${hours.toString().padStart(2, '0')}:${minutes
+          .toString()
+          .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+
+      // Format currency
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(amount);
+      }
+
+      // Update winner display
+      function updateWinnerDisplay(winningBid) {
+        const winnerCard = document.getElementById('winnerCard');
+        if (winningBid && winningBid.amount) {
+          winnerCard.classList.add('active');
+          document.getElementById('winnerAmount').textContent = formatCurrency(
+            winningBid.amount
+          );
+          document.getElementById('winnerName').textContent =
+            winningBid.bidderName || 'Anonymous';
+        } else {
+          winnerCard.classList.remove('active');
+        }
+      }
+
+      // Connect to WebSocket
+      function connectSocket() {
+        const serverUrl = document.getElementById('serverUrl').value;
+
+        if (socket && socket.connected) {
+          log('info', '⚠️ Already connected!');
+          return;
+        }
+
+        log('info', `🔌 Connecting to ${serverUrl}...`);
+
+        socket = io(serverUrl, {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 5,
+        });
+
+        // Event 1: Connect
+        socket.on('connect', () => {
+          log('connect', `✅ Connected to server`);
+          updateStatus(true);
+        });
+
+        // Event 2: Disconnect
+        socket.on('disconnect', (reason) => {
+          log('disconnect', `❌ Disconnected: ${reason}`);
+          updateStatus(false);
+        });
+
+        socket.on('connect_error', (error) => {
+          log('error', `❌ Connection error: ${error.message}`);
+        });
+
+        // Event 3: auctionState (received when joining auction)
+        socket.on('auctionState', (data) => {
+          log('auctionState', '📊 Received full auction state', data);
+
+          // Update UI
+          document.getElementById('totalBids').textContent =
+            data.totalBids || 0;
+          document.getElementById('nextMinBid').textContent = formatCurrency(
+            data.nextMinimumBid || 0
+          );
+          document.getElementById('timeRemaining').textContent = formatTime(
+            data.timeRemaining
+          );
+          currentMinBid = data.nextMinimumBid || 0;
+
+          if (data.currentWinningBid) {
+            updateWinnerDisplay(data.currentWinningBid);
+          }
+
+          // Show auction details
+          document.getElementById('auctionInfo').style.display = 'block';
+          document.getElementById('auctionDetails').textContent =
+            JSON.stringify(
+              {
+                name: data.name,
+                code: data.code,
+                status: data.status,
+                startingPrice: data.startingPrice,
+                bidIncrement: data.bidIncrement,
+                hasStarted: data.hasStarted,
+                hasEnded: data.hasEnded,
+                totalParticipants: data.totalParticipants,
+              },
+              null,
+              2
+            );
+        });
+
+        // Event 4: newBid (received when someone places a bid)
+        socket.on('newBid', (data) => {
+          log('newBid', '💰 NEW BID RECEIVED!', data);
+
+          if (data.currentWinningBid) {
+            updateWinnerDisplay(data.currentWinningBid);
+          }
+          if (data.totalBids !== undefined) {
+            document.getElementById('totalBids').textContent = data.totalBids;
+          }
+          if (data.nextMinimumBid !== undefined) {
+            document.getElementById('nextMinBid').textContent = formatCurrency(
+              data.nextMinimumBid
+            );
+            currentMinBid = data.nextMinimumBid;
+          }
+        });
+
+        // Event 5: timeUpdate (received every second while in auction)
+        socket.on('timeUpdate', (data) => {
+          // Handle both wrapped and unwrapped formats
+          const updateData = data.data || data;
+
+          log(
+            'timeUpdate',
+            `⏱️ Time: ${formatTime(updateData.timeRemaining)}`,
+            updateData
+          );
+
+          document.getElementById('timeRemaining').textContent = formatTime(
+            updateData.timeRemaining
+          );
+
+          if (updateData.currentWinningBid) {
+            updateWinnerDisplay(updateData.currentWinningBid);
+          }
+          if (updateData.nextMinimumBid !== undefined) {
+            document.getElementById('nextMinBid').textContent = formatCurrency(
+              updateData.nextMinimumBid
+            );
+            currentMinBid = updateData.nextMinimumBid;
+          }
+          if (updateData.totalBids !== undefined) {
+            document.getElementById('totalBids').textContent =
+              updateData.totalBids;
+          }
+          if (updateData.hasEnded) {
+            log('auctionUpdate', '🏁 AUCTION HAS ENDED!');
+          }
+        });
+
+        // Event 6: bidDenied (received when a bid is denied by admin)
+        socket.on('bidDenied', (data) => {
+          log('bidDenied', `⛔ BID DENIED!`, data);
+        });
+
+        // Event 7: auctionUpdate (received for auction status changes)
+        socket.on('auctionUpdate', (data) => {
+          log('auctionUpdate', `📢 Auction Update`, data);
+
+          if (data.type === 'AUCTION_ENDED') {
+            log('info', '🏁 Auction has officially ended!');
+          }
+        });
+
+        // Event 8: error
+        socket.on('error', (data) => {
+          log('error', `❌ Error received`, data);
+        });
+
+        // Join/Leave confirmations
+        socket.on('joinedAuction', (data) => {
+          log(
+            'joinedAuction',
+            `✅ Successfully joined auction: ${data.auctionId}`,
+            data
+          );
+        });
+
+        socket.on('leftAuction', (data) => {
+          log('leftAuction', `👋 Left auction: ${data.auctionId}`, data);
+        });
+      }
+
+      // Disconnect
+      function disconnectSocket() {
+        if (socket) {
+          socket.disconnect();
+          log('info', '🔌 Manually disconnected');
+          updateStatus(false);
+          socket = null;
+        }
+      }
+
+      // Join Auction
+      function joinAuction() {
+        const auctionId = document.getElementById('auctionId').value.trim();
+
+        if (!auctionId) {
+          log('error', '❌ Please enter an auction ID');
+          return;
+        }
+
+        if (!socket || !socket.connected) {
+          log('error', '❌ Not connected to server. Connect first!');
+          return;
+        }
+
+        currentAuctionId = auctionId;
+        log('info', `🎯 Joining auction: ${auctionId}`);
+        socket.emit('joinAuction', { auctionId });
+      }
+
+      // Leave Auction
+      function leaveAuction() {
+        if (!currentAuctionId) {
+          log('error', '❌ Not in any auction');
+          return;
+        }
+
+        if (!socket || !socket.connected) {
+          log('error', '❌ Not connected to server');
+          return;
+        }
+
+        log('info', `👋 Leaving auction: ${currentAuctionId}`);
+        socket.emit('leaveAuction', currentAuctionId);
+        currentAuctionId = null;
+        document.getElementById('auctionInfo').style.display = 'none';
+        document.getElementById('winnerCard').classList.remove('active');
+      }
+
+      // Quick bid buttons
+      function quickBid(amount) {
+        const currentValue =
+          parseFloat(document.getElementById('bidAmount').value) ||
+          currentMinBid;
+        document.getElementById('bidAmount').value = (
+          currentValue + amount
+        ).toFixed(2);
+      }
+
+      function setMinBid() {
+        document.getElementById('bidAmount').value = currentMinBid.toFixed(2);
+      }
+
+      // Place bid via REST API
+      async function placeBid() {
+        const auctionId = document.getElementById('auctionId').value.trim();
+        const amount = parseFloat(document.getElementById('bidAmount').value);
+        const token = document.getElementById('accessToken').value.trim();
+        const apiUrl = document.getElementById('apiUrl').value.trim();
+
+        if (!auctionId) {
+          log('error', '❌ Please enter an auction ID');
+          return;
+        }
+
+        if (!amount || amount <= 0) {
+          log('error', '❌ Please enter a valid bid amount');
+          return;
+        }
+
+        if (!token) {
+          log('error', '❌ Please enter your access token (JWT)');
+          return;
+        }
+
+        log(
+          'api',
+          `💸 Placing bid: ${formatCurrency(amount)} on auction ${auctionId}`
+        );
+
+        try {
+          const response = await fetch(`${apiUrl}/manual-bid`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              auctionId: auctionId,
+              amount: amount,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            log('api', `✅ Bid placed successfully!`, data);
+          } else {
+            log(
+              'error',
+              `❌ Bid failed: ${data.message || 'Unknown error'}`,
+              data
+            );
+          }
+        } catch (error) {
+          log('error', `❌ API Error: ${error.message}`);
+        }
+      }
+
+      // Login helper
+      async function login() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const apiUrl = document.getElementById('apiUrl').value.trim();
+
+        if (!email || !password) {
+          log('error', '❌ Please enter email and password');
+          return;
+        }
+
+        log('api', `🔐 Logging in as ${email}...`);
+
+        try {
+          const response = await fetch(`${apiUrl}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.accessToken) {
+            document.getElementById('accessToken').value = data.accessToken;
+            log('api', `✅ Login successful! Token received.`, {
+              user: data.user?.email || email,
+              expiresIn: data.expiresIn,
+            });
+          } else {
+            log(
+              'error',
+              `❌ Login failed: ${data.message || 'Unknown error'}`,
+              data
+            );
+          }
+        } catch (error) {
+          log('error', `❌ Login Error: ${error.message}`);
+        }
+      }
+
+      // Register helper
+      async function register() {
+        const fullName = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const apiUrl = document.getElementById('apiUrl').value.trim();
+
+        if (!fullName || !email || !password) {
+          log('error', '❌ Please fill all fields');
+          return;
+        }
+
+        log('api', `📝 Registering ${email}...`);
+
+        try {
+          const response = await fetch(`${apiUrl}/auth/register`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ fullName, email, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            log(
+              'api',
+              `✅ Registration successful! Please verify your email.`,
+              data
+            );
+          } else {
+            log(
+              'error',
+              `❌ Registration failed: ${data.message || 'Unknown error'}`,
+              data
+            );
+          }
+        } catch (error) {
+          log('error', `❌ Registration Error: ${error.message}`);
+        }
+      }
+
+      // Initialize on load
+      window.addEventListener('load', () => {
+        log('info', '🎯 WebSocket Testing Tool Ready');
+        log('info', '📋 This tool tests all 8 WebSocket events:');
+        log('info', '   1. joinAuction - Join an auction room');
+        log('info', '   2. leaveAuction - Leave an auction room');
+        log('info', '   3. auctionState - Receive full auction state on join');
+        log('info', '   4. newBid - Receive new bid notifications');
+        log('info', '   5. timeUpdate - Receive time updates every second');
+        log('info', '   6. bidDenied - Receive bid denied notifications');
+        log('info', '   7. auctionUpdate - Receive auction status updates');
+        log('info', '   8. error - Receive error messages');
+        log('info', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        log('info', '📝 Instructions:');
+        log('info', '   1. Login to get your JWT token (or paste it manually)');
+        log('info', '   2. Enter the auction ID');
+        log('info', '   3. Click "Connect" to connect to WebSocket');
+        log('info', '   4. Click "Join Auction" to join the room');
+        log('info', '   5. Place bids using the bid section');
+        log('info', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      });
+    </script>
+  </body>
+</html>
