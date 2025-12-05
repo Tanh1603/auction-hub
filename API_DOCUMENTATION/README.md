@@ -50,7 +50,6 @@ Complete API documentation for the Auction Hub backend system.
 | Bidding | `POST /manual-bid` | Place manual bid |
 | Finalization | `GET /auction-finalization/results/:auctionId` | View auction results |
 | Finalization | `POST /auction-finalization/submit-winner-payment` | Submit winner payment |
-| Policy | `GET /auction-policy` | List auction policies |
 | Policy | `POST /auction-policy/calculate/*` | Calculate fees/deposits |
 | Costs | `GET /auction-costs/auction/:auctionId` | View auction costs |
 
@@ -66,9 +65,11 @@ Complete API documentation for the Auction Hub backend system.
 | Finalization | `POST /auction-finalization/finalize` | Finalize auction |
 | Finalization | `GET /auction-finalization/evaluate/:auctionId` | Evaluate auction status |
 | Finalization | `POST /auction-finalization/override` | Override auction status |
-| Policy | `POST /auction-policy` | Create new policy |
-| Policy | `PATCH /auction-policy/:id` | Update policy |
+| Auctions | `PATCH /auctions/:id/resources` | Update auction resources |
+| SysVars | `GET /system-variables` | Manage system variables |
+| SysVars | `PATCH /system-variables/:category/:key` | Update system variable |
 | Costs | `POST /auction-costs/auction/:auctionId` | Create/update costs |
+| Costs | `POST /auction-costs/auction/:auctionId/other-cost` | Add other cost item |
 
 ---
 
@@ -255,14 +256,14 @@ For issues or questions about the API:
 8 endpoints for auction finalization, results, audit logs, winner payment processing, and generic payment operations.
 
 ### [05_AUCTIONS.md](05_AUCTIONS.md)
-2 public endpoints for browsing auctions and viewing auction details with filtering and pagination.
+5 public endpoints for browsing auctions, viewing details, and managing auction resources.
 
 ### [06_AUCTION_POLICY.md](06_AUCTION_POLICY.md)
-10 endpoints for policy CRUD operations, fee validation, and commission/deposit calculations.
+11 endpoints for System Variables configuration and policy fee validation/calculations.
 
 ### [07_AUCTION_COSTS.md](07_AUCTION_COSTS.md)
 5 endpoints for tracking and managing operational expenses per auction.
 
 ---
 
-**Total API Surface**: 52 HTTP endpoints + 8 WebSocket events
+**Total API Surface**: 49 HTTP endpoints + 8 WebSocket events

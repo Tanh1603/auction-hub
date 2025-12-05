@@ -192,60 +192,13 @@
 
 ---
 
-## Payment Endpoints
-
-### Base Path: `/payments`
-
-#### 1. Create Payment
-**Endpoint**: `POST /payments`
-**Status**: 201 Created
-**Access**: Authenticated
-
-**Request**:
-```
-{
-  auctionId: string,
-  registrationId: string,
-  paymentType: deposit | participation_fee | winning_payment | refund,
-  amount: number (> 0),
-  paymentMethod: bank_transfer | e_wallet | cash
-}
-```
-
-**Response**:
-```
-{
-  payment_id: string (Stripe session ID),
-  amount: number,
-  currency: "USD",
-  status: "unpaid" | "paid" | "pending",
-  payment_url: string,
-  qr_code: string (Data URL),
-  bank_info: {...},
-  payment_deadline: string (24 hours)
-}
-```
-
-**Creates**: Stripe session, generates QR code, stores payment record
-
----
-
-#### 2. Verify Payment
-**Endpoint**: `GET /payments/verify?session_id=<id>`
-**Status**: 200 OK
-**Access**: Authenticated
-
-**Returns**: Current payment status from Stripe
-
----
-
 ## Complete Payment Flows
 
 ### Deposit Payment Flow
 1. Admin verifies documents
-2. User initiates deposit payment (POST /payments)
+2. User initiates deposit payment (POST /register-to-bid/submit-deposit)
 3. User completes payment via Stripe/QR
-4. User submits deposit (POST /register-to-bid/submit-deposit)
+4. User verifies payment (POST /register-to-bid/verify-deposit-payment)
 5. Admin gives final approval
 
 ### Winning Payment Flow
