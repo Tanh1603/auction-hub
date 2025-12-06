@@ -1,0 +1,29 @@
+{{> header icon="✅" title="Documents Verified" subtitle="Your registration documents have been approved"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  <p>Great news! Your registration documents for auction <strong>{{auctionCode}}</strong> have been verified and approved.</p>
+
+  {{#> details-box title="📋 Auction Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+  {{/details-box}}
+
+  {{#if (eq nextStep 'pay_deposit')}}
+  <h3>📞 Next Step: Pay Deposit</h3>
+  <p>To complete your registration, you must pay the deposit amount:</p>
+  {{#> details-box backgroundColor="#fef5e7" borderColor="#f39c12"}}
+    <p><strong>Deposit Amount:</strong> <span class="amount-warning">{{formatCurrency depositAmount}} VND</span></p>
+    {{#if paymentDeadline}}
+    <p><strong>Payment Deadline:</strong> {{formatDate paymentDeadline}}</p>
+    {{/if}}
+  {{/details-box}}
+  <p><strong>⏰ Important:</strong> You must complete payment within 24 hours to proceed with your registration.</p>
+  {{else}}
+  <h3>📞 Next Step: Awaiting Final Approval</h3>
+  <p>Your registration is now awaiting final approval from the auctioneer. You will be notified via email once approved.</p>
+  {{/if}}
+
+  {{> footer}}
+</div>

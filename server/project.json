@@ -5,8 +5,16 @@
   "projectType": "application",
   "tags": [],
   "targets": {
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate",
+        "cwd": "server"
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
+      "dependsOn": ["prisma-generate"],
       "options": {
         "command": "webpack-cli build",
         "args": ["--node-env=production"],
@@ -59,6 +67,13 @@
         "production": {
           "buildTarget": "server:build:production"
         }
+      }
+    },
+    "docker-start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker-compose up -d --build",
+        "cwd": "{workspaceRoot}"
       }
     },
     "test": {

@@ -1,0 +1,60 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: auction-hub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auction-hub
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d auction-hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auction-hub-network
+
+  # NestJS Backend Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auction-hub-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - server/.env
+    environment:
+      # Override DATABASE_URL for Docker network
+      DATABASE_URL: postgresql://user:password@postgres:5432/auction-hub
+
+      # Node
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auction-hub-network
+    command: >
+      sh -c "
+        node node_modules/.bin/prisma db push --schema=server/prisma/schema.prisma --accept-data-loss &&
+        (cd server/prisma && node comprehensive-seed.js || true) &&
+        cd /app && node dist/server/main.js
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  auction-hub-network:
+    driver: bridge

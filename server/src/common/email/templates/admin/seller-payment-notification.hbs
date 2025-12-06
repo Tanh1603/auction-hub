@@ -1,0 +1,36 @@
+{{> header icon="💰" title="Winner Payment Received" subtitle="Contract ready for your signature"}}
+
+<div class="content">
+  <h2>Dear {{sellerName}},</h2>
+
+  {{> badge type="success" icon="✅" text="PAYMENT VERIFIED"}}
+
+  <p>Great news! The winning bidder has completed the payment for auction <strong>{{auctionCode}}</strong>.</p>
+
+  {{#> details-box title="💰 Payment Summary"}}
+    <p><strong>Total Amount Paid:</strong> <span class="amount-highlight">{{formatCurrency totalPaid}} VND</span></p>
+    <p><strong>Buyer:</strong> {{buyerName}}</p>
+  {{/details-box}}
+
+  {{#> details-box title="📋 Auction Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+  {{/details-box}}
+
+  {{#if contractReady}}
+  <h3>📄 Contract Ready for Signature</h3>
+  <p>The contract is now ready for your review and signature.</p>
+
+  {{> button url="#" text="Review & Sign Contract"}}
+
+  <h3>📞 Next Steps</h3>
+  <ol>
+    <li>Review the contract carefully</li>
+    <li>Sign the contract electronically</li>
+    <li>Auctioneer will finalize after both parties sign</li>
+    <li>Property handover arrangements will be made</li>
+  </ol>
+  {{/if}}
+
+  {{> footer message="Thank you for using Auction Hub!"}}
+</div>

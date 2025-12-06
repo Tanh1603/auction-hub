@@ -1,0 +1,96 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# Environment files (will be passed via docker-compose)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+*.spec.ts
+*.test.ts
+**/test/**
+**/__tests__/**
+**/__mocks__/**
+server-e2e/
+
+# Documentation
+*.md
+docs/
+DOCS_CLEANUP_SUMMARY.md
+DOCUMENTATION_INDEX.md
+FIXED_AUTH_IMPLEMENTATION.md
+GLOBAL_AUTH_IMPLEMENTATION.md
+PAYMENT_INTEGRATION_SIMPLIFIED.md
+POSTMAN_API_TESTING_GUIDE.md
+README.md
+REALTIME_BIDDING_SUMMARY.md
+REGISTRATION_MANAGEMENT_IMPLEMENTATION.md
+ROLE_BASED_ACCESS_CONTROL.md
+SYSTEM_ARCHITECTURE.md
+TODO_IMPLEMENTATION_GUIDE.md
+WEBSOCKET_BIDDING_GUIDE.md
+API_DOCUMENTATION/
+
+# Chat logs and temporary files
+*.txt
+afternoon*.txt
+morning*.txt
+night*.txt
+*.log
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+DOCKER.md
+
+# NX
+.nx/
+tmp/
+
+# Prisma
+server/prisma/migrations/*.sql
+server/prisma/*.json
+server/prisma/run-seeds-docker.sh
+server/prisma/DOCKER_SEED_GUIDE.md
+server/prisma/seed.ts
+server/prisma/extended-scenarios-seed.js
+
+# Generated (will be regenerated in build)
+server/generated/
+
+# Client application (not needed for backend)
+client/
+
+# Libraries (not needed in production build)
+libs/

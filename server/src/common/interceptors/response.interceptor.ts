@@ -18,20 +18,33 @@ export interface Response<T> {
 
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler
+  ): Observable<Response<T>> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest();
     const path = request.url;
 
     return next.handle().pipe(
       map((data) => {
+        // Skip wrapping for auth responses that already have the expected structure
+        if (path.includes('/auth/login') || path.includes('/auth/register')) {
+          return data;
+        }
+
         // If data is already in the expected response format, return it as-is
-        if (data && typeof data === 'object' && 'success' in data && 'timestamp' in data) {
+        if (
+          data &&
+          typeof data === 'object' &&
+          'success' in data &&
+          'timestamp' in data
+        ) {
           return {
             ...data,
             path: data.path || path,
           };
-        }  
+        }
 
         // If data has a 'data' property, use that as the response data
         // Otherwise, use the entire data object as the response data
@@ -47,8 +60,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
           timestamp: new Date().toISOString(),
           path,
         };
-      }),
+      })
     );
   }
 }
-

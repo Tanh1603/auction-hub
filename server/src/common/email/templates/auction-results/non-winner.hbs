@@ -1,0 +1,35 @@
+{{> header icon="📊" title="Auction Results" subtitle=(concat "Auction " auctionCode)}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+  
+  <p>Thank you for participating in auction <strong>{{auctionCode}}</strong>.</p>
+
+  {{#> details-box title="📋 Auction Summary"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    {{#if winnerName}}
+    <p><strong>Winning Bidder:</strong> {{winnerName}}</p>
+    {{else}}
+    <p><strong>Result:</strong> No winner</p>
+    {{/if}}
+    {{#if winningAmount}}
+    <p><strong>Winning Amount:</strong> <span class="amount-highlight">{{formatCurrency winningAmount}} VND</span></p>
+    {{/if}}
+    <p><strong>Total Bids Received:</strong> {{totalBids}}</p>
+  {{/details-box}}
+
+  <p>While you weren't the winning bidder this time, we appreciate your participation and interest.</p>
+  
+  <h3>🔔 Stay Connected</h3>
+  <p>Don't miss out on future opportunities:</p>
+  <ul>
+    <li>Browse our upcoming auctions</li>
+    <li>Set up alerts for properties in your area</li>
+    <li>Follow us for the latest auction announcements</li>
+  </ul>
+
+  {{> button url="#" text="View Upcoming Auctions"}}
+
+  {{> footer message="We look forward to seeing you at future auctions."}}
+</div>

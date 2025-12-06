@@ -12,6 +12,20 @@ const prisma = new PrismaClient();
 async function main() {
   await prisma.$connect();
 
+  // Check if data already exists
+  const existingUserCount = await prisma.user.count();
+  const existingAuctionCount = await prisma.auction.count();
+
+  if (existingUserCount > 0 || existingAuctionCount > 0) {
+    console.log('✅ Database already contains data:');
+    console.log(`   👥 Users: ${existingUserCount}`);
+    console.log(`   🏛️ Auctions: ${existingAuctionCount}`);
+    console.log('⏭️  Skipping seed to preserve existing data');
+    console.log('💡 To reseed, manually clear the database first');
+    return;
+  }
+
+  console.log('🧹 Database is empty, proceeding with seed...');
   console.log('🧹 Xóa dữ liệu cũ...');
   await prisma.$transaction([
     prisma.auctionRelation.deleteMany(),
@@ -87,13 +101,12 @@ async function main() {
     skipDuplicates: true,
   });
 
+  console.log('🔗 Tạo quan hệ related auctions...');
   const auctions = await prisma.auction.findMany({
     select: { id: true, code: true },
   });
 
   const auctionMap = Object.fromEntries(auctions.map((a) => [a.code, a.id]));
-
-  console.log('🔗 Tạo quan hệ related auctions...');
   const relations: { auctionId: string; relatedAuctionId: string }[] = [];
 
   for (const item of data.data) {
