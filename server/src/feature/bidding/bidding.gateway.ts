@@ -175,6 +175,9 @@ export class BiddingGateway
         );
       }
 
+      // Compute isActive: auction is active when it has started, hasn't ended, and status is 'live'
+      const isActive = hasStarted && !hasEnded && auction.status === 'live';
+
       return {
         auctionId: auction.id,
         name: auction.name,
@@ -190,7 +193,7 @@ export class BiddingGateway
         timeRemaining: Math.max(0, timeRemaining),
         hasStarted,
         hasEnded,
-        isActive: auction.isActive,
+        isActive,
         currentWinningBid: winningBid
           ? {
               bidId: winningBid.id,

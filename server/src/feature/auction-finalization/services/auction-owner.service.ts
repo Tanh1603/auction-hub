@@ -13,6 +13,7 @@ import { AuctionEvaluationService } from './auction-evaluation.service';
 import { FinalizeAuctionDto } from '../dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from '../dto/override-auction-status.dto';
 import { AuctionStatus, ContractStatus } from '../../../../generated';
+import { getPropertyOwnerId } from '../../../common/types/property-owner-snapshot.interface';
 
 /**
  * Service responsible for auction owner/auctioneer operations
@@ -34,11 +35,11 @@ export class AuctionOwnerService {
    * Finalize auction with automatic evaluation
    */
   async finalizeAuction(dto: FinalizeAuctionDto, userId: string) {
-    // Load auction with owner, participants, and bids
+    // Load auction with participants and bids
+    // Note: owner relation removed - propertyOwner is now a JSON field
     const auction = await this.prisma.auction.findUnique({
       where: { id: dto.auctionId },
       include: {
-        owner: true,
         participants: {
           include: {
             user: true,
@@ -73,8 +74,11 @@ export class AuctionOwnerService {
     }
 
     // Verify that the user is the auction owner OR an admin/super admin
-    const isOwner = auction.propertyOwner === userId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    // Note: propertyOwner is now a JSON field, extract ID using helper
+    const propertyOwnerId = getPropertyOwnerId(auction.propertyOwner);
+    const isOwner = propertyOwnerId === userId;
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
@@ -83,10 +87,10 @@ export class AuctionOwnerService {
     }
 
     // Check if auction has already been finalized
+    // Note: no_bid and cancelled have been replaced with 'failed' in the new schema
     if (
       auction.status === AuctionStatus.success ||
-      auction.status === AuctionStatus.no_bid ||
-      auction.status === AuctionStatus.cancelled
+      auction.status === AuctionStatus.failed
     ) {
       throw new BadRequestException('Auction has already been finalized');
     }
@@ -137,7 +141,8 @@ export class AuctionOwnerService {
       newStatus = AuctionStatus.success;
     } else {
       // No bids - auction failed
-      newStatus = AuctionStatus.no_bid;
+      // Note: no_bid has been replaced with 'failed' in the new schema
+      newStatus = AuctionStatus.failed;
     }
 
     // Use transaction to finalize auction
@@ -161,11 +166,12 @@ export class AuctionOwnerService {
         });
 
         // Create contract for the winning bid
+        // Note: propertyOwner is now a JSON field, extract ID using helper
         contract = await tx.contract.create({
           data: {
             auctionId: auction.id,
             winningBidId: winningBid.id,
-            propertyOwnerUserId: auction.propertyOwner,
+            propertyOwnerUserId: propertyOwnerId,
             buyerUserId: winningBid.participant.userId,
             createdBy: userId,
             price: winningBid.amount,
@@ -327,8 +333,11 @@ export class AuctionOwnerService {
     }
 
     // Verify that the user is the auction owner OR an admin/super admin
-    const isOwner = auction.propertyOwner === adminId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    // Note: propertyOwner is now a JSON field, extract ID using helper
+    const propertyOwnerId = getPropertyOwnerId(auction.propertyOwner);
+    const isOwner = propertyOwnerId === adminId;
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
@@ -379,14 +388,15 @@ export class AuctionOwnerService {
 
           if (!existingContract) {
             // Create new contract
+            // Note: propertyOwner is now a JSON field, extract ID using helper
             contract = await tx.contract.create({
               data: {
-              auctionId: auction.id,
-              winningBidId: winningBid.id,
-              propertyOwnerUserId: auction.propertyOwner,
-              buyerUserId: winningBid.participant.userId,
-              createdBy: adminId,
-              price: winningBid.amount,
+                auctionId: auction.id,
+                winningBidId: winningBid.id,
+                propertyOwnerUserId: propertyOwnerId,
+                buyerUserId: winningBid.participant.userId,
+                createdBy: adminId,
+                price: winningBid.amount,
                 status: ContractStatus.draft,
               },
             });
@@ -412,8 +422,9 @@ export class AuctionOwnerService {
             contract = existingContract;
           }
         }
-      } else if (dto.newStatus === AuctionStatus.cancelled) {
-        // If cancelling, mark any existing contracts as cancelled
+      } else if (dto.newStatus === AuctionStatus.failed) {
+        // If failing/cancelling, mark any existing contracts as cancelled
+        // Note: cancelled status has been replaced with 'failed' in AuctionStatus enum
         await tx.contract.updateMany({
           where: { auctionId: auction.id },
           data: {
@@ -444,9 +455,10 @@ export class AuctionOwnerService {
     });
 
     // Send notification emails if finalizing
+    // Note: no_bid has been replaced with 'failed' in the new schema
     if (
       dto.newStatus === AuctionStatus.success ||
-      dto.newStatus === AuctionStatus.no_bid
+      dto.newStatus === AuctionStatus.failed
     ) {
       const emailPromises = auction.participants.map((participant) => {
         const isWinner = winningBid?.participant.userId === participant.userId;
@@ -524,8 +536,10 @@ export class AuctionOwnerService {
     }
 
     // Only auction owner, admin, or super admin can view audit logs
-    const isOwner = auction.propertyOwner === userId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    // Note: propertyOwner is now a JSON field, extract ID using helper
+    const isOwner = getPropertyOwnerId(auction.propertyOwner) === userId;
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(

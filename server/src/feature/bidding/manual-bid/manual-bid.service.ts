@@ -8,12 +8,12 @@ import {
 } from '@nestjs/common';
 import { CreateManualBidDto } from './dto/create-manual-bid.dto';
 import { DenyBidDto } from './dto/deny-bid.dto';
-import { Prisma } from '../../../../generated';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ManualBidResponseDto } from './dto/manual-bid-response.dto';
 import { BiddingGateway } from '../bidding.gateway';
 import { AuctionStatus } from '../../../../generated';
 import { Decimal } from '@prisma/client/runtime/library';
+import { getPropertyOwnerId } from '../../../common/types/property-owner-snapshot.interface';
 
 @Injectable()
 export class ManualBidService {
@@ -242,8 +242,11 @@ export class ManualBidService {
     }
 
     // Verify that the user is the auction owner (auctioneer) OR an admin/super admin
-    const isOwner = bid.auction.propertyOwner === auctioneerId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    // Note: propertyOwner is now a JSON field, extract ID using helper
+    const isOwner =
+      getPropertyOwnerId(bid.auction.propertyOwner) === auctioneerId;
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(

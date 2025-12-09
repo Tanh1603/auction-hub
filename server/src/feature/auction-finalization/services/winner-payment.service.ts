@@ -13,6 +13,7 @@ import {
   PaymentMethod,
 } from '../../../payment/dto/PaymentCreateRequest.dto';
 import { AuctionStatus, ContractStatus } from '../../../../generated';
+import { getPropertyOwnerSnapshot } from '../../../common/types/property-owner-snapshot.interface';
 
 /**
  * Service responsible for winner payment operations
@@ -262,11 +263,11 @@ export class WinnerPaymentService {
       });
 
       // Step 3: Update contract status (draft → signed, ready for final signatures)
+      // Note: propertyOwner relation removed from contract include - need to get from auction
       const contract = await this.prisma.contract.findFirst({
         where: { auctionId },
         include: {
           auction: true,
-          propertyOwner: true,
           buyer: true,
         },
       });
@@ -289,6 +290,11 @@ export class WinnerPaymentService {
       // Send notifications
       await this.sendPaymentConfirmationEmails(contract, verification.amount);
 
+      // Note: Get property owner info from auction's propertyOwner JSON field
+      const propertyOwnerSnapshot = getPropertyOwnerSnapshot(
+        contract.auction.propertyOwner
+      );
+
       // Return contract data for contract generation module
       return {
         success: true,
@@ -310,11 +316,17 @@ export class WinnerPaymentService {
         contractData: {
           auctionId,
           contractId: contract.id,
-          seller: {
-            userId: contract.propertyOwnerUserId,
-            fullName: contract.propertyOwner.fullName,
-            email: contract.propertyOwner.email,
-          },
+          seller: propertyOwnerSnapshot
+            ? {
+                userId: propertyOwnerSnapshot.id,
+                fullName: propertyOwnerSnapshot.fullName,
+                email: propertyOwnerSnapshot.email,
+              }
+            : {
+                userId: contract.propertyOwnerUserId || '',
+                fullName: 'Unknown',
+                email: 'Unknown',
+              },
           buyer: {
             userId: contract.buyerUserId,
             fullName: contract.buyer.fullName,
@@ -533,13 +545,14 @@ export class WinnerPaymentService {
       );
     } else {
       // No 2nd bidder - mark auction as failed
+      // Note: no_bid has been replaced with 'failed' in the new schema
       await this.prisma.auction.update({
         where: { id: auction.id },
-        data: { status: AuctionStatus.no_bid },
+        data: { status: AuctionStatus.failed },
       });
 
       this.logger.warn(
-        `No 2nd bidder available for auction ${auction.id}. Auction marked as no_bid.`
+        `No 2nd bidder available for auction ${auction.id}. Auction marked as failed.`
       );
     }
   }
@@ -582,6 +595,11 @@ export class WinnerPaymentService {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async sendPaymentConfirmationEmails(contract: any, amount: number) {
+    // Get property owner info from auction's propertyOwner JSON field
+    const propertyOwnerSnapshot = getPropertyOwnerSnapshot(
+      contract.auction.propertyOwner
+    );
+
     // Send email notification to winner
     await this.emailService.sendWinnerPaymentConfirmedEmail({
       recipientEmail: contract.buyer.email,
@@ -592,16 +610,18 @@ export class WinnerPaymentService {
       contractReady: true,
     });
 
-    // Send notification to seller
-    await this.emailService.sendSellerPaymentNotificationEmail({
-      recipientEmail: contract.seller.email,
-      sellerName: contract.seller.fullName,
-      buyerName: contract.buyer.fullName,
-      auctionCode: contract.auction.code,
-      auctionName: contract.auction.name,
-      totalPaid: amount.toLocaleString(),
-      contractReady: true,
-    });
+    // Send notification to seller if we have their info
+    if (propertyOwnerSnapshot) {
+      await this.emailService.sendSellerPaymentNotificationEmail({
+        recipientEmail: propertyOwnerSnapshot.email,
+        sellerName: propertyOwnerSnapshot.fullName,
+        buyerName: contract.buyer.fullName,
+        auctionCode: contract.auction.code,
+        auctionName: contract.auction.name,
+        totalPaid: amount.toLocaleString(),
+        contractReady: true,
+      });
+    }
 
     // Send notification to admin(s)/auctioneer(s)
     const adminUsers = await this.prisma.user.findMany({
@@ -618,7 +638,7 @@ export class WinnerPaymentService {
         adminName: admin.fullName,
         buyerName: contract.buyer.fullName,
         buyerEmail: contract.buyer.email,
-        sellerName: contract.seller.fullName,
+        sellerName: propertyOwnerSnapshot?.fullName || 'Unknown',
         auctionCode: contract.auction.code,
         auctionName: contract.auction.name,
         totalPaid: amount.toLocaleString(),

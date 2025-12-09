@@ -81,7 +81,7 @@ GET /auctions?active=true                        // Only active auctions
     assetType: "secured_asset" | "land_use_rights" | "administrative_violation_asset" | "state_asset" | "enforcement_asset" | "other_asset",
     assetAddress: string,
     assetDescription: string,
-    status: "scheduled" | "live" | "success" | "no_bid" | "cancelled",
+    status: "scheduled" | "live" | "awaiting_result" | "success" | "failed",
 
     // Pricing
     startingPrice: number,
@@ -121,11 +121,14 @@ GET /auctions?active=true                        // Only active auctions
       url: string
     }>,
 
-    // Owner
-    owner: {
+    // Property Owner (stored as JSON snapshot)
+    propertyOwner: {
       id: string,
       fullName: string,
       email: string,
+      phoneNumber?: string,
+      identityNumber?: string,
+      userType?: string,
       avatarUrl?: string
     },
 
@@ -195,8 +198,20 @@ GET /auctions?active=true                        // Only active auctions
   validCheckInBeforeStartMinutes: number,
   validCheckInAfterStartMinutes: number,
 
-  // Owner (required)
-  propertyOwnerId: string,                 // UUID of property owner
+  // Property Owner (required - stored as JSON snapshot)
+  propertyOwner: {
+    id: string,              // UUID of property owner
+    fullName: string,
+    email: string,
+    phoneNumber?: string,
+    identityNumber?: string,
+    userType?: string,
+    avatarUrl?: string
+  },
+
+  // Location (required - new fields)
+  assetProvinceId: number,             // Location ID for province
+  assetWardId: number,                 // Location ID for ward
 
   // Optional
   relatedAuctions?: string[]               // Array of related auction IDs
@@ -261,9 +276,18 @@ GET /auctions?active=true                        // Only active auctions
   viewTime?: string,
   validCheckInBeforeStartMinutes?: number,
   validCheckInAfterStartMinutes?: number,
-  propertyOwnerId?: string,
-  relatedAuctions?: string[],
-  isActive?: boolean                       // Toggle auction visibility/participation
+  propertyOwner?: {                      // Property owner JSON snapshot
+    id: string,
+    fullName: string,
+    email: string,
+    phoneNumber?: string,
+    identityNumber?: string,
+    userType?: string,
+    avatarUrl?: string
+  },
+  assetProvinceId?: number,              // Location ID for province
+  assetWardId?: number,                  // Location ID for ward
+  relatedAuctions?: string[]
 }
 ```
 
@@ -396,11 +420,13 @@ enum AssetType {
 enum AuctionStatus {
   scheduled = 'scheduled', // Created and scheduled
   live = 'live', // Currently accepting bids
+  awaiting_result = 'awaiting_result', // Pending evaluation (new)
   success = 'success', // Completed with winner
-  no_bid = 'no_bid', // Completed without bids
-  cancelled = 'cancelled', // Cancelled by admin
+  failed = 'failed', // Completed without winner or cancelled
 }
 ```
+
+**Note**: The old `no_bid` and `cancelled` statuses have been replaced with `failed`.
 
 ---
 
@@ -474,9 +500,16 @@ Temporarily disable an auction.
 
 ### With Finalization System:
 
-- Completed auctions transition to `success` or `no_bid` status
+- Completed auctions transition to `success` or `failed` status
 - Winner information derived from highest bid
 - Financial summaries calculated using auction pricing fields
+
+### PropertyOwner Changes:
+
+- **Old Schema**: `propertyOwner` was a UUID foreign key referencing `User` table
+- **New Schema**: `propertyOwner` is a JSON object containing a snapshot of owner data
+- This denormalization ensures owner data is preserved even if the user is later modified
+- The JSON object contains: `id`, `fullName`, `email`, and optional fields like `phoneNumber`, `userType`, etc.
 
 ### With Cloudinary:
 

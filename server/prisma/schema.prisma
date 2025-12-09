@@ -69,7 +69,7 @@ model User {
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
-  ownedAuctions            Auction[]            @relation("AuctionOwner")
+  // Note: ownedAuctions relation removed - Auction.propertyOwner is now a JSON field
   participations           AuctionParticipant[]
   deniedBids               AuctionBid[]         @relation("BidDenier")
   contractsAsPropertyOwner Contract[]           @relation("ContractPropertyOwner")

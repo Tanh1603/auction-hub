@@ -5,10 +5,12 @@
 ### Base Path: `/auction-finalization`
 
 #### 1. Evaluate Auction
+
 **Endpoint**: `GET /auction-finalization/evaluate/:auctionId`
 **Access**: Admin/Auctioneer/Super Admin
 
 **Response** (200):
+
 ```
 {
   auctionId: string,
@@ -31,10 +33,12 @@
 ---
 
 #### 2. Finalize Auction
+
 **Endpoint**: `POST /auction-finalization/finalize`
 **Access**: Admin/Auctioneer/Super Admin
 
 **Request**:
+
 ```
 {
   auctionId: string (REQUIRED),
@@ -45,19 +49,24 @@
 ```
 
 **Final Statuses**:
-- success - Meets all criteria
-- no_bid - No valid bids
-- cancelled - Insufficient participants
+
+- `success` - Meets all criteria
+- `failed` - No valid bids, reserve not met, or cancelled
+- `awaiting_result` - Evaluation pending (intermediate state)
+
+**Note**: The old `no_bid` and `cancelled` statuses have been replaced with `failed` in the new schema.
 
 **Actions**: Determines winner, sends notifications, creates transaction
 
 ---
 
 #### 3. Override Status
+
 **Endpoint**: `POST /auction-finalization/override`
 **Access**: Super Admin ONLY
 
 **Request**:
+
 ```
 {
   auctionId: string,
@@ -71,6 +80,7 @@
 ---
 
 #### 4. Get Results
+
 **Endpoint**: `GET /auction-finalization/results/:auctionId`
 **Access**: Any authenticated user
 
@@ -80,6 +90,7 @@
 ---
 
 #### 5. Audit Logs
+
 **Endpoint**: `GET /auction-finalization/audit-logs/:auctionId`
 **Access**: Admin/Auctioneer/Super Admin
 
@@ -88,11 +99,13 @@
 ---
 
 #### 6. Get Winner Payment Requirements
+
 **Endpoint**: `GET /auction-finalization/winner-payment-requirements/:auctionId`
 **Access**: Authenticated
 **Status**: 200 OK
 
 **Response** (200):
+
 ```
 {
   auctionId: string,
@@ -108,6 +121,7 @@
 ```
 
 **Business Logic**:
+
 - Returns payment breakdown for auction winner
 - Shows deposit already paid and remaining balance
 - Includes commission fees and other applicable charges
@@ -116,11 +130,13 @@
 ---
 
 #### 7. Submit Winner Payment
+
 **Endpoint**: `POST /auction-finalization/submit-winner-payment`
 **Access**: Authenticated (Winner only)
 **Status**: 201 Created
 
 **Request**:
+
 ```
 {
   auctionId: string (UUID, REQUIRED)
@@ -128,6 +144,7 @@
 ```
 
 **Response** (201):
+
 ```
 {
   paymentId: string (Stripe session ID),
@@ -142,6 +159,7 @@
 ```
 
 **Error Responses**:
+
 - 403: User is not the winner or auction not finalized
 - 404: Auction not found
 - 409: Payment already completed
@@ -152,11 +170,13 @@
 ---
 
 #### 8. Verify Winner Payment
+
 **Endpoint**: `POST /auction-finalization/verify-winner-payment`
 **Access**: Authenticated (Winner or Admin/Auctioneer)
 **Status**: 200 OK
 
 **Request**:
+
 ```
 {
   sessionId: string (Stripe session ID, REQUIRED),
@@ -165,6 +185,7 @@
 ```
 
 **Response** (200):
+
 ```
 {
   verified: true,
@@ -179,11 +200,13 @@
 ```
 
 **Error Responses**:
+
 - 400: Invalid session ID or payment not completed
 - 403: User is not the winner or admin
 - 404: Auction or payment not found
 
 **Business Logic**:
+
 - Verifies Stripe payment completion
 - Updates auction transaction status to "paid"
 - Triggers contract generation (if applicable)
@@ -195,6 +218,7 @@
 ## Complete Payment Flows
 
 ### Deposit Payment Flow
+
 1. Admin verifies documents
 2. User initiates deposit payment (POST /register-to-bid/submit-deposit)
 3. User completes payment via Stripe/QR
@@ -202,6 +226,7 @@
 5. Admin gives final approval
 
 ### Winning Payment Flow
+
 1. Auction finalized with status: success
 2. Winner queries payment requirements (GET /auction-finalization/winner-payment-requirements/:auctionId)
 3. Winner initiates final payment (POST /auction-finalization/submit-winner-payment)
@@ -210,4 +235,3 @@
 6. Winner or admin verifies payment (POST /auction-finalization/verify-winner-payment)
 7. System confirms payment and triggers contract generation
 8. Transaction status updated to "paid" and winner receives confirmation email
-

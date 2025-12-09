@@ -1004,7 +1004,7 @@ After auction finalization, the winner must complete payment within 7 days:
 - If 7-day deadline expires:
   - Winner's deposit is forfeited
   - Property offered to 2nd highest bidder
-  - If no 2nd bidder: Auction marked as "no_bid"
+  - If no 2nd bidder: Auction marked as "failed"
 
 ### 17. Evaluate Auction Status (Admin Auctioneer Only)
 
@@ -1253,7 +1253,7 @@ After auction finalization, the winner must complete payment within 7 days:
   - Winner's deposit (50M VND) is **forfeited**
   - Property automatically offered to 2nd highest bidder
   - 2nd bidder receives winner payment request email
-  - If no 2nd bidder exists: Auction status changes to "no_bid"
+  - If no 2nd bidder exists: Auction status changes to "failed"
 
 ### 22. Override Auction Status (Admin Only)
 
@@ -1275,10 +1275,12 @@ After auction finalization, the winner must complete payment within 7 days:
 ```json
 {
   "auctionId": "auction-uuid-here",
-  "newStatus": "cancelled",
+  "newStatus": "failed",
   "reason": "Fraud detected during investigation"
 }
 ```
+
+**Note**: Valid status values are `scheduled`, `live`, `awaiting_result`, `success`, or `failed`.
 
 **Expected Response**:
 
@@ -1289,7 +1291,7 @@ After auction finalization, the winner must complete payment within 7 days:
   "data": {
     "auctionId": "auction-uuid",
     "previousStatus": "live",
-    "newStatus": "cancelled",
+    "newStatus": "failed",
     "reason": "Fraud detected during investigation",
     "overriddenAt": "2025-11-14T14:00:00.000Z",
     "performedBy": "admin-user-uuid"
@@ -1844,7 +1846,9 @@ Open Prisma Studio → Users table → Check `role` column values
 
 ### Available Auction Statuses:
 
-- `"scheduled"`, `"live"`, `"success"`, `"no_bid"`, `"cancelled"`
+- `"scheduled"`, `"live"`, `"awaiting_result"`, `"success"`, `"failed"`
+
+> **Note**: Old statuses `no_bid` and `cancelled` have been replaced with `failed`.
 
 ### Available User Roles:
 

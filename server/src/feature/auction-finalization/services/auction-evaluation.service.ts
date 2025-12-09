@@ -50,10 +50,10 @@ export class AuctionEvaluationService {
     let recommendedStatus: AuctionStatus;
 
     // Check if auction is already finalized
+    // Note: no_bid and cancelled have been replaced with 'failed' in the new schema
     const finalStatuses: AuctionStatus[] = [
       AuctionStatus.success,
-      AuctionStatus.no_bid,
-      AuctionStatus.cancelled,
+      AuctionStatus.failed,
     ];
     const isAlreadyFinalized = finalStatuses.includes(auction.status);
 
@@ -136,13 +136,14 @@ export class AuctionEvaluationService {
     }
 
     // Determine recommended status
+    // Note: no_bid has been replaced with 'failed' in the new schema
     if (!hasValidBids || !hasMinimumParticipants) {
-      recommendedStatus = AuctionStatus.no_bid;
+      recommendedStatus = AuctionStatus.failed;
     } else if (meetsReservePrice) {
       recommendedStatus = AuctionStatus.success;
     } else {
       // Has bids but doesn't meet reserve
-      recommendedStatus = AuctionStatus.no_bid;
+      recommendedStatus = AuctionStatus.failed;
       issues.push('Auction failed: reserve price not met');
     }
 

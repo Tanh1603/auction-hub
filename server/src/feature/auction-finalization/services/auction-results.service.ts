@@ -9,6 +9,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { AuctionEvaluationService } from './auction-evaluation.service';
 import { AuctionResultDto } from '../dto/auction-result.dto';
 import { AuctionStatus } from '../../../../generated';
+import { getPropertyOwnerId } from '../../../common/types/property-owner-snapshot.interface';
 
 /**
  * Service responsible for viewing auction results
@@ -62,8 +63,9 @@ export class AuctionResultsService {
     }
 
     // Check if user is a participant or the owner
+    // Note: propertyOwner is now a JSON field, extract ID using helper
     const isParticipant = auction.participants.length > 0;
-    const isOwner = auction.propertyOwner === userId;
+    const isOwner = getPropertyOwnerId(auction.propertyOwner) === userId;
 
     if (!isParticipant && !isOwner) {
       throw new ForbiddenException(
@@ -72,10 +74,10 @@ export class AuctionResultsService {
     }
 
     // Check if auction has been finalized
+    // Note: no_bid and cancelled have been replaced with 'failed' in the new schema
     if (
       auction.status !== AuctionStatus.success &&
-      auction.status !== AuctionStatus.no_bid &&
-      auction.status !== AuctionStatus.cancelled
+      auction.status !== AuctionStatus.failed
     ) {
       throw new BadRequestException('Auction results are not yet available');
     }
