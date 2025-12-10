@@ -46,6 +46,8 @@ export class AuctionService {
       relatedAuctions: (entity.relatedFrom ?? []).map((r) => ({
         ...r.relatedAuction,
       })),
+      assetProvince: { ...entity.assetProvince },
+      assetWard: { ...entity.assetWard },
     };
   }
 
@@ -80,24 +82,19 @@ export class AuctionService {
           id: dto.assetWardId,
         },
       },
-      // owner: {
-      //   connect: {
-      //     id: dto.propertyOwnerId,
-      //   },
-      // },
       propertyOwner: dto.propertyOwner,
     };
   }
 
   private toUpdateAuctionDto(dto: UpdateAuctionDto): Prisma.AuctionUpdateInput {
+    const { assetWardId, assetProvinceId, ...rest } = dto;
+
     return {
-      ...dto,
-      assetProvince: dto.assetProvinceId
-        ? { connect: { id: dto.assetProvinceId } }
+      ...rest,
+      assetProvince: assetProvinceId
+        ? { connect: { id: assetProvinceId } }
         : undefined,
-      assetWard: dto.assetWardId
-        ? { connect: { id: dto.assetWardId } }
-        : undefined,
+      assetWard: assetWardId ? { connect: { id: assetWardId } } : undefined,
     };
   }
 
@@ -165,6 +162,22 @@ export class AuctionService {
                 saleStartAt: true,
               },
             },
+          },
+        },
+        assetProvince: {
+          select: {
+            id: true,
+            name: true,
+            value: true,
+            sortOrder: true,
+          },
+        },
+        assetWard: {
+          select: {
+            id: true,
+            name: true,
+            value: true,
+            sortOrder: true,
           },
         },
       },
@@ -258,6 +271,12 @@ export class AuctionService {
     });
     if (!existingAuction) {
       throw new NotFoundException(`Auction with ${id} not found!`);
+    }
+
+    if (existingAuction.status !== 'scheduled') {
+      throw new BadRequestException(
+        `Auction can only be deleted when its status is "scheduled".`
+      );
     }
 
     try {
