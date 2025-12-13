@@ -15,7 +15,7 @@ export class PaymentService {
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
     this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-10-29.clover',
+      apiVersion: '2025-09-30.clover',
     });
   }
 

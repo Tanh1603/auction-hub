@@ -69,6 +69,7 @@ model User {
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
+
   ownedAuctions            Auction[]            @relation("AuctionOwner")
   participations           AuctionParticipant[]
   deniedBids               AuctionBid[]         @relation("BidDenier")
@@ -102,6 +103,7 @@ model Auction {
   validCheckInBeforeStartMinutes Int           @map("valid_check_in_before_start_minutes")
   validCheckInAfterStartMinutes  Int           @map("valid_check_in_after_start_minutes")
   startingPrice                  Decimal       @map("starting_price") @db.Decimal(18, 2)
+
   reservePrice                   Decimal?      @map("reserve_price") @db.Decimal(18, 2)
   bidIncrement                   Decimal       @map("bid_increment") @db.Decimal(18, 2)
   isActive                       Boolean       @default(true) @map("is_active")

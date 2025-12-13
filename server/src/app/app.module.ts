@@ -14,6 +14,7 @@ import { AuthGuard } from '../common/guards/auth.guard';
 import { AuctionPolicyModule } from '../feature/auction-policy/auction-policy.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
+import { ContractModule } from '../contracts/contract.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,6 +30,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     AuctionFinalizationModule,
     AuctionPolicyModule,
     CloudinaryModule,
+    ContractModule,
   ],
   controllers: [AppController],
   providers: [
