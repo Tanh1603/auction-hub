@@ -137,7 +137,8 @@ export class AuctionOwnerService {
 
     // Verify that the user is the auction owner OR an admin/super admin
     const isOwner = auction.propertyOwner === userId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
@@ -203,14 +204,12 @@ export class AuctionOwnerService {
       newStatus = AuctionStatus.no_bid;
     }
 
-    // Verify winner payment before finalizing auction (if there's a winning bid)
-    if (winningBid && newStatus === AuctionStatus.success) {
-      const winnerUserId = winningBid.participant.userId;
-      await this.verifyWinnerPaymentBeforeContract(
-        dto.auctionId,
-        winnerUserId
-      );
-    }
+    // NOTE: Payment verification happens AFTER finalization, not before.
+    // Flow: Finalize auction → Create contract (draft) → Email winner → Winner pays
+    //       → Verify payment → Contract updated to 'signed'
+    // The previous verifyWinnerPaymentBeforeContract call was removed because
+    // it created a chicken-and-egg problem: winner can't pay until they're notified,
+    // and they can't be notified until auction is finalized.
 
     // Use transaction to finalize auction
     const result = await this.prisma.$transaction(async (tx) => {
@@ -400,7 +399,8 @@ export class AuctionOwnerService {
 
     // Verify that the user is the auction owner OR an admin/super admin
     const isOwner = auction.propertyOwner === adminId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(
@@ -415,7 +415,7 @@ export class AuctionOwnerService {
     let winningBid = null;
     let contract = null;
 
-    // Determine winning bid before transaction (for payment verification)
+    // Determine winning bid before transaction
     if (dto.newStatus === AuctionStatus.success) {
       if (dto.winningBidId) {
         winningBid = auction.bids.find((b) => b.id === dto.winningBidId);
@@ -425,15 +425,10 @@ export class AuctionOwnerService {
       } else if (auction.bids.length > 0) {
         winningBid = auction.bids[0];
       }
-
-      // Verify winner payment before creating contract
-      if (winningBid) {
-        const winnerUserId = winningBid.participant.userId;
-        await this.verifyWinnerPaymentBeforeContract(
-          dto.auctionId,
-          winnerUserId
-        );
-      }
+      // NOTE: Payment verification is NOT required before override.
+      // Admin can override to 'success' to create contract in 'draft' status.
+      // Winner then receives notification to pay, and payment verification
+      // happens afterward via the normal winner payment flow.
     }
 
     // Use transaction for status override
@@ -465,12 +460,12 @@ export class AuctionOwnerService {
             // Create new contract
             contract = await tx.contract.create({
               data: {
-              auctionId: auction.id,
-              winningBidId: winningBid.id,
-              propertyOwnerUserId: auction.propertyOwner,
-              buyerUserId: winningBid.participant.userId,
-              createdBy: adminId,
-              price: winningBid.amount,
+                auctionId: auction.id,
+                winningBidId: winningBid.id,
+                propertyOwnerUserId: auction.propertyOwner,
+                buyerUserId: winningBid.participant.userId,
+                createdBy: adminId,
+                price: winningBid.amount,
                 status: ContractStatus.draft,
               },
             });
@@ -609,7 +604,8 @@ export class AuctionOwnerService {
 
     // Only auction owner, admin, or super admin can view audit logs
     const isOwner = auction.propertyOwner === userId;
-    const isAdminOrSuperAdmin = user.role === 'admin' || user.role === 'super_admin';
+    const isAdminOrSuperAdmin =
+      user.role === 'admin' || user.role === 'super_admin';
 
     if (!isOwner && !isAdminOrSuperAdmin) {
       throw new ForbiddenException(

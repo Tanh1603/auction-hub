@@ -315,18 +315,39 @@ export class PaymentProcessingService {
   }
 
   /**
+   * Verify winner payment by Stripe Session ID (Webhook entry point)
+   */
+  async verifyWinnerPaymentBySessionId(sessionId: string, auctionId: string) {
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        transactionId: sessionId,
+        auctionId: auctionId,
+        paymentType: 'winning_payment',
+      },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(`Payment not found for session ${sessionId}`);
+    }
+
+    return this.verifyWinnerPayment(payment.id, auctionId);
+  }
+
+  /**
    * Verify winner payment and trigger contract generation
+   *
+   * CRITICAL INTEGRATION POINT: This method handles the payment→contract handoff.
+   *
+   * Idempotency: Safe to call multiple times with the same paymentId.
+   * If payment is already completed, returns the existing state.
+   *
+   * Transactional Atomicity: Payment update and contract update happen in a
+   * single transaction. If either fails, both are rolled back to prevent
+   * inconsistent state (user charged without contract).
    */
   async verifyWinnerPayment(paymentId: string, auctionId: string) {
     try {
-      // Verify payment with Stripe
-      const verification = await this.paymentService.verifyPayment(paymentId);
-
-      if (verification.status !== 'paid') {
-        throw new BadRequestException('Payment not completed');
-      }
-
-      // Update payment record
+      // Step 1: Fetch payment record first (for idempotency check)
       const payment = await this.prisma.payment.findUnique({
         where: { id: paymentId },
       });
@@ -339,40 +360,82 @@ export class PaymentProcessingService {
         throw new BadRequestException('Payment does not match auction');
       }
 
-      // Update payment status
-      await this.prisma.payment.update({
-        where: { id: paymentId },
-        data: {
-          status: PaymentStatus.completed,
-          paidAt: new Date(),
-        },
-      });
+      // IDEMPOTENCY CHECK: If already completed, return current state
+      if (payment.status === PaymentStatus.completed) {
+        this.logger.log(
+          `Payment ${paymentId} already completed. Returning cached result.`
+        );
 
-      // Update contract status to ready for signing
-      const contract = await this.prisma.contract.findFirst({
-        where: { auctionId },
-      });
+        const existingContract = await this.prisma.contract.findFirst({
+          where: { auctionId },
+        });
 
-      if (contract) {
-        await this.prisma.contract.update({
-          where: { id: contract.id },
+        return {
+          verified: true,
+          paymentId,
+          amount: parseFloat(payment.amount.toString()),
+          status: 'completed',
+          contractReady: !!existingContract,
+          contractId: existingContract?.id,
+          alreadyProcessed: true,
+          message: 'Payment was already verified.',
+        };
+      }
+
+      // Step 2: Verify payment with Stripe
+      const verification = await this.paymentService.verifyPayment(paymentId);
+
+      if (verification.status !== 'paid') {
+        throw new BadRequestException('Payment not completed');
+      }
+
+      // Step 3: ATOMIC TRANSACTION - Update payment and contract together
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Update payment status
+        await tx.payment.update({
+          where: { id: paymentId },
           data: {
-            status: 'signed', // Ready for final signatures
+            status: PaymentStatus.completed,
+            paidAt: new Date(),
           },
         });
 
-        this.logger.log(
-          `Winner payment verified. Contract ${contract.id} ready for signing`
-        );
-      }
+        // Find or handle contract
+        let contract = await tx.contract.findFirst({
+          where: { auctionId },
+        });
+
+        if (contract) {
+          // Update existing contract to 'signed'
+          contract = await tx.contract.update({
+            where: { id: contract.id },
+            data: {
+              status: 'signed', // Ready for final signatures
+            },
+          });
+
+          this.logger.log(
+            `Winner payment verified. Contract ${contract.id} ready for signing`
+          );
+        } else {
+          // Edge case: Contract doesn't exist - log warning but don't fail
+          // The WinnerPaymentService.verifyWinnerPaymentAndPrepareContract should be
+          // the canonical method that creates contracts if missing
+          this.logger.warn(
+            `No contract found for auction ${auctionId} during payment verification`
+          );
+        }
+
+        return { contract };
+      });
 
       return {
         verified: true,
         paymentId,
         amount: verification.amount,
         status: 'completed',
-        contractReady: !!contract,
-        contractId: contract?.id,
+        contractReady: !!result.contract,
+        contractId: result.contract?.id,
         message: 'Payment completed. Contract is ready for final signatures.',
       };
     } catch (error) {

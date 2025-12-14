@@ -29,7 +29,7 @@ export class ContractAccessGuard implements CanActivate {
     const contract = await this.prisma.contract.findUnique({
       where: { id: contractId },
       select: {
-        sellerUserId: true,
+        propertyOwnerUserId: true,
         buyerUserId: true,
         createdBy: true,
       },
@@ -41,7 +41,7 @@ export class ContractAccessGuard implements CanActivate {
 
     const userId = user.sub;
     const hasAccess =
-      contract.sellerUserId === userId ||
+      contract.propertyOwnerUserId === userId ||
       contract.buyerUserId === userId ||
       contract.createdBy === userId;
 
@@ -54,4 +54,3 @@ export class ContractAccessGuard implements CanActivate {
     return true;
   }
 }
-

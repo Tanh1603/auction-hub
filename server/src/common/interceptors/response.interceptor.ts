@@ -48,21 +48,18 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
 
         // If data has a 'data' property, use that as the response data
         // Otherwise, use the entire data object as the response data
-        const responseData = data && typeof data === 'object' && 'data' in data 
-          ? data.data 
-          : data;
-
-        // If data has a 'data' property, use that as the response data
-        // Otherwise, use the entire data object as the response data
-        const responseData = data && typeof data === 'object' && 'data' in data 
-          ? data.data 
-          : data;
+        const responseData =
+          data && typeof data === 'object' && 'data' in data ? data.data : data;
 
         return {
           success: true,
-          message: (data && typeof data === 'object' && 'message' in data) ? data.message : 'Request successful',
+          message:
+            data && typeof data === 'object' && 'message' in data
+              ? data.message
+              : 'Request successful',
           data: responseData,
-          meta: (data && typeof data === 'object' && 'meta' in data) ? data.meta : {},
+          meta:
+            data && typeof data === 'object' && 'meta' in data ? data.meta : {},
           timestamp: new Date().toISOString(),
           path,
         };

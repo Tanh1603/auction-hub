@@ -11,7 +11,10 @@ import { UpdateContractDto } from './dto/update-contract.dto';
 import { ContractQueryDto } from './dto/contract-query.dto';
 import { SignContractDto } from './dto/sign-contract.dto';
 import { CancelContractDto } from './dto/cancel-contract.dto';
-import { ContractDetailDto, ContractListItemDto } from './dto/contract-detail.dto';
+import {
+  ContractDetailDto,
+  ContractListItemDto,
+} from './dto/contract-detail.dto';
 import { Prisma } from '../../generated';
 import { getPaginationOptions } from '../common/utils/pagination.util';
 import PDFDocument from 'pdfkit';
@@ -28,7 +31,7 @@ export class ContractService {
 
     const where: Prisma.ContractWhereInput = {
       OR: [
-        { sellerUserId: userId },
+        { propertyOwnerUserId: userId },
         { buyerUserId: userId },
         { createdBy: userId },
       ],
@@ -47,7 +50,7 @@ export class ContractService {
     }
 
     if (query.sellerId) {
-      where.sellerUserId = query.sellerId;
+      where.propertyOwnerUserId = query.sellerId;
     }
 
     const [items, total] = await Promise.all([
@@ -56,7 +59,7 @@ export class ContractService {
         ...pagination,
         include: {
           auction: { select: { name: true, code: true } },
-          seller: { select: { fullName: true } },
+          propertyOwner: { select: { fullName: true } },
           buyer: { select: { fullName: true } },
         },
       }),
@@ -67,7 +70,7 @@ export class ContractService {
       id: contract.id,
       auctionName: contract.auction.name,
       auctionCode: contract.auction.code,
-      sellerName: contract.seller.fullName,
+      sellerName: contract.propertyOwner?.fullName ?? 'Unknown',
       buyerName: contract.buyer.fullName,
       price: Number(contract.price),
       status: contract.status,
@@ -91,7 +94,7 @@ export class ContractService {
       where: { id },
       include: {
         auction: { select: { name: true, code: true } },
-        seller: { select: { fullName: true } },
+        propertyOwner: { select: { fullName: true } },
         buyer: { select: { fullName: true } },
         creator: { select: { fullName: true } },
         winningBid: true,
@@ -110,8 +113,8 @@ export class ContractService {
       auctionName: contract.auction.name,
       auctionCode: contract.auction.code,
       winningBidId: contract.winningBidId,
-      sellerUserId: contract.sellerUserId,
-      sellerName: contract.seller.fullName,
+      sellerUserId: contract.propertyOwnerUserId,
+      sellerName: contract.propertyOwner?.fullName ?? 'Unknown',
       buyerUserId: contract.buyerUserId,
       buyerName: contract.buyer.fullName,
       createdBy: contract.createdBy,
@@ -145,7 +148,9 @@ export class ContractService {
     }
 
     if (winningBid.auctionId !== dto.auctionId) {
-      throw new BadRequestException('Winning bid does not belong to this auction');
+      throw new BadRequestException(
+        'Winning bid does not belong to this auction'
+      );
     }
 
     if (winningBid.participant.userId !== dto.buyerUserId) {
@@ -157,14 +162,16 @@ export class ContractService {
     });
 
     if (existingContract) {
-      throw new BadRequestException('A contract already exists for this auction');
+      throw new BadRequestException(
+        'A contract already exists for this auction'
+      );
     }
 
     const contract = await this.prisma.contract.create({
       data: {
         auctionId: dto.auctionId,
         winningBidId: dto.winningBidId,
-        sellerUserId: auction.propertyOwner,
+        propertyOwnerUserId: auction.propertyOwner,
         buyerUserId: dto.buyerUserId,
         createdBy: userId,
         price: new Prisma.Decimal(dto.price),
@@ -173,7 +180,7 @@ export class ContractService {
       },
       include: {
         auction: { select: { name: true, code: true } },
-        seller: { select: { fullName: true } },
+        propertyOwner: { select: { fullName: true } },
         buyer: { select: { fullName: true } },
         creator: { select: { fullName: true } },
       },
@@ -185,7 +192,7 @@ export class ContractService {
         id: contract.id,
         auctionName: contract.auction.name,
         auctionCode: contract.auction.code,
-        sellerName: contract.seller.fullName,
+        sellerName: contract.propertyOwner?.fullName ?? 'Unknown',
         buyerName: contract.buyer.fullName,
         price: Number(contract.price),
         status: contract.status,
@@ -204,7 +211,10 @@ export class ContractService {
 
     this.checkAccess(contract, userId);
 
-    if (dto.status && !this.isValidStatusTransition(contract.status, dto.status)) {
+    if (
+      dto.status &&
+      !this.isValidStatusTransition(contract.status, dto.status)
+    ) {
       throw new BadRequestException(
         `Cannot transition from ${contract.status} to ${dto.status}`
       );
@@ -312,12 +322,12 @@ export class ContractService {
     };
   }
 
-  async exportToPdf(id: string, userId: string): Promise<PDFDocument> {
+  async exportToPdf(id: string, userId: string): Promise<any> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
         auction: true,
-        seller: true,
+        propertyOwner: true,
         buyer: true,
         creator: true,
         winningBid: true,
@@ -329,21 +339,22 @@ export class ContractService {
     }
 
     this.checkAccess(contract, userId);
-    
+
     const contractForPdf = {
       ...contract,
       price: Number(contract.price),
     };
 
+    // @ts-ignore - mismatch in expected types for pdf generator vs prisma result
     return this.pdfGenerator.generateContractPdf(contractForPdf);
   }
 
-    async exportToPdfEnglish(id: string, userId: string): Promise<PDFDocument> {
+  async exportToPdfEnglish(id: string, userId: string): Promise<any> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
         auction: true,
-        seller: true,
+        propertyOwner: true,
         buyer: true,
         creator: true,
         winningBid: true,
@@ -355,23 +366,26 @@ export class ContractService {
     }
 
     this.checkAccess(contract, userId);
-    
+
     const contractForPdf = {
       ...contract,
       price: Number(contract.price),
     };
 
+    // @ts-ignore
     return this.pdfGenerator.generateContractPdfEnglish(contractForPdf);
   }
 
   private checkAccess(contract: any, userId: string): void {
     const hasAccess =
-      contract.sellerUserId === userId ||
+      contract.propertyOwnerUserId === userId ||
       contract.buyerUserId === userId ||
       contract.createdBy === userId;
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have permission to access this contract');
+      throw new ForbiddenException(
+        'You do not have permission to access this contract'
+      );
     }
   }
 
@@ -389,4 +403,3 @@ export class ContractService {
     return validTransitions[currentStatus]?.includes(newStatus) ?? false;
   }
 }
-

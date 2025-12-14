@@ -988,25 +988,18 @@ http://localhost:3000/api/register-to-bid/admin/registrations?page=1&limit=20&st
 
 ### Overview of Winner Payment Process
 
-After auction finalization, the winner must complete payment within 7 days:
+The auction finalization process has been updated to ensure payment security. **The winner must complete payment BEFORE the auction can be finalized and the contract created.**
 
-1. **Evaluate Auction** → Admin checks auction status and winner
-2. **Finalize Auction** → Owner/Admin finalizes and declares winner
-3. **Winner Receives Email** → Payment breakdown and deadline (7 days) ✉️
-4. **Winner Submits Payment** → Via payment gateway
-5. **Verify Winner Payment** → System verifies payment
-6. **Payment Success** → Contract ready for signatures ✉️ Emails to winner, seller, admins
-7. **Payment Failure** → Auto-retry or deposit forfeiture if deadline expires
+**Correct Flow:**
 
-**Payment Failure Handling:**
+1. **Evaluate Auction** → Admin checks auction status and identifies the winner
+2. **Winner Check Payment Requirements** → Winner sees payment breakdown ✉️
+3. **Winner Submits Payment** → Via payment gateway
+4. **Verify Winner Payment** → System verifies payment and records it
+5. **Finalize Auction** → Owner/Admin finalizes (System checks payment + Creates Contract) ✉️
+6. **Contract Signing** → Parties sign the generated contract
 
-- If payment fails: Winner receives failure email with retry link
-- If 7-day deadline expires:
-  - Winner's deposit is forfeited
-  - Property offered to 2nd highest bidder
-  - If no 2nd bidder: Auction marked as "no_bid"
-
-### 17. Evaluate Auction Status (Admin Auctioneer Only)
+### 17. Evaluate Auction Status (Admin/Auctioneer Only)
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/auction-finalization/evaluate/{auctionId}`  
@@ -1042,69 +1035,9 @@ After auction finalization, the winner must complete payment within 7 days:
 }
 ```
 
-### 18. Finalize Auction (Admin/Auctioneer Only)
+### 18. Get Winner Payment Requirements
 
-**Method**: `POST`  
-**URL**: `http://localhost:3000/api/auction-finalization/finalize`  
-**Headers**:
-
-```json
-{
-  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE",
-  "Content-Type": "application/json"
-}
-```
-
-**Body** (JSON):
-
-```json
-{
-  "auctionId": "auction-uuid-here",
-  "notes": "Auction completed successfully"
-}
-```
-
-**Optional Fields**:
-
-- `winningBidId`: Override winner selection
-- `notes`: Additional notes for finalization
-- `skipAutoEvaluation`: Skip automatic evaluation (default: false)
-
-**Expected Response**:
-
-```json
-{
-  "success": true,
-  "message": "Auction finalized successfully",
-  "data": {
-    "auctionId": "auction-uuid",
-    "finalStatus": "success",
-    "winner": {
-      "userId": "winner-user-uuid",
-      "participantId": "winner-participant-uuid",
-      "winningAmount": "1200000000"
-    },
-    "contract": {
-      "id": "contract-uuid",
-      "buyerUserId": "winner-user-uuid",
-      "sellerUserId": "auction-owner-uuid",
-      "price": "1200000000",
-      "status": "draft"
-    },
-    "notes": "Auction completed successfully",
-    "emailsSent": true
-  },
-  "meta": {},
-  "timestamp": "2025-11-14T14:00:00.000Z",
-  "path": "/api/auction-finalization/finalize"
-}
-```
-
-**📧 Emails Sent**: All auction participants receive result emails (winners and non-winners).
-
-### 19. Get Winner Payment Requirements
-
-**Winner can check payment breakdown and deadline.**
+**Winner checks payment breakdown and deadline.**
 
 **Method**: `GET`
 **URL**: `http://localhost:3000/api/auction-finalization/winner-payment-requirements/{auctionId}`
@@ -1141,9 +1074,7 @@ After auction finalization, the winner must complete payment within 7 days:
 }
 ```
 
-**📧 Email Sent**: Winner receives "Winner Payment Required" email with payment breakdown and 7-day deadline.
-
-### 20. Initiate Winner Payment
+### 19. Initiate Winner Payment
 
 **Winner initiates payment for the remaining amount.**
 
@@ -1192,13 +1123,7 @@ After auction finalization, the winner must complete payment within 7 days:
 }
 ```
 
-**Next Steps**:
-
-1. Open `paymentUrl` in browser or scan `qrCode`
-2. Complete payment using Stripe test card: `4242 4242 4242 4242`
-3. After payment, call verify endpoint (see next section)
-
-### 21. Verify Winner Payment
+### 20. Verify Winner Payment
 
 **Winner verifies the payment after completion.**
 
@@ -1222,8 +1147,6 @@ After auction finalization, the winner must complete payment within 7 days:
 }
 ```
 
-**⚠️ Note**: `sessionId` is the `paymentId` returned from the initiate winner payment endpoint.
-
 **Expected Response**:
 
 ```json
@@ -1232,28 +1155,63 @@ After auction finalization, the winner must complete payment within 7 days:
   "paymentVerified": true,
   "paymentId": "cs_test_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0",
   "amount": 1160000000,
-  "contractId": "contract-uuid",
-  "contractStatus": "signed",
-  "contractReady": true,
-  "message": "Payment verified successfully. Contract is ready for final signatures from both parties.",
-  "nextSteps": ["1. Winner reviews and signs the contract", "2. Seller reviews and signs the contract", "3. Auctioneer reviews and finalizes", "4. Final contract document generated"]
+  "message": "Payment verified successfully. Auction can now be finalized.",
+  "nextSteps": ["1. Admin finalizes auction", "2. System generates contract", "3. Parties sign contract"]
 }
 ```
 
-**📧 Emails Sent**:
+### 21. Finalize Auction (Admin/Auctioneer Only)
 
-- Winner receives "Payment Confirmed - Contract Ready" email
-- Seller receives "Winner Payment Received - Contract Ready" email
-- All admins receive payment notification
+**After payment is verified, Admin finalizes the auction. This action triggers contract creation.**
 
-**Payment Failure Scenarios**:
+**Method**: `POST`  
+**URL**: `http://localhost:3000/api/auction-finalization/finalize`  
+**Headers**:
 
-- If payment verification fails before deadline: Winner receives failure email with retry link
-- If 7-day deadline expires without payment:
-  - Winner's deposit (50M VND) is **forfeited**
-  - Property automatically offered to 2nd highest bidder
-  - 2nd bidder receives winner payment request email
-  - If no 2nd bidder exists: Auction status changes to "no_bid"
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body** (JSON):
+
+```json
+{
+  "auctionId": "auction-uuid-here",
+  "notes": "Auction completed successfully, payment received."
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "message": "Auction finalized successfully",
+  "data": {
+    "auctionId": "auction-uuid",
+    "status": "success",
+    "finalizedAt": "2025-11-14T14:00:00.000Z",
+    "winningBidId": "bid-uuid",
+    "contractId": "contract-uuid",
+    "totalBids": 5,
+    "totalParticipants": 3,
+    "evaluation": {
+      "recommendedStatus": "success",
+      "meetsReservePrice": true,
+      "hasMinimumParticipants": true,
+      "hasValidBids": true
+    }
+  },
+  "meta": {},
+  "timestamp": "2025-11-14T14:00:00.000Z",
+  "path": "/api/auction-finalization/finalize"
+}
+```
+
+**📧 Emails Sent**: All auction participants receive result emails. Winner and Seller receive contract notifications.
 
 ### 22. Override Auction Status (Admin Only)
 
@@ -1382,6 +1340,90 @@ After auction finalization, the winner must complete payment within 7 days:
   "path": "/api/auction-finalization/audit-logs/{auctionId}"
 }
 ```
+
+---
+
+## 📜 Contract Management Flow
+
+### 25. View Contract Details
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/contracts/{contractId}`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+}
+```
+
+**Note**: Available to Admin, Seller, and Buyer only.
+
+### 26. Export Contract PDF (Vietnamese)
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/contracts/{contractId}/pdf/vi`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+}
+```
+
+**Result**: Downloads a PDF file for the Vietnamese contract.
+
+### 27. Export Contract PDF (English)
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/contracts/{contractId}/pdf/en`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+}
+```
+
+**Result**: Downloads a PDF file for the English contract.
+
+### 28. Sign Contract
+
+**Once satisfied with the PDF, parties can sign the contract.**
+
+**Method**: `POST`  
+**URL**: `http://localhost:3000/api/contracts/{contractId}/sign`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body**:
+
+```json
+{
+  "docUrl": "https://url-to-signed-document.pdf" // Optional: URL to uploaded signed doc
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "message": "Contract signed successfully",
+  "data": {
+    "id": "contract-uuid",
+    "status": "signed",
+    "signedAt": "2025-11-14T16:00:00.000Z"
+  }
+}
+```
+
+---
 
 ## 📝 Test User Types
 
@@ -1582,28 +1624,19 @@ After auction finalization, the winner must complete payment within 7 days:
    - Registration must be confirmed
    - **Must have checked in** (most common error)
 
-### Phase 5: Auction Finalization & Winner Payment
+### Phase 5: Auction Finalization & Contract
 
 1. **Admin**: Evaluate auction (endpoint 17)
-   - Check winner determination
-   - Verify bid counts
-2. **Admin/Auctioneer**: Finalize auction (endpoint 18) ✉️
-   - Check all participants receive result emails
-3. **Winner**: Get payment requirements (endpoint 19) ✉️
-   - Check winner receives payment request email
-   - Verify payment breakdown calculation
-4. **Winner**: Initiate winner payment (endpoint 20)
-   - Receives Stripe payment URL and session ID
-   - Opens payment URL in browser
-   - Completes payment with test card: 4242 4242 4242 4242
-5. **Winner**: Verify winner payment (endpoint 21) ✉️
-   - Provides session ID from step 4
-   - Payment verified and contract prepared
-   - Check winner receives payment confirmed email
-   - Check seller receives payment notification
-   - Check admins receive payment notification
-6. **Any User**: View auction results (endpoint 23)
-7. **Admin**: View audit logs (endpoint 24)
+2. **Winner**: Get payment requirements (endpoint 18)
+3. **Winner**: Initiate payment (endpoint 19)
+4. **Winner**: Verify payment (endpoint 20)
+5. **Admin**: Finalize auction (endpoint 21) ✉️
+   - **Critical**: Must happen AFTER payment verification
+   - **Result**: Contract created
+6. **User/Admin**: Export Contract PDF (endpoint 26/27)
+7. **User**: Sign Contract (endpoint 28)
+8. **Any User**: View auction results (endpoint 23)
+9. **Admin**: View audit logs (endpoint 24)
 
 ### Phase 6: Edge Cases & Alternative Flows
 

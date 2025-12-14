@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common';
+// @ts-ignore
 import PDFDocument from 'pdfkit';
 import * as path from 'path';
-import type { Auction, User, AuctionBid, ContractStatus } from '../../generated';
+import type {
+  Auction,
+  User,
+  AuctionBid,
+  ContractStatus,
+} from '../../generated';
 
 interface ContractWithRelations {
   id: string;
   auctionId: string;
   winningBidId: string;
-  sellerUserId: string;
+  propertyOwnerUserId: string | null;
   buyerUserId: string;
   createdBy: string;
   price: number | string;
@@ -18,7 +24,7 @@ interface ContractWithRelations {
   createdAt: Date;
   updatedAt: Date;
   auction: Auction;
-  seller: User;
+  propertyOwner: User | null;
   buyer: User;
   creator: User;
   winningBid: AuctionBid;
@@ -26,24 +32,44 @@ interface ContractWithRelations {
 
 @Injectable()
 export class PdfGeneratorService {
-  generateContractPdf(contract: ContractWithRelations): PDFDocument {
+  generateContractPdf(contract: ContractWithRelations): any {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const projectRoot = path.join(__dirname, '..', '..');
-    const fontPath = path.join(projectRoot, 'server', 'src', 'assets', 'font', 'Inter', 'static');
+    const fontPath = path.join(
+      projectRoot,
+      'server',
+      'src',
+      'assets',
+      'font',
+      'Inter',
+      'static'
+    );
 
     let normalFont = 'Helvetica';
     let boldFont = 'Helvetica-Bold';
     let semiBoldFont = 'Helvetica-Bold';
 
     try {
-      doc.registerFont('Inter-Regular', path.join(fontPath, 'Inter_18pt-Regular.ttf'));
-      doc.registerFont('Inter-Bold', path.join(fontPath, 'Inter_18pt-Bold.ttf'));
-      doc.registerFont('Inter-SemiBold', path.join(fontPath, 'Inter_18pt-SemiBold.ttf'));
+      doc.registerFont(
+        'Inter-Regular',
+        path.join(fontPath, 'Inter_18pt-Regular.ttf')
+      );
+      doc.registerFont(
+        'Inter-Bold',
+        path.join(fontPath, 'Inter_18pt-Bold.ttf')
+      );
+      doc.registerFont(
+        'Inter-SemiBold',
+        path.join(fontPath, 'Inter_18pt-SemiBold.ttf')
+      );
       normalFont = 'Inter-Regular';
       boldFont = 'Inter-Bold';
       semiBoldFont = 'Inter-SemiBold';
     } catch (error) {
-      console.warn('Inter fonts not found — using Helvetica fallback. Error: ', error);
+      console.warn(
+        'Inter fonts not found — using Helvetica fallback. Error: ',
+        error
+      );
     }
 
     const drawSeparator = (yOffset = 10) => {
@@ -73,7 +99,7 @@ export class PdfGeneratorService {
           month: '2-digit',
           year: 'numeric',
         })}`,
-        { align: 'center' },
+        { align: 'center' }
       )
       .moveDown(1.5);
 
@@ -96,15 +122,25 @@ export class PdfGeneratorService {
     const leftX = 50;
     const rightX = 310;
 
-    doc.fontSize(12).font(semiBoldFont).text('BÊN BÁN (CHỦ SỞ HỮU):', leftX, startY);
+    doc
+      .fontSize(12)
+      .font(semiBoldFont)
+      .text('BÊN BÁN (CHỦ SỞ HỮU):', leftX, startY);
+    const sellerName = contract.propertyOwner?.fullName || 'Không xác định';
+    const sellerEmail = contract.propertyOwner?.email || 'N/A';
+    const sellerPhone = contract.propertyOwner?.phoneNumber || 'Không có';
+
     doc
       .fontSize(11)
       .font(normalFont)
-      .text(`Họ tên: ${contract.seller.fullName}`, leftX, doc.y)
-      .text(`Email: ${contract.seller.email}`, leftX, doc.y)
-      .text(`SĐT: ${contract.seller.phoneNumber || 'Không có'}`, leftX, doc.y);
+      .text(`Họ tên: ${sellerName}`, leftX, doc.y)
+      .text(`Email: ${sellerEmail}`, leftX, doc.y)
+      .text(`SĐT: ${sellerPhone}`, leftX, doc.y);
 
-    doc.fontSize(12).font(semiBoldFont).text('BÊN MUA (NGƯỜI TRÚNG THẦU):', rightX, startY);
+    doc
+      .fontSize(12)
+      .font(semiBoldFont)
+      .text('BÊN MUA (NGƯỜI TRÚNG THẦU):', rightX, startY);
     doc
       .fontSize(11)
       .font(normalFont)
@@ -124,24 +160,62 @@ export class PdfGeneratorService {
     doc
       .fontSize(11)
       .font(normalFont)
-      .text(`Giá khởi điểm: ${this.formatCurrency(Number(contract.auction.startingPrice))}`, leftX, contractInfoStartY)
-      .text(`Giá trúng đấu giá: ${this.formatCurrency(contract.price)}`, leftX, doc.y)
-      .text(`Tiền đặt cọc: ${this.formatCurrency(Number(contract.auction.depositAmountRequired))}`, leftX, doc.y)
-      .text(`Phí bán đấu giá: ${this.formatCurrency(Number(contract.auction.saleFee))}`, leftX, doc.y);
+      .text(
+        `Giá khởi điểm: ${this.formatCurrency(
+          Number(contract.auction.startingPrice)
+        )}`,
+        leftX,
+        contractInfoStartY
+      )
+      .text(
+        `Giá trúng đấu giá: ${this.formatCurrency(contract.price)}`,
+        leftX,
+        doc.y
+      )
+      .text(
+        `Tiền đặt cọc: ${this.formatCurrency(
+          Number(contract.auction.depositAmountRequired)
+        )}`,
+        leftX,
+        doc.y
+      )
+      .text(
+        `Phí bán đấu giá: ${this.formatCurrency(
+          Number(contract.auction.saleFee)
+        )}`,
+        leftX,
+        doc.y
+      );
 
     // Right column - Contract Status
     doc
       .fontSize(11)
       .font(normalFont)
-      .text(`Trạng thái: ${contract.status.toUpperCase()}`, rightX, contractInfoStartY);
-    
-    doc.text(`Ngày tạo: ${contract.createdAt.toLocaleString('vi-VN')}`, rightX, doc.y);
-    
+      .text(
+        `Trạng thái: ${contract.status.toUpperCase()}`,
+        rightX,
+        contractInfoStartY
+      );
+
+    doc.text(
+      `Ngày tạo: ${contract.createdAt.toLocaleString('vi-VN')}`,
+      rightX,
+      doc.y
+    );
+
     if (contract.signedAt) {
-      doc.text(`Ngày ký: ${contract.signedAt.toLocaleString('vi-VN')}`, rightX, doc.y);
+      doc.text(
+        `Ngày ký: ${contract.signedAt.toLocaleString('vi-VN')}`,
+        rightX,
+        doc.y
+      );
     }
     if (contract.cancelledAt) {
-      doc.text(`Ngày huỷ: ${contract.cancelledAt.toLocaleString('vi-VN')}`, rightX, doc.y);
+      doc.text(
+        `Ngày huỷ: ${contract.cancelledAt.toLocaleString('vi-VN')}`,
+        rightX,
+        doc.y
+      );
     }
 
     doc.moveDown(4);
@@ -185,25 +259,45 @@ export class PdfGeneratorService {
     return doc;
   }
 
-  generateContractPdfEnglish(contract: ContractWithRelations): PDFDocument {
+  generateContractPdfEnglish(contract: ContractWithRelations): any {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
     const projectRoot = path.join(__dirname, '..', '..');
-    const fontPath = path.join(projectRoot, 'server', 'src', 'assets', 'font', 'Inter', 'static');
+    const fontPath = path.join(
+      projectRoot,
+      'server',
+      'src',
+      'assets',
+      'font',
+      'Inter',
+      'static'
+    );
 
     let normalFont = 'Helvetica';
     let boldFont = 'Helvetica-Bold';
     let semiBoldFont = 'Helvetica-Bold';
 
     try {
-      doc.registerFont('Inter-Regular', path.join(fontPath, 'Inter_18pt-Regular.ttf'));
-      doc.registerFont('Inter-Bold', path.join(fontPath, 'Inter_18pt-Bold.ttf'));
-      doc.registerFont('Inter-SemiBold', path.join(fontPath, 'Inter_18pt-SemiBold.ttf'));
+      doc.registerFont(
+        'Inter-Regular',
+        path.join(fontPath, 'Inter_18pt-Regular.ttf')
+      );
+      doc.registerFont(
+        'Inter-Bold',
+        path.join(fontPath, 'Inter_18pt-Bold.ttf')
+      );
+      doc.registerFont(
+        'Inter-SemiBold',
+        path.join(fontPath, 'Inter_18pt-SemiBold.ttf')
+      );
       normalFont = 'Inter-Regular';
       boldFont = 'Inter-Bold';
       semiBoldFont = 'Inter-SemiBold';
     } catch (error) {
-      console.warn('Inter fonts not found - using Helvetica fallback. Error: ', error);
+      console.warn(
+        'Inter fonts not found - using Helvetica fallback. Error: ',
+        error
+      );
     }
 
     const drawSeparator = (yOffset = 10) => {
@@ -233,7 +327,7 @@ export class PdfGeneratorService {
           month: 'long',
           year: 'numeric',
         })}`,
-        { align: 'center' },
+        { align: 'center' }
       )
       .moveDown(1.5);
 
@@ -256,15 +350,25 @@ export class PdfGeneratorService {
     const leftX = 50;
     const rightX = 310;
 
-    doc.fontSize(12).font(semiBoldFont).text('SELLER (PROPERTY OWNER):', leftX, startY);
+    doc
+      .fontSize(12)
+      .font(semiBoldFont)
+      .text('SELLER (PROPERTY OWNER):', leftX, startY);
+    const sellerName = contract.propertyOwner?.fullName || 'Unknown';
+    const sellerEmail = contract.propertyOwner?.email || 'N/A';
+    const sellerPhone = contract.propertyOwner?.phoneNumber || 'N/A';
+
     doc
       .fontSize(11)
       .font(normalFont)
-      .text(`Name: ${contract.seller.fullName}`, leftX, doc.y)
-      .text(`Email: ${contract.seller.email}`, leftX, doc.y)
-      .text(`Phone: ${contract.seller.phoneNumber || 'N/A'}`, leftX, doc.y);
+      .text(`Name: ${sellerName}`, leftX, doc.y)
+      .text(`Email: ${sellerEmail}`, leftX, doc.y)
+      .text(`Phone: ${sellerPhone}`, leftX, doc.y);
 
-    doc.fontSize(12).font(semiBoldFont).text('BUYER (WINNING BIDDER):', rightX, startY);
+    doc
+      .fontSize(12)
+      .font(semiBoldFont)
+      .text('BUYER (WINNING BIDDER):', rightX, startY);
     doc
       .fontSize(11)
       .font(normalFont)
@@ -284,24 +388,58 @@ export class PdfGeneratorService {
     doc
       .fontSize(11)
       .font(normalFont)
-      .text(`Starting Price: ${this.formatCurrencyEnglish(Number(contract.auction.startingPrice))}`, leftX, contractInfoStartY)
-      .text(`Winning Bid Amount: ${this.formatCurrencyEnglish(contract.price)}`, leftX, doc.y)
-      .text(`Deposit Required: ${this.formatCurrencyEnglish(Number(contract.auction.depositAmountRequired))}`, leftX, doc.y)
-      .text(`Auction Fee: ${this.formatCurrencyEnglish(Number(contract.auction.saleFee))}`, leftX, doc.y);
+      .text(
+        `Starting Price: ${this.formatCurrencyEnglish(
+          Number(contract.auction.startingPrice)
+        )}`,
+        leftX,
+        contractInfoStartY
+      )
+      .text(
+        `Winning Bid Amount: ${this.formatCurrencyEnglish(contract.price)}`,
+        leftX,
+        doc.y
+      )
+      .text(
+        `Deposit Required: ${this.formatCurrencyEnglish(
+          Number(contract.auction.depositAmountRequired)
+        )}`,
+        leftX,
+        doc.y
+      )
+      .text(
+        `Auction Fee: ${this.formatCurrencyEnglish(
+          Number(contract.auction.saleFee)
+        )}`,
+        leftX,
+        doc.y
+      );
 
     // Right column - Contract Status
     doc
       .fontSize(11)
       .font(normalFont)
       .text(`Status: ${contract.status}`, rightX, contractInfoStartY);
-    
-    doc.text(`Created: ${contract.createdAt.toLocaleDateString('en-US')}`, rightX, doc.y);
-    
+
+    doc.text(
+      `Created: ${contract.createdAt.toLocaleDateString('en-US')}`,
+      rightX,
+      doc.y
+    );
+
     if (contract.signedAt) {
-      doc.text(`Signed: ${contract.signedAt.toLocaleDateString('en-US')}`, rightX, doc.y);
+      doc.text(
+        `Signed: ${contract.signedAt.toLocaleDateString('en-US')}`,
+        rightX,
+        doc.y
+      );
     }
     if (contract.cancelledAt) {
-      doc.text(`Cancelled: ${contract.cancelledAt.toLocaleDateString('en-US')}`, rightX, doc.y);
+      doc.text(
+        `Cancelled: ${contract.cancelledAt.toLocaleDateString('en-US')}`,
+        rightX,
+        doc.y
+      );
     }
 
     doc.moveDown(4);
@@ -362,5 +500,4 @@ export class PdfGeneratorService {
       minimumFractionDigits: 0,
     }).format(numAmount);
   }
-
 }

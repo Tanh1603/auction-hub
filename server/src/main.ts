@@ -11,7 +11,9 @@ import { AllExceptionFilter } from './common/filters/exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true, // Required for Stripe webhook signature verification
+  });
   // Use ConfigService to read allowed origins from environment (ALLOWED_ORIGINS or FRONTEND_URL).
   // This enables secure CORS for HTTP endpoints and keeps behavior consistent with websockets.
   // Allow all origins for development / requested behaviour
