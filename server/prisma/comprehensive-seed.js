@@ -1198,7 +1198,7 @@ async function main() {
         performedBy: users.admin.id,
         action: 'AUCTION_FINALIZED',
         previousStatus: 'live',
-        newStatus: 'no_bid',
+        newStatus: 'failed',
         reason: 'Không có người đặt giá',
       },
       {
