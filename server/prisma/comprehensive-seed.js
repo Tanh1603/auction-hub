@@ -111,7 +111,8 @@ const sampleAuctions = [
     assetAddress: '123 Nguyễn Huệ, Quận 1, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    isActive: true,
+    assetWardId: 15,
+    assetProvinceId: 7,
   },
 
   // Live auction - currently happening
@@ -134,7 +135,8 @@ const sampleAuctions = [
     assetAddress: 'Showroom ABC, Quận 7, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    isActive: true,
+    assetWardId: 57,
+    assetProvinceId: 7,
   },
 
   // Recently completed auction - successful
@@ -158,7 +160,8 @@ const sampleAuctions = [
     assetAddress: 'Đường Võ Văn Ngân, Quận 9, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    isActive: true,
+    assetWardId: 54,
+    assetProvinceId: 7,
   },
 
   // Failed auction - no bids
@@ -166,7 +169,7 @@ const sampleAuctions = [
     code: 'AUC004',
     name: 'Máy móc cũ - Nhà máy ABC',
     assetType: 'state_asset',
-    status: 'no_bid',
+    status: 'failed',
     saleStartAt: createDate(-30),
     saleEndAt: createDate(-20),
     depositEndAt: createDate(-20),
@@ -181,7 +184,8 @@ const sampleAuctions = [
     assetAddress: 'KCN Tân Thuận, Quận 7, TP.HCM',
     validCheckInBeforeStartMinutes: 30,
     validCheckInAfterStartMinutes: 15,
-    isActive: true,
+    assetWardId: 56,
+    assetProvinceId: 7,
   },
 
   // Future auction - registration not started yet
@@ -205,7 +209,8 @@ const sampleAuctions = [
     assetAddress: 'KDC Riviera Point, TP. Thủ Đức',
     validCheckInBeforeStartMinutes: 45,
     validCheckInAfterStartMinutes: 30,
-    isActive: true,
+    assetWardId: 22,
+    assetProvinceId: 7,
   },
 ];
 
@@ -451,6 +456,67 @@ async function main() {
         update: { value: variable.value },
       });
     }
+
+    // ========================================
+    // SEED LOCATION DATA
+    // ========================================
+    console.log('\n📍 Seeding location data...');
+
+    // Hardcoded minimal location data for seed script
+    // This includes only the locations needed for sample auctions
+    const locations = [
+      // Province - An Giang (ID 7 as parent)
+      {
+        id: 7,
+        name: 'An Giang',
+        value: 30000,
+        sortOrder: 1,
+        parentId: null,
+      },
+      // Wards/Districts in An Giang province
+      {
+        id: 15,
+        name: 'Bình Đức',
+        value: 30292,
+        sortOrder: 8,
+        parentId: 7,
+      },
+      {
+        id: 57,
+        name: 'Mỹ Thới',
+        value: 30301,
+        sortOrder: 50,
+        parentId: 7,
+      },
+      {
+        id: 54,
+        name: 'Long Xuyên',
+        value: 30307,
+        sortOrder: 47,
+        parentId: 7,
+      },
+      {
+        id: 56,
+        name: 'Mỹ Hòa Hưng',
+        value: 30313,
+        sortOrder: 49,
+        parentId: 7,
+      },
+      {
+        id: 22,
+        name: 'Châu Đốc',
+        value: 30316,
+        sortOrder: 15,
+        parentId: 7,
+      },
+    ];
+
+    await prisma.location.createMany({
+      data: locations,
+      skipDuplicates: true,
+    });
+
+    console.log(`  ✓ Created ${locations.length} locations`);
 
     // Create users
     console.log('👥 Creating users...');

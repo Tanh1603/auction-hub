@@ -322,7 +322,7 @@ export class ContractService {
     };
   }
 
-  async exportToPdf(id: string, userId: string): Promise<Buffer> {
+  async exportToPdf(id: string, userId: string) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -345,11 +345,10 @@ export class ContractService {
       price: Number(contract.price),
     };
 
-    // @ts-expect-error - mismatch in expected types for pdf generator vs prisma result
     return this.pdfGenerator.generateContractPdf(contractForPdf);
   }
 
-  async exportToPdfEnglish(id: string, userId: string): Promise<Buffer> {
+  async exportToPdfEnglish(id: string, userId: string) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -372,7 +371,6 @@ export class ContractService {
       price: Number(contract.price),
     };
 
-    // @ts-expect-error - mismatch in expected types for pdf generator vs prisma result
     return this.pdfGenerator.generateContractPdfEnglish(contractForPdf);
   }
 
