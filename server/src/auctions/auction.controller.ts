@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiBody, ApiOkResponse } from '@nestjs/swagger';
 import { ApiResponse, ApiResponseError } from '../common/dto/reponse.dto';
+import { Public } from '../common/decorators/public.decorator';
 import { AuctionService } from './auction.service';
 import { AuctionDetailDto } from './dto/auction-detail.dto';
 import { AuctionQueryDto } from './dto/auction-query.dto';
@@ -26,6 +27,7 @@ export class AuctionController {
   constructor(private readonly auctionService: AuctionService) {}
 
   // Get all
+  @Public()
   @ApiOkResponse({
     type: ApiResponse<AucitonSummaryDto[]>,
   })
@@ -39,6 +41,7 @@ export class AuctionController {
   }
 
   // Get detail
+  @Public()
   @ApiOkResponse({
     description: 'List of auctions',
     type: ApiResponse<AuctionDetailDto>,
