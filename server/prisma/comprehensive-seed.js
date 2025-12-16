@@ -518,6 +518,104 @@ async function main() {
 
     console.log(`  ✓ Created ${locations.length} locations`);
 
+    // ========================================
+    // SEED ARTICLES
+    // ========================================
+    console.log('\n📰 Seeding articles...');
+
+    const sampleArticles = [
+      {
+        type: 'news',
+        title: 'Thị trường đấu giá tài sản 2024: Xu hướng và triển vọng',
+        description:
+          'Phân tích xu hướng thị trường đấu giá tài sản trong năm 2024 và dự báo cho năm 2025.',
+        author: 'Nguyễn Văn An',
+        content: `<h2>Tổng quan thị trường</h2>
+<p>Thị trường đấu giá tài sản Việt Nam năm 2024 ghi nhận nhiều biến động tích cực với sự tham gia ngày càng đông đảo của các nhà đầu tư.</p>
+<h3>Các điểm nổi bật</h3>
+<ul>
+<li>Tăng trưởng 25% so với năm trước</li>
+<li>Số lượng phiên đấu giá trực tuyến tăng mạnh</li>
+<li>Bất động sản vẫn là phân khúc chủ đạo</li>
+</ul>
+<p>Dự kiến năm 2025 sẽ tiếp tục đà tăng trưởng với nhiều chính sách hỗ trợ từ Chính phủ.</p>`,
+        image: {
+          url: 'https://example.com/images/market-analysis-2024.jpg',
+          alt: 'Market Analysis 2024',
+        },
+      },
+      {
+        type: 'auction_notice',
+        title: 'Thông báo đấu giá lô đất 1000m2 tại Quận 2, TP.HCM',
+        description:
+          'Thông báo tổ chức đấu giá quyền sử dụng đất tại khu vực trung tâm Quận 2.',
+        author: 'Công ty TNHH Đấu giá ABC',
+        content: `<h2>Thông báo đấu giá</h2>
+<p><strong>Tài sản đấu giá:</strong> Quyền sử dụng đất 1000m2 tại Phường Thảo Điền, Quận 2, TP.HCM</p>
+<p><strong>Giá khởi điểm:</strong> 50.000.000.000 VND (Năm mươi tỷ đồng)</p>
+<p><strong>Thời gian đấu giá:</strong> 15/01/2025 lúc 09:00</p>
+<p><strong>Địa điểm:</strong> Trụ sở Công ty TNHH Đấu giá ABC</p>
+<h3>Điều kiện tham gia</h3>
+<ul>
+<li>Đặt cọc: 5 tỷ VND</li>
+<li>Thời hạn nộp hồ sơ: Trước 10/01/2025</li>
+</ul>
+<p>Liên hệ hotline: 1900-xxxx để biết thêm chi tiết.</p>`,
+        image: {
+          url: 'https://example.com/images/land-auction-notice.jpg',
+          alt: 'Land Auction Notice',
+        },
+      },
+      {
+        type: 'auction_report',
+        title: 'Báo cáo kết quả đấu giá xe ô tô thanh lý tháng 11/2024',
+        description:
+          'Tổng hợp kết quả các phiên đấu giá xe ô tô thanh lý trong tháng 11/2024.',
+        author: 'Phòng Nghiệp vụ - Trung tâm đấu giá',
+        content: `<h2>Báo cáo kết quả đấu giá</h2>
+<h3>Tổng quan</h3>
+<table>
+<tr><td>Số phiên đấu giá</td><td>15 phiên</td></tr>
+<tr><td>Tổng số xe đấu giá</td><td>45 chiếc</td></tr>
+<tr><td>Số xe bán thành công</td><td>38 chiếc (84.4%)</td></tr>
+<tr><td>Tổng giá trị</td><td>12.5 tỷ VND</td></tr>
+</table>
+<h3>Phân tích</h3>
+<p>Tỷ lệ thành công cao cho thấy nhu cầu mua xe thanh lý tăng mạnh trong giai đoạn cuối năm.</p>
+<p>Các dòng xe Toyota và Honda tiếp tục được ưa chuộng nhất.</p>`,
+        image: {
+          url: 'https://example.com/images/car-auction-report.jpg',
+          alt: 'Car Auction Report',
+        },
+      },
+      {
+        type: 'legal_document',
+        title:
+          'Nghị định 62/2017/NĐ-CP về quy định chi tiết thi hành Luật Đấu giá tài sản',
+        description:
+          'Văn bản quy phạm pháp luật quy định chi tiết một số điều của Luật Đấu giá tài sản năm 2016.',
+        author: 'Chính phủ Việt Nam',
+        content: `<h2>Nghị định 62/2017/NĐ-CP</h2>
+<p><strong>Ngày ban hành:</strong> 16/05/2017</p>
+<p><strong>Ngày hiệu lực:</strong> 01/07/2017</p>
+<h3>Chương I: Quy định chung</h3>
+<p><strong>Điều 1. Phạm vi điều chỉnh:</strong> Nghị định này quy định chi tiết một số điều của Luật Đấu giá tài sản về trình tự, thủ tục đấu giá tài sản theo quy định của pháp luật về tố tụng dân sự, pháp luật về thi hành án dân sự...</p>
+<h3>Chương II: Quy định về đấu giá tài sản</h3>
+<p><strong>Điều 5. Thông báo đấu giá:</strong> Tổ chức đấu giá tài sản phải thông báo công khai về việc đấu giá ít nhất 30 ngày trước ngày mở cuộc đấu giá...</p>
+<p>Xem toàn văn tại: https://thuvienphapluat.vn</p>`,
+        image: null,
+      },
+    ];
+
+    for (const article of sampleArticles) {
+      await prisma.article.create({
+        data: article,
+      });
+      console.log(`  ✓ Created article: ${article.title.substring(0, 50)}...`);
+    }
+
+    console.log(`  ✓ Created ${sampleArticles.length} articles`);
+
     // Create users
     console.log('👥 Creating users...');
     const users = {};
@@ -1302,6 +1400,7 @@ async function main() {
     console.log('\n📊 Summary:');
     console.log(`   👥 Users: ${sampleUsers.length}`);
     console.log(`   ⚙️ System Variables: Seeded`);
+    console.log(`   📰 Articles: ${sampleArticles.length}`);
     console.log(`   🏛️ Auctions: ${sampleAuctions.length}`);
     console.log('   📸 Images: Added to all auctions');
     console.log('   📎 Attachments: Added to all auctions');
