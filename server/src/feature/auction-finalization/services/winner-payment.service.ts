@@ -207,6 +207,12 @@ export class WinnerPaymentService {
   /**
    * Verify winner payment and prepare contract
    * Called after winner completes payment
+   *
+   * CRITICAL: This method is idempotent - calling it multiple times with the same
+   * sessionId will not create duplicate contracts or duplicate state updates.
+   *
+   * Transactional guarantee: Payment update and contract update happen atomically.
+   * If either fails, both are rolled back.
    */
   async verifyWinnerPaymentAndPrepareContract(
     sessionId: string,
@@ -217,10 +223,7 @@ export class WinnerPaymentService {
         `Verifying winner payment session ${sessionId} for auction ${auctionId}`
       );
 
-      // Step 1: Verify payment with Stripe via PaymentService
-      const verification = await this.paymentService.verifyPayment(sessionId);
-
-      // Find the payment record using Stripe session ID (stored in transactionId)
+      // Step 1: Find the payment record using Stripe session ID
       const payment = await this.prisma.payment.findFirst({
         where: {
           transactionId: sessionId,
@@ -234,6 +237,66 @@ export class WinnerPaymentService {
           'Payment record not found for this session'
         );
       }
+
+      // IDEMPOTENCY CHECK: If payment already completed, return existing state
+      if (payment.status === 'completed') {
+        this.logger.log(
+          `Payment ${sessionId} already verified. Returning cached result.`
+        );
+
+        // Fetch contract to return its current state
+        const existingContract = await this.prisma.contract.findFirst({
+          where: { auctionId },
+          include: {
+            auction: true,
+            propertyOwner: true,
+            buyer: true,
+          },
+        });
+
+        if (existingContract) {
+          return {
+            success: true,
+            paymentVerified: true,
+            paymentId: payment.id,
+            sessionId: sessionId,
+            amount: parseFloat(payment.amount.toString()),
+            contractId: existingContract.id,
+            contractStatus: existingContract.status,
+            contractReady:
+              existingContract.status === 'signed' ||
+              existingContract.status === 'completed',
+            message: 'Payment was already verified. Contract is ready.',
+            alreadyProcessed: true,
+            contractData: {
+              auctionId,
+              contractId: existingContract.id,
+              seller: {
+                userId: existingContract.propertyOwnerUserId,
+                fullName: existingContract.propertyOwner?.fullName || 'N/A',
+                email: existingContract.propertyOwner?.email || 'N/A',
+              },
+              buyer: {
+                userId: existingContract.buyerUserId,
+                fullName: existingContract.buyer.fullName,
+                email: existingContract.buyer.email,
+              },
+              auctionDetails: {
+                title: existingContract.auction.name,
+                startingPrice: parseFloat(
+                  existingContract.auction.startingPrice.toString()
+                ),
+                finalPrice: parseFloat(existingContract.price.toString()),
+              },
+              paymentConfirmed: true,
+              paymentDate: payment.paidAt || new Date(),
+            },
+          };
+        }
+      }
+
+      // Step 2: Verify payment with Stripe
+      const verification = await this.paymentService.verifyPayment(sessionId);
 
       if (verification.status !== 'paid') {
         this.logger.warn(
@@ -253,47 +316,136 @@ export class WinnerPaymentService {
         );
       }
 
-      // Step 2: Update payment record in database
-      await this.prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'completed',
-          paidAt: new Date(),
-        },
+      // Step 3: ATOMIC TRANSACTION - Update payment and contract together
+      // This ensures consistency: if either update fails, both are rolled back
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Update payment record
+        const updatedPayment = await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'completed',
+            paidAt: new Date(),
+          },
+        });
+
+        // Find or create contract
+        let contract = await tx.contract.findFirst({
+          where: { auctionId },
+          include: {
+            auction: true,
+            propertyOwner: true,
+            buyer: true,
+            winningBid: {
+              include: {
+                participant: {
+                  include: { user: true },
+                },
+              },
+            },
+          },
+        });
+
+        // Handle missing contract (edge case - should not happen in normal flow)
+        if (!contract) {
+          this.logger.warn(
+            `Contract not found for auction ${auctionId}. Creating one now.`
+          );
+
+          // Find the winning bid to create the contract
+          const winningBid = await tx.auctionBid.findFirst({
+            where: {
+              auctionId,
+              isWinningBid: true,
+            },
+            include: {
+              participant: {
+                include: { user: true },
+              },
+            },
+          });
+
+          if (!winningBid) {
+            throw new NotFoundException(
+              'Cannot create contract: No winning bid found for this auction'
+            );
+          }
+
+          const auction = await tx.auction.findUnique({
+            where: { id: auctionId },
+          });
+
+          if (!auction) {
+            throw new NotFoundException('Auction not found');
+          }
+
+          contract = await tx.contract.create({
+            data: {
+              auctionId: auctionId,
+              winningBidId: winningBid.id,
+              propertyOwnerUserId: auction.propertyOwner,
+              buyerUserId: winningBid.participant.userId,
+              createdBy: winningBid.participant.userId, // Created by system during payment
+              price: winningBid.amount,
+              status: ContractStatus.signed, // Already paid, so signed
+            },
+            include: {
+              auction: true,
+              propertyOwner: true,
+              buyer: true,
+              winningBid: {
+                include: {
+                  participant: {
+                    include: { user: true },
+                  },
+                },
+              },
+            },
+          });
+
+          this.logger.log(
+            `Contract ${contract.id} created during payment verification for auction ${auctionId}`
+          );
+        } else {
+          // Update existing contract status to 'signed'
+          contract = await tx.contract.update({
+            where: { id: contract.id },
+            data: {
+              status: ContractStatus.signed,
+            },
+            include: {
+              auction: true,
+              propertyOwner: true,
+              buyer: true,
+              winningBid: {
+                include: {
+                  participant: {
+                    include: { user: true },
+                  },
+                },
+              },
+            },
+          });
+        }
+
+        return { payment: updatedPayment, contract };
       });
 
-      // Step 3: Update contract status (draft → signed, ready for final signatures)
-      // Note: propertyOwner relation removed from contract include - need to get from auction
-      const contract = await this.prisma.contract.findFirst({
-        where: { auctionId },
-        include: {
-          auction: true,
-          buyer: true,
-        },
-      });
-
-      if (!contract) {
-        throw new NotFoundException('Contract not found for this auction');
-      }
-
-      await this.prisma.contract.update({
-        where: { id: contract.id },
-        data: {
-          status: ContractStatus.signed, // Ready for final signatures
-        },
-      });
+      const { contract } = result;
 
       this.logger.log(
         `Winner payment ${sessionId} (ID: ${payment.id}) verified. Contract ${contract.id} ready for signatures.`
       );
 
-      // Send notifications
-      await this.sendPaymentConfirmationEmails(contract, verification.amount);
-
-      // Note: Get property owner info from auction's propertyOwner JSON field
-      const propertyOwnerSnapshot = getPropertyOwnerSnapshot(
-        contract.auction.propertyOwner
-      );
+      // Send notifications (outside transaction - best effort)
+      try {
+        await this.sendPaymentConfirmationEmails(contract, verification.amount);
+      } catch (emailError) {
+        this.logger.error(
+          'Failed to send payment confirmation emails',
+          emailError
+        );
+        // Don't fail the whole operation due to email failure
+      }
 
       // Return contract data for contract generation module
       return {
@@ -316,17 +468,11 @@ export class WinnerPaymentService {
         contractData: {
           auctionId,
           contractId: contract.id,
-          seller: propertyOwnerSnapshot
-            ? {
-                userId: propertyOwnerSnapshot.id,
-                fullName: propertyOwnerSnapshot.fullName,
-                email: propertyOwnerSnapshot.email,
-              }
-            : {
-                userId: contract.propertyOwnerUserId || '',
-                fullName: 'Unknown',
-                email: 'Unknown',
-              },
+          seller: {
+            userId: contract.propertyOwnerUserId,
+            fullName: contract.propertyOwner?.fullName || 'N/A',
+            email: contract.propertyOwner?.email || 'N/A',
+          },
           buyer: {
             userId: contract.buyerUserId,
             fullName: contract.buyer.fullName,

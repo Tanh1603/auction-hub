@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { RegisterToBidService } from './register-to-bid.service';
 import { PrismaModule } from '../../../prisma/prisma.module';
 import { PaymentModule } from '../../../payment/payment.module';
@@ -17,7 +17,12 @@ import {
 import { RegisterToBidController } from './register-to-bid.controller';
 
 @Module({
-  imports: [PrismaModule, PaymentModule, EmailModule, CloudinaryModule],
+  imports: [
+    PrismaModule,
+    forwardRef(() => PaymentModule),
+    EmailModule,
+    CloudinaryModule,
+  ],
   controllers: [
     RegisterToBidController,
     UserRegistrationController,
@@ -30,6 +35,6 @@ import { RegisterToBidController } from './register-to-bid.controller';
     AdminApprovalService,
     RegistrationPaymentService,
   ],
-  exports: [RegisterToBidService],
+  exports: [RegisterToBidService, RegistrationPaymentService],
 })
 export class RegisterToBidModule {}

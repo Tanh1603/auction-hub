@@ -16,6 +16,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { ArticleModule } from '../article/article.module';
 import { LocationModule } from '../location/location.module';
 
+import { ContractModule } from '../contracts/contract.module';
 @Module({
   imports: [
     ConfigModule.forRoot({

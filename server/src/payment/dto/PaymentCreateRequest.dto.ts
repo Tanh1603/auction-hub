@@ -5,7 +5,7 @@ export enum PaymentType {
     participation_fee = 'participation_fee',
     winning_payment = 'winning_payment',
     refund = 'refund',
-  }
+  }   
 
 export enum PaymentMethod {
   bank_transfer = 'bank_transfer',

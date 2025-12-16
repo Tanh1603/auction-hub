@@ -15,7 +15,8 @@ export class PaymentService {
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
     this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-10-29.clover',
+      // @ts-ignore
+      apiVersion: '2024-12-18.acacia',
     });
   }
 
@@ -87,7 +88,7 @@ export class PaymentService {
           registrationId: paymentRequest.registrationId,
           paymentType: paymentRequest.paymentType,
           amount: paymentRequest.amount,
-          currency: 'VND', 
+          currency: 'VND',
           status: paymentStatus,
           paymentMethod: paymentRequest.paymentMethod,
           transactionId: session.id,
@@ -124,7 +125,7 @@ export class PaymentService {
   async verifyPayment(sessionId: string): Promise<PaymentVerificationDto> {
     try {
       const session = await this.stripe.checkout.sessions.retrieve(sessionId);
-      
+
       console.log('[PAYMENT VERIFICATION]', {
         sessionId: session.id,
         payment_status: session.payment_status,
@@ -147,5 +148,21 @@ export class PaymentService {
         `Failed to verify payment: ${error.message}`
       );
     }
+  }
+
+  /**
+   * Safe method to construct Stripe event from raw body and signature
+   * Used for Webhook verification
+   */
+  constructEvent(payload: Buffer, signature: string): Stripe.Event {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not defined');
+    }
+    return this.stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      webhookSecret
+    );
   }
 }

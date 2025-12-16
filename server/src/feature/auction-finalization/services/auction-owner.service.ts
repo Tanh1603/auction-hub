@@ -10,6 +10,7 @@ import { EmailService } from '../../../common/services/email.service';
 import { BiddingGateway } from '../../bidding/bidding.gateway';
 import { PolicyCalculationService } from '../../auction-policy/policy-calculation.service';
 import { AuctionEvaluationService } from './auction-evaluation.service';
+import { PaymentService } from '../../../payment/payment.service';
 import { FinalizeAuctionDto } from '../dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from '../dto/override-auction-status.dto';
 import { AuctionStatus, ContractStatus } from '../../../../generated';
@@ -28,8 +29,70 @@ export class AuctionOwnerService {
     private readonly emailService: EmailService,
     private readonly biddingGateway: BiddingGateway,
     private readonly policyCalc: PolicyCalculationService,
-    private readonly evaluationService: AuctionEvaluationService
+    private readonly evaluationService: AuctionEvaluationService,
+    private readonly paymentService: PaymentService
   ) {}
+
+  /**
+   * Verify winner payment before contract creation
+   * Throws error if payment is not found or not verified
+   */
+  private async verifyWinnerPaymentBeforeContract(
+    auctionId: string,
+    winnerUserId: string
+  ): Promise<void> {
+    // Find winning payment record
+    const winningPayment = await this.prisma.payment.findFirst({
+      where: {
+        userId: winnerUserId,
+        auctionId: auctionId,
+        paymentType: 'winning_payment',
+      },
+      orderBy: { createdAt: 'desc' }, // Get most recent
+    });
+
+    if (!winningPayment) {
+      throw new BadRequestException(
+        'Winner has not initiated payment yet. Please complete payment before finalizing the auction.'
+      );
+    }
+
+    // Get Stripe session ID from payment
+    const stripeSessionId = winningPayment.transactionId;
+    if (!stripeSessionId) {
+      this.logger.error(
+        `Payment record ${winningPayment.id} exists but has no transaction ID`
+      );
+      throw new BadRequestException(
+        'Payment record is missing transaction information. Please initiate a new payment.'
+      );
+    }
+
+    // Verify payment with Stripe
+    let verification;
+    try {
+      verification = await this.paymentService.verifyPayment(stripeSessionId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to verify payment ${stripeSessionId} for auction ${auctionId}:`,
+        error
+      );
+      throw new BadRequestException(
+        `Payment verification failed: ${error.message}`
+      );
+    }
+
+    // Check if payment is completed
+    if (verification.status !== 'paid') {
+      throw new BadRequestException(
+        `Payment not completed. Status: ${verification.status}. Please complete payment before finalizing the auction.`
+      );
+    }
+
+    this.logger.log(
+      `Winner payment verified for auction ${auctionId}. Payment status: ${verification.status}`
+    );
+  }
 
   /**
    * Finalize auction with automatic evaluation
@@ -352,6 +415,22 @@ export class AuctionOwnerService {
     let winningBid = null;
     let contract = null;
 
+    // Determine winning bid before transaction
+    if (dto.newStatus === AuctionStatus.success) {
+      if (dto.winningBidId) {
+        winningBid = auction.bids.find((b) => b.id === dto.winningBidId);
+        if (!winningBid) {
+          throw new NotFoundException('Specified winning bid not found');
+        }
+      } else if (auction.bids.length > 0) {
+        winningBid = auction.bids[0];
+      }
+      // NOTE: Payment verification is NOT required before override.
+      // Admin can override to 'success' to create contract in 'draft' status.
+      // Winner then receives notification to pay, and payment verification
+      // happens afterward via the normal winner payment flow.
+    }
+
     // Use transaction for status override
     await this.prisma.$transaction(async (tx) => {
       // Update auction status
@@ -365,15 +444,6 @@ export class AuctionOwnerService {
 
       // Handle winning bid if status is success
       if (dto.newStatus === AuctionStatus.success) {
-        if (dto.winningBidId) {
-          winningBid = auction.bids.find((b) => b.id === dto.winningBidId);
-          if (!winningBid) {
-            throw new NotFoundException('Specified winning bid not found');
-          }
-        } else if (auction.bids.length > 0) {
-          winningBid = auction.bids[0];
-        }
-
         if (winningBid) {
           // Mark as winning bid
           await tx.auctionBid.update({
