@@ -13,7 +13,10 @@ import {
   PaymentMethod,
 } from '../../../payment/dto/PaymentCreateRequest.dto';
 import { AuctionStatus, ContractStatus } from '../../../../generated';
-import { getPropertyOwnerSnapshot } from '../../../common/types/property-owner-snapshot.interface';
+import {
+  getPropertyOwnerSnapshot,
+  getPropertyOwnerId,
+} from '../../../common/types/property-owner-snapshot.interface';
 
 /**
  * Service responsible for winner payment operations
@@ -382,7 +385,7 @@ export class WinnerPaymentService {
             data: {
               auctionId: auctionId,
               winningBidId: winningBid.id,
-              propertyOwnerUserId: auction.propertyOwner,
+              propertyOwnerUserId: getPropertyOwnerId(auction.propertyOwner),
               buyerUserId: winningBid.participant.userId,
               createdBy: winningBid.participant.userId, // Created by system during payment
               price: winningBid.amount,

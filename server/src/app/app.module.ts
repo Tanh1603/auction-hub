@@ -31,7 +31,10 @@ import { ContractModule } from '../contracts/contract.module';
     BiddingModule,
     AuctionFinalizationModule,
     AuctionPolicyModule,
-    CloudinaryModule, ArticleModule, LocationModule,
+    CloudinaryModule,
+    ArticleModule,
+    LocationModule,
+    ContractModule,
   ],
   controllers: [AppController],
   providers: [

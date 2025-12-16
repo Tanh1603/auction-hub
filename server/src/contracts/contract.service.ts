@@ -17,7 +17,7 @@ import {
 } from './dto/contract-detail.dto';
 import { Prisma } from '../../generated';
 import { getPaginationOptions } from '../common/utils/pagination.util';
-import PDFDocument from 'pdfkit';
+import { getPropertyOwnerId } from '../common/types/property-owner-snapshot.interface';
 
 @Injectable()
 export class ContractService {
@@ -171,7 +171,7 @@ export class ContractService {
       data: {
         auctionId: dto.auctionId,
         winningBidId: dto.winningBidId,
-        propertyOwnerUserId: auction.propertyOwner,
+        propertyOwnerUserId: getPropertyOwnerId(auction.propertyOwner),
         buyerUserId: dto.buyerUserId,
         createdBy: userId,
         price: new Prisma.Decimal(dto.price),
@@ -322,7 +322,7 @@ export class ContractService {
     };
   }
 
-  async exportToPdf(id: string, userId: string): Promise<any> {
+  async exportToPdf(id: string, userId: string): Promise<Buffer> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -345,11 +345,11 @@ export class ContractService {
       price: Number(contract.price),
     };
 
-    // @ts-ignore - mismatch in expected types for pdf generator vs prisma result
+    // @ts-expect-error - mismatch in expected types for pdf generator vs prisma result
     return this.pdfGenerator.generateContractPdf(contractForPdf);
   }
 
-  async exportToPdfEnglish(id: string, userId: string): Promise<any> {
+  async exportToPdfEnglish(id: string, userId: string): Promise<Buffer> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -372,11 +372,18 @@ export class ContractService {
       price: Number(contract.price),
     };
 
-    // @ts-ignore
+    // @ts-expect-error - mismatch in expected types for pdf generator vs prisma result
     return this.pdfGenerator.generateContractPdfEnglish(contractForPdf);
   }
 
-  private checkAccess(contract: any, userId: string): void {
+  private checkAccess(
+    contract: {
+      propertyOwnerUserId: string | null;
+      buyerUserId: string;
+      createdBy: string;
+    },
+    userId: string
+  ): void {
     const hasAccess =
       contract.propertyOwnerUserId === userId ||
       contract.buyerUserId === userId ||
