@@ -525,8 +525,8 @@ async function seedAuctions(
     if (allRelations.length) {
       // De-duplicate relations
       const uniqueRelations = Array.from(
-        new Set(allRelations.map(JSON.stringify))
-      ).map(JSON.parse);
+        new Set(allRelations.map((r) => JSON.stringify(r)))
+      ).map((s) => JSON.parse(s));
 
       await prisma.auctionRelation.createMany({
         data: uniqueRelations,
