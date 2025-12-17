@@ -43,7 +43,7 @@ RUN npm install -g npm@latest
 # Install only production dependencies
 COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps && \
-    npm install prisma@6.17.1 --save-dev --legacy-peer-deps && \
+    npm install prisma@6.17.1 ts-node typescript tsx --save-dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder

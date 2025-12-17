@@ -80,11 +80,7 @@ tmp/
 
 # Prisma
 server/prisma/migrations/*.sql
-server/prisma/*.json
 server/prisma/run-seeds-docker.sh
-server/prisma/DOCKER_SEED_GUIDE.md
-server/prisma/seed.ts
-server/prisma/extended-scenarios-seed.js
 
 # Generated (will be regenerated in build)
 server/generated/

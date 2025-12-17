@@ -144,8 +144,6 @@ describe('Auction Flow Integration Tests', () => {
       prismaService.auctionBid.deleteMany(),
       prismaService.auctionParticipant.deleteMany(),
       prismaService.auctionRelation.deleteMany(),
-      prismaService.auctionAttachment.deleteMany(),
-      prismaService.auctionImage.deleteMany(),
       prismaService.auction.deleteMany(),
       prismaService.user.deleteMany(),
     ]);
@@ -241,26 +239,29 @@ describe('Auction Flow Integration Tests', () => {
         assetAddress: 'Test Address, Integration Test City',
         validCheckInBeforeStartMinutes: 30,
         validCheckInAfterStartMinutes: 15,
-        hasMaxBidSteps: false,
-        maxBidSteps: 0,
+
         isActive: true,
       },
     });
 
-    // Add some images and attachments for completeness
-    await prismaService.auctionImage.create({
+    // Update auction with images and attachments (now stored as JsonB)
+    await prismaService.auction.update({
+      where: { id: testAuction.id },
       data: {
-        auctionId: testAuction.id,
-        url: 'https://test.com/image1.jpg',
-        sortOrder: 0,
-      },
-    });
-
-    await prismaService.auctionAttachment.create({
-      data: {
-        auctionId: testAuction.id,
-        url: 'https://test.com/document.pdf',
-        type: 'document',
+        images: [
+          {
+            publicId: null,
+            url: 'https://test.com/image1.jpg',
+            sortOrder: 0,
+          },
+        ],
+        attachments: [
+          {
+            publicId: null,
+            url: 'https://test.com/document.pdf',
+            type: 'document',
+          },
+        ],
       },
     });
   });
@@ -902,8 +903,6 @@ describe('Auction Flow Integration Tests', () => {
           assetAddress: 'No bid test address',
           validCheckInBeforeStartMinutes: 30,
           validCheckInAfterStartMinutes: 15,
-          hasMaxBidSteps: false,
-          maxBidSteps: 0,
           isActive: true,
         },
       });

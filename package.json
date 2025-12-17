@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "test:mocha": "mocha --require ts-node/register 'test/**/*.ts' --exit",
     "docker:start": "docker-compose up -d --build",
     "docker:stop": "docker-compose down",
     "docker:logs": "docker-compose logs -f"
@@ -122,6 +123,7 @@
     "jest": "^30.0.2",
     "jest-environment-node": "^30.0.2",
     "jest-util": "^30.0.2",
+    "mocha": "^11.7.5",
     "nx": "21.6.4",
     "postcss": "8.4.38",
     "prettier": "^2.6.2",
