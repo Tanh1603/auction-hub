@@ -1,4 +1,5 @@
 {
   "nxConsole.generateAiAgentRules": true,
-  "nxConsole.nxWorkspacePath": ""
+  "nxConsole.nxWorkspacePath": "",
+  "prisma.pinToPrisma6": true
 }

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '../../generated';
+import { AuctionStatus, Prisma } from '../../generated';
 import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { getPaginationOptions } from '../common/utils/pagination.util';
@@ -13,12 +13,17 @@ import { AuctionDetailDto } from './dto/auction-detail.dto';
 import { AuctionQueryDto } from './dto/auction-query.dto';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { UpdateAuctionDto } from './dto/update-auction.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { AUCTION_QUEUE, AuctionJob } from './auction.queue';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class AuctionService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cloudinary: CloudinaryService
+    private readonly cloudinary: CloudinaryService,
+    @InjectQueue(AUCTION_QUEUE)
+    private readonly auctionQueue: Queue
   ) {}
 
   private toAuctionDetail(entity): AuctionDetailDto {
@@ -101,20 +106,34 @@ export class AuctionService {
   // crud
   async findAll(query: AuctionQueryDto) {
     const pagination = getPaginationOptions(query);
-    const now = new Date();
-    let where: Prisma.AuctionWhereInput = {
+    // const now = new Date();
+    const where: Prisma.AuctionWhereInput = {
       name: { contains: query.name, mode: 'insensitive' },
       assetType: query.auctionType || undefined,
       assetWardId: query.assetWardId || undefined,
       assetProvinceId: query.assetProvinceId || undefined,
     };
 
-    if (query.status === 'completed') {
-      where = { auctionStartAt: { lt: now } };
+    // if (query.status === 'completed') {
+    //   where = { auctionStartAt: { lt: now } };
+    // } else if (query.status === 'now') {
+    //   where = { auctionStartAt: { lte: now }, auctionEndAt: { gt: now } };
+    // } else if (query.status === 'upcoming') {
+    //   where = { auctionStartAt: { gt: now } };
+    // }
+
+    if (query.status === 'upcoming') {
+      where.status = AuctionStatus.scheduled;
     } else if (query.status === 'now') {
-      where = { auctionStartAt: { lte: now }, auctionEndAt: { gt: now } };
-    } else if (query.status === 'upcoming') {
-      where = { auctionStartAt: { gt: now } };
+      where.status = AuctionStatus.live;
+    } else if (query.status === 'completed') {
+      where.status = {
+        in: [
+          AuctionStatus.awaiting_result,
+          AuctionStatus.success,
+          AuctionStatus.failed,
+        ],
+      };
     }
 
     const [items, total] = await Promise.all([
@@ -190,11 +209,41 @@ export class AuctionService {
 
   async create(dto: CreateAuctionDto) {
     try {
-      await this.prisma.$transaction(async (db) => {
+      const now = new Date();
+
+      const auction = await this.prisma.$transaction(async (db) => {
         return db.auction.create({
           data: this.toCreateAuctionDto(dto),
         });
       });
+
+      // Schedule OPEN
+      await this.auctionQueue.add(
+        AuctionJob.OPEN_AUCTION,
+        { auctionId: auction.id },
+        {
+          delay: auction.auctionStartAt.getTime() - now.getTime(),
+          jobId: `open-${auction.id}`,
+          attempts: 3,
+          backoff: 5000,
+          removeOnComplete: true,
+          removeOnFail: true,
+        }
+      );
+
+      // Schedule CLOSE
+      await this.auctionQueue.add(
+        AuctionJob.CLOSE_AUCTION,
+        { auctionId: auction.id },
+        {
+          delay: auction.auctionEndAt.getTime() - now.getTime(),
+          jobId: `close-${auction.id}`,
+          attempts: 3,
+          backoff: 5000,
+          removeOnComplete: true,
+          removeOnFail: true,
+        }
+      );
 
       return {
         message: 'Create auction successfully!',
