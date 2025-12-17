@@ -76,6 +76,27 @@
         "cwd": "{workspaceRoot}"
       }
     },
+    "prisma:generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx prisma generate",
+        "cwd": "server"
+      }
+    },
+    "prisma:deploy": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx prisma migrate deploy",
+        "cwd": "server"
+      }
+    },
+    "prisma:seed": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsx seed.ts",
+        "cwd": "server/prisma"
+      }
+    },
     "test": {
       "options": {
         "passWithNoTests": true
