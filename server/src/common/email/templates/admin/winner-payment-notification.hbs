@@ -1,0 +1,40 @@
+{{> header icon="💰" title="Winner Payment Confirmed" subtitle="Contract ready for final signatures"}}
+
+<div class="content">
+  <h2>Dear {{adminName}},</h2>
+
+  <p>The winner has successfully completed their payment for the auction. The contract is now ready for final signatures.</p>
+
+  {{#> details-box title="👤 Buyer (Winner)"}}
+    <p><strong>Name:</strong> {{buyerName}}</p>
+    <p><strong>Email:</strong> {{buyerEmail}}</p>
+  {{/details-box}}
+
+  {{#> details-box title="👤 Seller"}}
+    <p><strong>Name:</strong> {{sellerName}}</p>
+  {{/details-box}}
+
+  {{#> details-box title="💰 Payment Information"}}
+    <p><strong>Total Paid:</strong> <span class="amount-highlight">{{formatCurrency totalPaid}} VND</span></p>
+    <p><strong>Payment Date:</strong> {{formatDate paidAt}}</p>
+    {{> badge type="success" icon="✅" text="PAYMENT VERIFIED"}}
+  {{/details-box}}
+
+  {{#> details-box title="📋 Auction Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    <p><strong>Contract ID:</strong> {{contractId}}</p>
+  {{/details-box}}
+
+  <h3>📞 Next Steps</h3>
+  <ul>
+    <li>Winner reviews and signs the contract</li>
+    <li>Seller reviews and signs the contract</li>
+    <li>Auctioneer reviews and finalizes</li>
+    <li>Final contract document generated</li>
+  </ul>
+
+  {{> button url="#" text="View Contract"}}
+
+  {{> footer message="This is an automated notification from Auction Hub."}}
+</div>

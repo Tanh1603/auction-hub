@@ -1,4 +1,12 @@
 import { Decimal, JsonValue } from '../../../generated/runtime/library';
+import { PropertyOwnerDto } from './create-auction.dto';
+
+export class LocationDto {
+  id: number;
+  name: string;
+  value: number;
+  sortOrder: number;
+}
 
 export class AuctionDetailDto {
   id: string;
@@ -21,12 +29,7 @@ export class AuctionDetailDto {
   depositAmountRequired: Decimal;
   saleFee: Decimal;
 
-  owner: {
-    id: string;
-    fullName: string;
-    email: string;
-    avatarUrl: string;
-  };
+  propertyOwner: PropertyOwnerDto;
 
   images: JsonValue;
   attachments: JsonValue;
@@ -38,4 +41,8 @@ export class AuctionDetailDto {
     depositAmountRequired: Decimal;
     saleStartAt: Date;
   }[];
+
+  assetProvince: LocationDto;
+
+  assetWard: LocationDto;
 }

@@ -1,8 +1,12 @@
-# AuctionHub
+# Auction Hub
+
+> **📚 Documentation:** [System Architecture](./SYSTEM_ARCHITECTURE.md) | [API Testing](./POSTMAN_API_TESTING_GUIDE.md) | [Documentation Index](./DOCUMENTATION_INDEX.md)
+
+---
 
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+A comprehensive online auction platform implementing Vietnamese legal regulations for asset auctions.
 
 [Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 

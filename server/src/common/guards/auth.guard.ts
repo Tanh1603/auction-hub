@@ -3,8 +3,13 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
+  Logger,
+  Inject,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { PrismaService } from '../../prisma/prisma.service';
 import * as jwt from 'jsonwebtoken';
 
 export interface JwtPayload {
@@ -18,19 +23,100 @@ export interface JwtPayload {
   exp?: number;
 }
 
+export interface AuthenticatedUser extends JwtPayload {
+  role: string; // This will be populated from local DB
+}
+
+export const IS_PUBLIC_KEY = 'isPublic';
+
 @Injectable()
 export class AuthGuard implements CanActivate {
+  private readonly logger = new Logger(AuthGuard.name);
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly reflector: Reflector,
+    private readonly prisma: PrismaService
+  ) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Check if route is marked as public
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
+    const authMode = this.configService.get<string>('AUTH_MODE', 'jwt');
+
+    this.logger.debug(`Auth mode: ${authMode}`);
+
+    // MODE 1: DISABLED - No authentication required
+    if (authMode === 'disabled') {
+      this.logger.warn(
+        '⚠️  AUTH DISABLED - All requests allowed without authentication'
+      );
+      // Set a mock user for disabled mode
+      const testUserId = this.configService.get<string>('TEST_USER_ID');
+      request['user'] = {
+        sub: testUserId || 'test-user-id',
+        email: 'test@example.com',
+        full_name: 'Test User',
+        avatar_url: '',
+        role: this.configService.get<string>('TEST_USER_ROLE', 'user'),
+      };
+      return true;
+    }
+
+    // MODE 2: TEST - Allow x-test-user-id header
+    if (authMode === 'test') {
+      const testUserIdFromHeader = request.headers['x-test-user-id'] as string;
+      const testUserIdFromEnv = this.configService.get<string>('TEST_USER_ID');
+      const testUserId = testUserIdFromHeader || testUserIdFromEnv;
+
+      if (testUserId) {
+        this.logger.warn(`⚠️  TEST MODE - Using test user ID: ${testUserId}`);
+
+        // Try to get real user data from database in test mode
+        const localUser = await this.prisma.user.findUnique({
+          where: { id: testUserId },
+          select: { role: true, email: true, fullName: true },
+        });
+
+        request['user'] = {
+          sub: testUserId,
+          email: localUser?.email || 'test@example.com',
+          full_name: localUser?.fullName || 'Test User',
+          avatar_url: '',
+          role:
+            localUser?.role ||
+            this.configService.get<string>('TEST_USER_ROLE', 'bidder'),
+        };
+        return true;
+      }
+
+      // No test user ID provided, fall through to JWT verification
+      this.logger.warn(
+        '⚠️  TEST MODE - No x-test-user-id header or TEST_USER_ID env var, attempting JWT verification'
+      );
+    }
+
+    // MODE 3: JWT - Full JWT authentication (default)
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
-      throw new UnauthorizedException('Authorization header is missing');
+      throw new UnauthorizedException(
+        'Authorization header is missing. Use Bearer token or enable test mode with x-test-user-id header.'
+      );
     }
 
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      throw new UnauthorizedException('Invalid authorization header');
+      throw new UnauthorizedException('Invalid authorization header format');
     }
     const token = parts[1];
 
@@ -39,21 +125,50 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const jwtSecret = process.env.JWT_SECRET;
+      // Use Supabase JWT secret to verify Supabase-issued tokens
+      const jwtSecret =
+        this.configService.get<string>('SUPABASE_JWT_SECRET') ||
+        this.configService.get<string>('JWT_SECRET');
+
       if (!jwtSecret) {
-        throw new UnauthorizedException('JWT_SECRET is not configured');
+        this.logger.error('JWT secret is not configured');
+        throw new UnauthorizedException('JWT secret is not configured');
       }
 
       const payload = jwt.verify(token, jwtSecret, {
         algorithms: ['HS256'],
       }) as JwtPayload;
 
-      request['user'] = payload;
+      // 🔥 KEY FIX: Query local database for user role
+      const localUser = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { role: true, email: true, fullName: true },
+      });
+
+      if (!localUser) {
+        throw new UnauthorizedException(
+          'User not found in system. Please complete registration.'
+        );
+      }
+
+      // Combine JWT payload with local database role
+      const authenticatedUser: AuthenticatedUser = {
+        ...payload,
+        role: localUser.role, // ✅ Role from local database
+        email: localUser.email,
+        full_name: localUser.fullName,
+      };
+
+      request['user'] = authenticatedUser;
+      this.logger.debug(
+        `JWT verified for user: ${payload.sub}, role: ${localUser.role}`
+      );
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new UnauthorizedException('Token has expired');
       } else if (error instanceof jwt.JsonWebTokenError) {
-        throw new UnauthorizedException('Invalid token');
+        this.logger.error(`JWT verification failed: ${error.message}`);
+        throw new UnauthorizedException(`Invalid token: ${error.message}`);
       }
       throw new UnauthorizedException('Authentication failed');
     }

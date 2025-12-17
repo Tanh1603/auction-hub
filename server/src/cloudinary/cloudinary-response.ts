@@ -1,7 +1,20 @@
 // cloudinary-response.ts
 
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty } from "class-validator";
+
 export class CloudinaryResponse {
-  url: string;
+  @ApiProperty({
+    type: String,
+    required: true,
+  })
+  @IsNotEmpty()
   publicId: string;
-  sortOrder: number | null;
+
+  @ApiProperty({
+    type: String,
+    required: true,
+  })
+  @IsNotEmpty()
+  url: string;
 }

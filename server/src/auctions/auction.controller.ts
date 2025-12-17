@@ -1,36 +1,33 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
   Put,
   Query,
-  UploadedFiles,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBadRequestResponse,
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-} from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBody, ApiOkResponse } from '@nestjs/swagger';
 import { ApiResponse, ApiResponseError } from '../common/dto/reponse.dto';
+import { Public } from '../common/decorators/public.decorator';
 import { AuctionService } from './auction.service';
 import { AuctionDetailDto } from './dto/auction-detail.dto';
 import { AuctionQueryDto } from './dto/auction-query.dto';
 import { AucitonSummaryDto } from './dto/auction-summary.dto';
 import { CreateAuctionDto } from './dto/create-auction.dto';
-import { FileUploadDto } from './dto/file-upload.dto';
-import { UpdateAuctionDto } from './dto/update-auction.dto';
+import {
+  UpdateAuctionDto,
+  UpdateAuctionRelationsDto,
+} from './dto/update-auction.dto';
 
 @Controller('auctions')
 export class AuctionController {
   constructor(private readonly auctionService: AuctionService) {}
 
   // Get all
+  @Public()
   @ApiOkResponse({
     type: ApiResponse<AucitonSummaryDto[]>,
   })
@@ -44,6 +41,7 @@ export class AuctionController {
   }
 
   // Get detail
+  @Public()
   @ApiOkResponse({
     description: 'List of auctions',
     type: ApiResponse<AuctionDetailDto>,
@@ -59,7 +57,6 @@ export class AuctionController {
 
   // Creat auction
   @ApiOkResponse({
-    description: 'List of auctions',
     type: ApiResponse<AuctionDetailDto>,
   })
   @ApiBadRequestResponse({
@@ -75,7 +72,6 @@ export class AuctionController {
   }
 
   @ApiOkResponse({
-    description: 'List of auctions',
     type: ApiResponse<AuctionDetailDto>,
   })
   @ApiBadRequestResponse({
@@ -90,7 +86,12 @@ export class AuctionController {
     return this.auctionService.update(id, request);
   }
 
-  // Update resources
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    return this.auctionService.remove(id);
+  }
+
+  @Patch(':id/relations')
   @ApiOkResponse({
     description: 'List of auctions',
     type: ApiResponse<AuctionDetailDto>,
@@ -99,37 +100,13 @@ export class AuctionController {
     description: 'Bad request',
     type: ApiResponseError,
   })
-  @Patch(':id/resources')
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'images', maxCount: 10 },
-        { name: 'attachments', maxCount: 10 },
-      ],
-      {
-        limits: {
-          fileSize: 10 * 1024 * 1024,
-        },
-      }
-    )
-  )
-  @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'List of cats',
-    type: FileUploadDto,
+    type: UpdateAuctionRelationsDto,
   })
-  async updateResource(
-    @UploadedFiles()
-    files: {
-      images?: Express.Multer.File[];
-      attachments?: Express.Multer.File[];
-    },
-    @Param('id') id: string
+  async updateRelation(
+    @Param('id') id: string,
+    @Body() request: UpdateAuctionRelationsDto
   ) {
-    return this.auctionService.updateResource(
-      id,
-      files.images,
-      files.attachments
-    );
+    return this.auctionService.updateRelations(id, request.relatedIds);
   }
 }

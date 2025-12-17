@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '../../generated';
+import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { getPaginationOptions } from '../common/utils/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuctionDetailDto } from './dto/auction-detail.dto';
 import { AuctionQueryDto } from './dto/auction-query.dto';
-import {
-  AttachmentDto,
-  CreateAuctionDto,
-  ImageDto,
-} from './dto/create-auction.dto';
+import { CreateAuctionDto } from './dto/create-auction.dto';
 import { UpdateAuctionDto } from './dto/update-auction.dto';
 
 @Injectable()
@@ -39,17 +40,14 @@ export class AuctionService {
       depositAmountRequired: entity.depositAmountRequired,
       saleFee: entity.saleFee,
       viewTime: entity.viewtime,
-      owner: {
-        id: entity.owner.id,
-        fullName: entity.owner.fullName,
-        email: entity.owner.email,
-        avatarUrl: entity.owner.avatarUrl,
-      },
+      propertyOwner: entity.propertyOwner,
       images: entity.images,
       attachments: entity.attachments,
-      relatedAuctions: entity.relatedFrom.map((r) => ({
+      relatedAuctions: (entity.relatedFrom ?? []).map((r) => ({
         ...r.relatedAuction,
       })),
+      assetProvince: { ...entity.assetProvince },
+      assetWard: { ...entity.assetWard },
     };
   }
 
@@ -72,24 +70,31 @@ export class AuctionService {
       startingPrice: dto.startingPrice,
       bidIncrement: dto.bidIncrement,
       assetType: dto.assetType,
-      owner: {
+      images: dto.images,
+      attachments: dto.attachments,
+      assetProvince: {
         connect: {
-          id: dto.propertyOwnerId,
+          id: dto.assetProvinceId,
         },
       },
+      assetWard: {
+        connect: {
+          id: dto.assetWardId,
+        },
+      },
+      propertyOwner: dto.propertyOwner,
     };
   }
 
   private toUpdateAuctionDto(dto: UpdateAuctionDto): Prisma.AuctionUpdateInput {
+    const { assetWardId, assetProvinceId, ...rest } = dto;
+
     return {
-      ...dto,
-      owner: dto.propertyOwnerId
-        ? {
-            connect: {
-              id: dto.propertyOwnerId,
-            },
-          }
+      ...rest,
+      assetProvince: assetProvinceId
+        ? { connect: { id: assetProvinceId } }
         : undefined,
+      assetWard: assetWardId ? { connect: { id: assetWardId } } : undefined,
     };
   }
 
@@ -97,7 +102,12 @@ export class AuctionService {
   async findAll(query: AuctionQueryDto) {
     const pagination = getPaginationOptions(query);
     const now = new Date();
-    let where: Prisma.AuctionWhereInput = {};
+    let where: Prisma.AuctionWhereInput = {
+      name: { contains: query.name, mode: 'insensitive' },
+      assetType: query.auctionType || undefined,
+      assetWardId: query.assetWardId || undefined,
+      assetProvinceId: query.assetProvinceId || undefined,
+    };
 
     if (query.status === 'completed') {
       where = { auctionStartAt: { lt: now } };
@@ -107,26 +117,24 @@ export class AuctionService {
       where = { auctionStartAt: { gt: now } };
     }
 
-    if (typeof query.active === 'boolean') {
-      where.isActive = query.active;
-    }
-
     const [items, total] = await Promise.all([
       this.prisma.auction.findMany({
         where,
         ...pagination,
+        select: {
+          id: true,
+          name: true,
+          images: true,
+          startingPrice: true,
+          depositAmountRequired: true,
+          auctionStartAt: true,
+        },
       }),
       this.prisma.auction.count({ where }),
     ]);
 
     return {
-      data: items.map((auction) => ({
-        id: auction.id,
-        name: auction.name,
-        startingPrice: auction.startingPrice,
-        depositAmountRequired: auction.depositAmountRequired,
-        auctionStartAt: auction.auctionStartAt,
-      })),
+      data: [...items],
       meta: {
         total,
         page: query.page ?? 1,
@@ -140,15 +148,14 @@ export class AuctionService {
     const auction = await this.prisma.auction.findUnique({
       where: { id },
       include: {
-        owner: true,
         participants: true,
+        bids: true,
         relatedFrom: {
           include: {
             relatedAuction: {
               select: {
                 id: true,
                 name: true,
-                code: true,
                 images: true,
                 startingPrice: true,
                 depositAmountRequired: true,
@@ -157,7 +164,22 @@ export class AuctionService {
             },
           },
         },
-        bids: true,
+        assetProvince: {
+          select: {
+            id: true,
+            name: true,
+            value: true,
+            sortOrder: true,
+          },
+        },
+        assetWard: {
+          select: {
+            id: true,
+            name: true,
+            value: true,
+            sortOrder: true,
+          },
+        },
       },
     });
 
@@ -168,101 +190,163 @@ export class AuctionService {
 
   async create(dto: CreateAuctionDto) {
     try {
-      const auction = await this.prisma.$transaction(async (db) => {
+      await this.prisma.$transaction(async (db) => {
         return db.auction.create({
           data: this.toCreateAuctionDto(dto),
-          include: {
-            owner: true,
-            relatedFrom: true,
-          },
         });
       });
 
       return {
-        data: this.toAuctionDetail(auction),
         message: 'Create auction successfully!',
       };
     } catch (error) {
-      console.log(error);
-      throw error;
+      await this.cloudinary.deleteMultipleFiles([
+        ...((dto.images as any as CloudinaryResponse[])?.map(
+          (image) => image.publicId
+        ) ?? []),
+        ...((dto.attachments as any as CloudinaryResponse[])?.map(
+          (attachment) => attachment.publicId
+        ) ?? []),
+      ]);
+      throw new BadRequestException(error);
     }
   }
 
   async update(id: string, dto: UpdateAuctionDto) {
-    const existingAuction = this.prisma.auction.findUnique({
+    const existingAuction = await this.prisma.auction.findUnique({
       where: { id },
     });
     if (!existingAuction) {
       throw new NotFoundException(`Auction with ${id} not found!`);
     }
 
-    const updatedAuction = await this.prisma.$transaction(async (db) => {
-      return db.auction.update({
-        where: { id },
-        data: {
-          ...this.toUpdateAuctionDto(dto),
-        },
-        include: {
-          owner: true,
-          relatedFrom: true,
-        },
-      });
-    });
+    const imagesToDelete =
+      dto.images !== undefined
+        ? (existingAuction.images as any as CloudinaryResponse[]).map(
+            (i) => i.publicId
+          )
+        : [];
 
-    return {
-      data: this.toAuctionDetail(updatedAuction),
-      message: 'Update auction successfully!',
-    };
-  }
-
-  async updateResource(
-    id: string,
-    imageFiles: Express.Multer.File[],
-    attachmentFiles: Express.Multer.File[]
-  ) {
-    let uploadImages: ImageDto[] = [];
-    let uploadAttachments: AttachmentDto[] = [];
+    const attachmentsToDelete =
+      dto.attachments !== undefined
+        ? (existingAuction.attachments as any as CloudinaryResponse[]).map(
+            (a) => a.publicId
+          )
+        : [];
 
     try {
-      const existingAuction = this.prisma.auction.findUnique({
-        where: { id },
-      });
-      if (!existingAuction) {
-        throw new NotFoundException(`Auction with ${id} not found!`);
-      }
-
-      [uploadImages, uploadAttachments] = await Promise.all([
-        this.cloudinary.uploadFiles(imageFiles),
-        this.cloudinary.uploadFiles(attachmentFiles),
-      ]);
-
-      const auction = await this.prisma.$transaction(async (db) => {
+      await this.prisma.$transaction(async (db) => {
         return db.auction.update({
-          where: {
-            id,
-          },
-          include: {
-            owner: true,
-            relatedFrom: true,
-          },
+          where: { id },
           data: {
-            images: uploadImages as any,
-            attachments: uploadAttachments as any,
+            ...this.toUpdateAuctionDto(dto),
           },
         });
       });
 
+      await this.cloudinary.deleteMultipleFiles([
+        ...imagesToDelete,
+        ...attachmentsToDelete,
+      ]);
+
       return {
-        data: this.toAuctionDetail(auction),
-        message: 'Updated resource successfully!',
+        message: 'Update auction successfully!',
       };
     } catch (error) {
-      console.log(error);
+      await this.cloudinary.deleteMultipleFiles([
+        ...((dto.images as any as CloudinaryResponse[])?.map(
+          (image) => image.publicId
+        ) ?? []),
+        ...((dto.attachments as any as CloudinaryResponse[])?.map(
+          (attachment) => attachment.publicId
+        ) ?? []),
+      ]);
+      throw new BadRequestException(error);
+    }
+  }
 
-      const all = [...uploadImages, ...uploadAttachments];
-      const publicIds = all.map((item) => item.publicId);
+  async remove(id: string) {
+    const existingAuction = await this.prisma.auction.findUnique({
+      where: { id },
+    });
+    if (!existingAuction) {
+      throw new NotFoundException(`Auction with ${id} not found!`);
+    }
+
+    if (existingAuction.status !== 'scheduled') {
+      throw new BadRequestException(
+        `Auction can only be deleted when its status is "scheduled".`
+      );
+    }
+
+    try {
+      const publicIds = [
+        ...((existingAuction.images as any as CloudinaryResponse[])?.map(
+          (image) => image.publicId
+        ) ?? []),
+        ...((existingAuction.attachments as any as CloudinaryResponse[])?.map(
+          (attachment) => attachment.publicId
+        ) ?? []),
+      ];
+
+      await this.prisma.auction.delete({
+        where: {
+          id,
+        },
+      });
+
       await this.cloudinary.deleteMultipleFiles(publicIds);
-      throw error;
+      return {
+        message: 'Delete auction successfully!',
+      };
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  async updateRelations(auctionId: string, newRelatedIds: string[]) {
+    try {
+      const filteredIds = newRelatedIds.filter((id) => id !== auctionId);
+
+      await this.prisma.$transaction(async (db) => {
+        // 1. Lấy quan hệ hiện tại của auctionId
+        const existingRelations = await db.auctionRelation.findMany({
+          where: {
+            auctionId: auctionId,
+          },
+          select: {
+            relatedAuctionId: true,
+          },
+        });
+
+        const existingIds = existingRelations.map((r) => r.relatedAuctionId);
+
+        // 2. Xóa các quan hệ không còn trong filteredIds
+        const toRemove = existingIds.filter((id) => !filteredIds.includes(id));
+        if (toRemove.length) {
+          await db.auctionRelation.deleteMany({
+            where: {
+              auctionId,
+              relatedAuctionId: { in: toRemove },
+            },
+          });
+        }
+
+        // 3. Thêm các quan hệ mới chưa tồn tại
+        const toAdd = filteredIds.filter((id) => !existingIds.includes(id));
+        if (toAdd.length) {
+          await db.auctionRelation.createMany({
+            data: toAdd.map((id) => ({ auctionId, relatedAuctionId: id })),
+            skipDuplicates: true,
+          });
+        }
+      });
+
+      return {
+        message: 'Update auction relations successfully!',
+      };
+    } catch (error) {
+      throw new BadRequestException(error);
     }
   }
 }

@@ -1,0 +1,32 @@
+{{> header icon="💰" title="Deposit Payment Required" subtitle="Complete your registration"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  <p>Your documents have been verified! To complete your registration for auction <strong>{{auctionCode}}</strong>, please pay the deposit amount.</p>
+
+  {{#> details-box title="💵 Payment Details" backgroundColor="#fef5e7" borderColor="#f39c12"}}
+    <p><strong>Deposit Amount:</strong> <span class="amount-warning">{{formatCurrency depositAmount}} VND</span></p>
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    <p><strong>Payment Deadline:</strong> <span style="color: #e74c3c; font-weight: bold;">{{formatDate deadline}}</span></p>
+  {{/details-box}}
+
+  {{> button url=paymentUrl text="Pay Deposit Now" variant="warning"}}
+
+  {{#if qrCode}}
+  {{#> details-box title="📱 QR Code Payment"}}
+    <p>Scan this QR code with your banking app:</p>
+    <img src="{{qrCode}}" alt="QR Code" style="max-width: 200px; margin: 10px 0;" />
+  {{/details-box}}
+  {{/if}}
+
+  <h3>⚠️ Important Reminders</h3>
+  <ul>
+    <li>Payment must be completed within <strong>24 hours</strong></li>
+    <li>Registration will be <strong>automatically cancelled</strong> if payment is not received by the deadline</li>
+    <li>You will receive a confirmation email once payment is verified</li>
+  </ul>
+
+  {{> footer message=(concat "Payment deadline: " (formatDate deadline))}}
+</div>

@@ -1,0 +1,30 @@
+{{> header icon="🔔" title="New Deposit Payment Received" subtitle="Action required: Final approval"}}
+
+<div class="content">
+  <h2>Dear {{adminName}},</h2>
+
+  <p>A new deposit payment has been received and verified. The registration is now ready for final approval.</p>
+
+  {{#> details-box title="👤 User Information"}}
+    <p><strong>Name:</strong> {{userName}}</p>
+    <p><strong>Email:</strong> {{userEmail}}</p>
+  {{/details-box}}
+
+  {{#> details-box title="💰 Payment Information"}}
+    <p><strong>Deposit Amount:</strong> <span class="amount-highlight">{{formatCurrency depositAmount}} VND</span></p>
+    <p><strong>Payment Date:</strong> {{formatDate paidAt}}</p>
+  {{/details-box}}
+
+  {{#> details-box title="📋 Auction Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    <p><strong>Registration ID:</strong> {{registrationId}}</p>
+  {{/details-box}}
+
+  <h3>📞 Action Required</h3>
+  <p>Please review the registration and give final approval so the user can start bidding.</p>
+
+  {{> button url="#" text="Review & Approve Registration"}}
+
+  {{> footer message="This is an automated notification from Auction Hub."}}
+</div>

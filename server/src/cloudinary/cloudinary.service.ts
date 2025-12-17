@@ -1,19 +1,22 @@
 // cloudinary.service.ts
 
 import { Injectable } from '@nestjs/common';
-import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryResponse } from './cloudinary-response';
 const streamifier = require('streamifier');
 
 @Injectable()
 export class CloudinaryService {
-  async uploadFile(file: Express.Multer.File): Promise<UploadApiResponse> {
+  async uploadFile(file: Express.Multer.File): Promise<CloudinaryResponse> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: process.env.CLOUDINARY_FOLDER, resource_type: 'auto' },
         (error, result) => {
           if (error) return reject(error);
-          resolve(result);
+          resolve({
+            publicId: result.public_id,
+            url: result.url,
+          });
         }
       );
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
@@ -23,13 +26,7 @@ export class CloudinaryService {
   async uploadFiles(
     files: Express.Multer.File[]
   ): Promise<CloudinaryResponse[]> {
-    const uploadPromises = files.map((file, index) =>
-      this.uploadFile(file).then((result) => ({
-        url: result.secure_url,
-        publicId: result.public_id,
-        sortOrder: file.mimetype.startsWith('image/') ? index : null,
-      }))
-    );
+    const uploadPromises = files.map((file) => this.uploadFile(file));
 
     return await Promise.all(uploadPromises);
   }
@@ -42,5 +39,10 @@ export class CloudinaryService {
         .catch((err) => console.error(`Failed to delete ${id}:`, err))
     );
     await Promise.allSettled(deletePromises);
+  }
+
+  async deleteFile(publicId: string): Promise<void> {
+    if(!publicId) return;
+    await cloudinary.uploader.destroy(publicId);
   }
 }
