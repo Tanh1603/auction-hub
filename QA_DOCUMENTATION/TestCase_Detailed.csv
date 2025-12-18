@@ -264,3 +264,57 @@ Category,Test Case ID,Test Case Description,PreRequisites,Steps to Perform,Step 
 3.11 Article,TC-3.11.6-01,Verify Admin deletes article,Admin is authenticated; Article exists,"1. Send DELETE /articles/:id",Returns 200 OK or 204 No Content,Article deleted successfully,,New,
 3.11 Article,TC-3.11.6-02,Fail Auctioneer deleting article,Auctioneer is authenticated,"1. Send DELETE /articles/:id
 2. Use Auctioneer token",Returns 403 Forbidden,Error message indicating only Admin can delete articles,,New,
+4.1 Security Testing - IDOR,TC-4.1.1-01,IDOR: Attempt to access another user's registrations via userId parameter,Bidder A is authenticated; Bidder B exists with registrations,"1. Send GET /register-to-bid/users/:userIdB/registrations
+2. Use Bidder A's valid JWT token
+3. userIdB belongs to a different user",Returns 403 Forbidden,Access denied - cannot view another user's registrations; Bidder A's token cannot access Bidder B's data,,New,OWASP A01:2021 - Broken Access Control (IDOR)
+4.1 Security Testing - IDOR,TC-4.1.1-02,IDOR: Attempt to access another user's specific auction registration,Bidder A is authenticated; Bidder B registered for auction,"1. Send GET /register-to-bid/auctions/:auctionId/registration
+2. Use Bidder A's token for auction where only Bidder B is registered
+3. Manipulate participantId in query if exposed",Returns 403 Forbidden or returns only Bidder A's own registration,System does not leak Bidder B's registration data to Bidder A,,New,OWASP A01:2021 - Broken Access Control (IDOR)
+4.1 Security Testing - BOLA,TC-4.1.2-01,BOLA: Download contract PDF for auction user did not win,"Bidder A is authenticated; Bidder B won auction and has contract; Contract ID is known","1. Send GET /api/contracts/:contractId/pdf/vi
+2. Use Bidder A's token
+3. contractId belongs to Bidder B's winning contract",Returns 403 Forbidden,Access denied - cannot download contract belonging to another winner,,New,OWASP A01:2021 - Broken Access Control (BOLA)
+4.1 Security Testing - BOLA,TC-4.1.2-02,BOLA: Access winner payment requirements for auction user did not win,Bidder A is authenticated; Bidder B is winner of auction,"1. Send GET /auction-finalization/winner-payment-requirements/:auctionId
+2. Use Bidder A's token (non-winner)
+3. auctionId has Bidder B as winner",Returns 403 Forbidden,Access denied - only the actual winner can access payment requirements,,New,OWASP A01:2021 - Broken Access Control (BOLA)
+4.1 Security Testing - Mass Assignment,TC-4.1.3-01,Mass Assignment: Inject isWinningBid field in manual bid request,Bidder is checked-in; Auction is live,"1. Send POST /manual-bid
+2. Body: {auctionId: 'uuid'; amount: 100000000; isWinningBid: true}
+3. Verify bid is processed but isWinningBid is not accepted",Returns 201 Created but isWinningBid field is ignored,Bid created successfully but isWinningBid is determined by server logic not client input,,New,OWASP A08:2021 - Mass Assignment vulnerability
+4.1 Security Testing - Mass Assignment,TC-4.1.3-02,Mass Assignment: Inject role field in profile update,Bidder is authenticated,"1. Send PUT /auth/me
+2. Body: {fullName: 'New Name'; role: 'admin'}
+3. Verify role is not changed to admin",Returns 200 OK but role field is ignored,Profile updated but role remains 'bidder' - cannot self-promote via mass assignment,,New,OWASP A08:2021 - Mass Assignment vulnerability
+4.1 Security Testing - Mass Assignment,TC-4.1.3-03,Mass Assignment: Inject status field in registration submission,Bidder is authenticated; Auction in registration period,"1. Send POST /register-to-bid
+2. Body: {auctionId: 'uuid'; confirmedAt: '2024-01-01'; depositPaidAt: '2024-01-01'}
+3. Verify confirmation timestamps are ignored",Returns 201 Created but timestamp fields are ignored,Registration created but confirmedAt/depositPaidAt remain null - cannot bypass approval process,,New,OWASP A08:2021 - Mass Assignment vulnerability
+4.1 Security Testing - Rate Limiting,TC-4.1.4-01,Rate Limiting: Brute force OTP/verification endpoint,Guest has access to API,"1. Send POST /auth/verify-email 50 times in 60 seconds
+2. Use different invalid tokens each request
+3. Monitor for rate limiting response",Returns 429 Too Many Requests after threshold,Rate limiting applied - endpoint protected from brute force token enumeration,,New,OWASP A07:2021 - Rate Limiting / Brute Force protection
+4.1 Security Testing - Rate Limiting,TC-4.1.4-02,Rate Limiting: Spam bid placement endpoint,Bidder is checked-in; Auction is live,"1. Send POST /manual-bid 100 times in 10 seconds
+2. Use incrementing amounts each request
+3. Monitor for rate limiting or throttling",Returns 429 or system handles gracefully without performance degradation,Rate limiting applied or system gracefully handles spam without affecting other users,,New,OWASP A04:2021 - Rate Limiting for resource exhaustion prevention
+5.1 Non-Functional - Race Conditions,TC-5.1.1-01,Race Condition: Two simultaneous bids with exact same amount,Two bidders (A and B) checked-in; Auction live; Both prepare same bid amount,"1. Prepare two POST /manual-bid requests with identical amount
+2. Send both requests exactly simultaneously (within 10ms)
+3. Amount = currentHighest + bidIncrement",Only one request returns 201 Created; other returns 400/409,Exactly one bid succeeds; other fails with 'bid amount no longer valid' - no duplicate winning bids,,New,Critical: Database transaction isolation must prevent duplicate bids
+5.1 Non-Functional - Race Conditions,TC-5.1.1-02,Race Condition: Bid placed during auction status transition,Bidder checked-in; Auction is exactly at auctionEndAt millisecond,"1. Send POST /manual-bid at exact moment auctionEndAt occurs
+2. Time bid to hit server precisely at boundary
+3. Monitor response and auction state",Returns 400 Bad Request if auction ended OR 201 if bid processed before cutoff,Consistent behavior - either bid accepted before end or rejected after; no ambiguous state,,New,Critical: Auction end boundary must be deterministic
+5.1 Non-Functional - Race Conditions,TC-5.1.1-03,Race Condition: Simultaneous check-in requests from same user,Bidder confirmed; Within check-in window,"1. Send POST /register-to-bid/check-in twice simultaneously
+2. Both requests with same auctionId and user token
+3. Monitor for duplicate checkedInAt records",Only one request returns 200 OK; other returns 400 already checked in,Only one check-in record created; no duplicate registrations,,New,Idempotency check for check-in operation
+5.1 Non-Functional - Double Spend,TC-5.1.2-01,Double Spend: Concurrent deposit payment submissions,Bidder with verified documents; Ready to pay deposit,"1. Send POST /register-to-bid/submit-deposit twice simultaneously
+2. Both requests with same auctionId
+3. Monitor for duplicate Stripe sessions or payments",Only one payment session created OR second request returns 409,No double payment sessions - user cannot be charged twice for same deposit,,New,Critical: Payment idempotency must prevent double charges
+5.1 Non-Functional - Double Spend,TC-5.1.2-02,Double Spend: Concurrent winner payment submissions,Winner authenticated; Ready to pay final amount,"1. Send POST /auction-finalization/submit-winner-payment twice simultaneously
+2. Both requests with same auctionId
+3. Monitor for duplicate payment records",Only one payment session created; second request blocked,No duplicate winner payment sessions - prevents double charging winner,,New,Critical: Winner payment must be idempotent
+5.1 Non-Functional - Double Spend,TC-5.1.2-03,Double Spend: Multiple verify-deposit-payment calls with same session,Bidder completed Stripe payment; Has valid session_id,"1. Send POST /register-to-bid/verify-deposit-payment 5 times rapidly
+2. All requests with same sessionId
+3. Monitor depositPaidAt and Payment records",First request returns 200 OK; subsequent requests return 200 (idempotent) or 400 already verified,Only one deposit payment record created; subsequent calls are idempotent,,New,Idempotency for payment verification
+5.1 Non-Functional - Edge Cases,TC-5.1.3-01,Edge Case: Bid at exact auctionStartAt moment,Bidder checked-in; Auction status about to transition to live,"1. Send POST /manual-bid precisely when auctionStartAt occurs
+2. Monitor if bid is accepted or rejected
+3. Verify auction status transitions correctly",Returns 201 Created if auction is live OR 400 if not yet live,Consistent boundary handling - bid only accepted when auction is definitely live,,New,Boundary condition for auction start
+5.1 Non-Functional - Edge Cases,TC-5.1.3-02,Edge Case: Registration submission at exact depositEndAt deadline,Bidder authenticated; Registration period ending,"1. Send POST /register-to-bid precisely at depositEndAt millisecond
+2. Monitor if registration is accepted or rejected
+3. Check timestamp comparison logic",Returns 201 if before deadline OR 400 if past deadline,Consistent deadline enforcement - clear accept/reject at boundary,,New,Boundary condition for registration deadline
+5.1 Non-Functional - Edge Cases,TC-5.1.3-03,Edge Case: High volume concurrent WebSocket connections,50 bidders ready to join auction room simultaneously,"1. Connect 50 WebSocket clients simultaneously
+2. All join same auction room via 'joinAuction'
+3. Place one bid and verify all 50 receive 'newBid' event",All 50 clients receive auctionState and newBid events,System handles concurrent WebSocket connections without dropping events or crashing,,New,Stress test for WebSocket gateway scalability

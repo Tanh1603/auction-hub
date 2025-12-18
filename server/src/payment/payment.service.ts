@@ -15,7 +15,7 @@ export class PaymentService {
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
     this.stripe = new Stripe(stripeSecretKey, {
-      // @ts-ignore
+      // @ts-expect-error - Stripe API version might be newer than types
       apiVersion: '2024-12-18.acacia',
     });
   }
@@ -39,7 +39,9 @@ export class PaymentService {
                 )} - Auction Payment`,
                 description: `Payment for auction ${paymentRequest.auctionId}`,
               },
-              unit_amount: Math.round(paymentRequest.amount * 100),
+              unit_amount: this.isZeroDecimalCurrency('vnd')
+                ? Math.round(paymentRequest.amount)
+                : Math.round(paymentRequest.amount * 100),
             },
             quantity: 1,
           },
@@ -138,7 +140,9 @@ export class PaymentService {
       return {
         payment_id: session.id,
         status: session.payment_status,
-        amount: session.amount_total / 100,
+        amount: this.isZeroDecimalCurrency(session.currency)
+          ? session.amount_total
+          : session.amount_total / 100,
         currency: session.currency.toUpperCase(),
         metadata: session.metadata,
       };
@@ -164,5 +168,31 @@ export class PaymentService {
       signature,
       webhookSecret
     );
+  }
+
+  /**
+   * Check if a currency is zero-decimal
+   * @see https://stripe.com/docs/currencies#zero-decimal
+   */
+  private isZeroDecimalCurrency(currency: string): boolean {
+    const zeroDecimalCurrencies = [
+      'bif',
+      'clp',
+      'djf',
+      'gnf',
+      'jpy',
+      'kmf',
+      'krw',
+      'mga',
+      'pyg',
+      'rwf',
+      'ugx',
+      'vnd',
+      'vuv',
+      'xaf',
+      'xof',
+      'xpf',
+    ];
+    return zeroDecimalCurrencies.includes(currency.toLowerCase());
   }
 }
