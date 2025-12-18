@@ -168,7 +168,9 @@ async function clearDatabase() {
   `);
 
   for (const table of tables) {
-    await prisma.$executeRawUnsafe(`DELETE FROM "${table.tablename}";`);
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE "${table.tablename}" RESTART IDENTITY CASCADE;`
+    );
   }
 
   console.log('🧹 All tables cleared');
