@@ -160,8 +160,25 @@ const mapAuditAction = (action: string): AuditAction => {
 // MAIN SEED FUNCTION
 // ========================================
 
+async function clearDatabase() {
+  const tables: { tablename: string }[] = await prisma.$queryRawUnsafe(`
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname='public' AND tablename != '_prisma_migrations';
+  `);
+
+  for (const table of tables) {
+    await prisma.$executeRawUnsafe(`DELETE FROM "${table.tablename}";`);
+  }
+
+  console.log('🧹 All tables cleared');
+}
+
+
+
 async function main() {
   await prisma.$connect();
+  await clearDatabase();
   console.log('📦 Connected to database');
 
   // Check if data already exists
