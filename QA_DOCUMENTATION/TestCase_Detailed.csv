@@ -1,0 +1,320 @@
+Category,Test Case ID,Test Case Description,PreRequisites,Steps to Perform,Step Expected Result,Test Case Expected Result,Actual Result,Status,Note
+3.1 User Management,TC-3.1.1-01,Verify successful registration of Individual User,Guest has access to API and valid email,"1. Send POST /auth/register
+2. Body: {email: 'newuser@test.com', password: 'SecurePass123!', fullName: 'Test User', userType: 'individual', phoneNumber: '0901234567'}",Returns 201 Created with user object,User created successfully with bidder role and email verification sent,,New,Rule: All new users start with bidder role by default
+3.1 User Management,TC-3.1.1-02,Verify successful registration of Business User with Tax ID,Guest has access to API and valid business details,"1. Send POST /auth/register
+2. Body: {email: 'business@test.com', password: 'SecurePass123!', fullName: 'Business Corp', userType: 'business', taxId: '0123456789', phoneNumber: '0901234567'}",Returns 201 Created with user object containing taxId,Business user created successfully with taxId stored,,New,Rule: Business users must provide taxId
+3.1 User Management,TC-3.1.1-03,Fail to register Business User without Tax ID,Guest has access to API,"1. Send POST /auth/register
+2. Body: {email: 'business@test.com', password: 'SecurePass123!', fullName: 'Business Corp', userType: 'business', taxId: null}",Returns 400 Bad Request,Error message indicating Tax ID is required for business users,,New,Rule: Business users must provide taxId
+3.1 User Management,TC-3.1.1-04,Fail to register with existing email,Guest has access to API; Email already exists in system,"1. Send POST /auth/register
+2. Body: {email: 'existing@test.com', password: 'SecurePass123!', fullName: 'Test User', userType: 'individual'}",Returns 409 Conflict,Error message 'Email already exists' is displayed,,New,
+3.1 User Management,TC-3.1.2-01,Verify get current user info successfully,User is authenticated with valid JWT token,"1. Send GET /auth/me
+2. Include Authorization: Bearer <valid_token>",Returns 200 OK with user profile,User profile data including email; fullName; role is returned,,New,
+3.1 User Management,TC-3.1.2-02,Fail to get user info without authentication,No authentication token,"1. Send GET /auth/me
+2. No Authorization header",Returns 401 Unauthorized,Error message 'Unauthorized' is displayed,,New,
+3.1 User Management,TC-3.1.3-01,Verify Super Admin can promote user to Admin role,Super Admin is authenticated; Target user exists,"1. Send PUT /auth/admin/users/:userId/promote
+2. Body: {role: 'admin'}
+3. Use Super Admin token",Returns 200 OK with updated user,User role updated to admin successfully,,New,Rule: super_admin can promote to any role
+3.1 User Management,TC-3.1.3-02,Fail Admin promoting user to Admin role,Admin is authenticated; Target user exists,"1. Send PUT /auth/admin/users/:userId/promote
+2. Body: {role: 'admin'}
+3. Use Admin token",Returns 403 Forbidden,Error message indicating insufficient permissions,,New,Rule: Regular admin cannot promote users to admin or super_admin roles
+3.1 User Management,TC-3.1.3-03,Fail Bidder attempting to promote user,Bidder is authenticated; Target user exists,"1. Send PUT /auth/admin/users/:userId/promote
+2. Body: {role: 'auctioneer'}
+3. Use Bidder token",Returns 403 Forbidden,Error message indicating role not authorized,,New,Rule: Only admin and super_admin can promote users
+3.1 User Management,TC-3.1.4-01,Verify Admin can ban user,Admin is authenticated; Target user exists,"1. Update user via internal API
+2. Set isBanned: true",Returns 200 OK with updated user,User isBanned field set to true; user cannot access system,,New,
+3.1 User Management,TC-3.1.4-02,Fail banning user as Bidder,Bidder is authenticated; Target user exists,"1. Attempt to update user isBanned field
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating unauthorized action,,New,
+3.1 User Management,TC-3.1.5-01,Verify Admin can verify user identity (KYC),Admin is authenticated; User with pending KYC exists,"1. Update user via internal API
+2. Set isVerified: true",Returns 200 OK with updated user,User isVerified field set to true,,New,
+3.1 User Management,TC-3.1.5-02,Fail KYC verification as non-admin,Bidder is authenticated; User with pending KYC exists,"1. Attempt to update user isVerified field
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating unauthorized action,,New,
+3.2 Authentication,TC-3.2.1-01,Verify successful account registration,Guest has access to API,"1. Send POST /auth/register
+2. Body: {email: 'newuser@test.com', password: 'ValidPass123!', fullName: 'New User', userType: 'individual'}",Returns 201 Created,User account created in both Supabase and local database atomically,,New,Rule: Registration creates user in both Supabase and local database atomically
+3.2 Authentication,TC-3.2.1-02,Fail registration with invalid email format,Guest has access to API,"1. Send POST /auth/register
+2. Body: {email: 'invalid-email', password: 'ValidPass123!', fullName: 'New User'}",Returns 400 Bad Request,Error message indicating invalid email format,,New,
+3.2 Authentication,TC-3.2.2-01,Verify successful login,Registered user with verified email exists,"1. Send POST /auth/login
+2. Body: {email: 'user@test.com', password: 'CorrectPassword123!'}",Returns 200 OK with JWT token,User authenticated and JWT token returned,,New,Rule: JWT tokens are validated through Supabase
+3.2 Authentication,TC-3.2.2-02,Fail login with incorrect password,Registered user exists,"1. Send POST /auth/login
+2. Body: {email: 'user@test.com', password: 'WrongPassword123!'}",Returns 401 Unauthorized,Error message indicating invalid credentials,,New,
+3.2 Authentication,TC-3.2.2-03,Fail login with unverified email,Registered user with unverified email exists,"1. Send POST /auth/login
+2. Body: {email: 'unverified@test.com', password: 'CorrectPassword123!'}",Returns 403 Forbidden,Error message indicating email not verified,,New,Rule: Email must be verified before full account access
+3.2 Authentication,TC-3.2.3-01,Verify forgot password sends reset email,Registered user exists,"1. Send POST /auth/forgot-password
+2. Body: {email: 'user@test.com'}",Returns 200 OK,Password reset code sent via email,,New,Rule: Password reset codes are sent via email
+3.2 Authentication,TC-3.2.3-02,Fail forgot password with non-existent email,Email not registered,"1. Send POST /auth/forgot-password
+2. Body: {email: 'nonexistent@test.com'}",Returns 404 Not Found or 200 OK (for security),Appropriate response returned without revealing email existence,,New,
+3.2 Authentication,TC-3.2.4-01,Verify resend verification email,Registered user with unverified email,"1. Send POST /auth/resend-verification-email
+2. Body: {email: 'unverified@test.com'}",Returns 200 OK,Verification email resent successfully,,New,
+3.2 Authentication,TC-3.2.4-02,Fail resend verification for already verified email,Registered user with verified email,"1. Send POST /auth/resend-verification-email
+2. Body: {email: 'verified@test.com'}",Returns 400 Bad Request,Error message indicating email already verified,,New,
+3.2 Authentication,TC-3.2.5-01,Verify email verification with valid token,User has valid verification token,"1. Send POST /auth/verify-email
+2. Body: {token: 'valid_token', email: 'user@test.com'}",Returns 200 OK,Email verified successfully; user can now login,,New,
+3.2 Authentication,TC-3.2.5-02,Fail email verification with invalid token,User has invalid/expired token,"1. Send POST /auth/verify-email
+2. Body: {token: 'invalid_token', email: 'user@test.com'}",Returns 400 Bad Request,Error message indicating invalid or expired token,,New,
+3.2 Authentication,TC-3.2.6-01,Verify email via link click,User has received verification email with link,"1. Send GET /auth/verify?token=valid_token&email=user@test.com",Returns 200 OK or redirect to success page,Email verified successfully via link click,,New,
+3.2 Authentication,TC-3.2.6-02,Fail email verification via link with expired token,Token has expired,"1. Send GET /auth/verify?token=expired_token&email=user@test.com",Returns 400 Bad Request,Error message indicating token expired,,New,
+3.3 Auction Management,TC-3.3.1-01,Verify list all auctions publicly,No authentication required,"1. Send GET /auctions",Returns 200 OK with array of auctions,List of auctions returned with pagination,,New,
+3.3 Auction Management,TC-3.3.1-02,Verify list auctions with filters,No authentication required,"1. Send GET /auctions?status=live&assetType=land_use_rights",Returns 200 OK with filtered results,Only live auctions with land_use_rights type returned,,New,
+3.3 Auction Management,TC-3.3.2-01,Verify get auction details by ID,Valid auction ID exists,"1. Send GET /auctions/:id",Returns 200 OK with auction details,Full auction details including images; attachments; propertyOwner returned,,New,
+3.3 Auction Management,TC-3.3.2-02,Fail get auction with invalid ID,Invalid UUID format,"1. Send GET /auctions/invalid-id",Returns 400 Bad Request,Error message indicating invalid auction ID format,,New,
+3.3 Auction Management,TC-3.3.2-03,Fail get auction with non-existent ID,Valid UUID but not in database,"1. Send GET /auctions/550e8400-e29b-41d4-a716-446655440000",Returns 404 Not Found,Error message indicating auction not found,,New,
+3.3 Auction Management,TC-3.3.3-01,Verify Auctioneer can create auction,Auctioneer is authenticated; All required fields available,"1. Send POST /auctions
+2. Body with all required fields: name; code; assetType; startingPrice; bidIncrement; auctionStartAt; auctionEndAt; assetWardId; assetProvinceId; propertyOwner (JSON)",Returns 201 Created with auction object,Auction created successfully with scheduled status,,New,Rule: assetWardId and assetProvinceId are required
+3.3 Auction Management,TC-3.3.3-02,Fail create auction without required assetWardId,Auctioneer is authenticated,"1. Send POST /auctions
+2. Body missing assetWardId",Returns 400 Bad Request,Error message indicating assetWardId is required,,New,Rule: assetWardId is required for auction creation
+3.3 Auction Management,TC-3.3.3-03,Fail Bidder attempting to create auction,Bidder is authenticated,"1. Send POST /auctions
+2. Body with valid auction data
+3. Use Bidder token",Returns 403 Forbidden,Error message indicating insufficient permissions,,New,
+3.3 Auction Management,TC-3.3.4-01,Verify update auction details,Auctioneer is authenticated; Auction exists with scheduled status,"1. Send PUT /auctions/:id
+2. Body: {name: 'Updated Auction Name', startingPrice: 200000000}",Returns 200 OK with updated auction,Auction details updated successfully,,New,
+3.3 Auction Management,TC-3.3.4-02,Fail update auction that is live,Auctioneer is authenticated; Auction has live status,"1. Send PUT /auctions/:id
+2. Body: {startingPrice: 300000000}",Returns 400 Bad Request,Error message indicating cannot update live auction,,New,
+3.3 Auction Management,TC-3.3.5-01,Verify delete scheduled auction,Auctioneer is authenticated; Auction exists with scheduled status,"1. Send DELETE /auctions/:id",Returns 200 OK or 204 No Content,Auction deleted successfully,,New,
+3.3 Auction Management,TC-3.3.5-02,Fail delete auction that has bids,Auctioneer is authenticated; Auction has associated bids,"1. Send DELETE /auctions/:id",Returns 400 Bad Request,Error message indicating cannot delete auction with bids,,New,
+3.3 Auction Management,TC-3.3.6-01,Verify update auction relations,Auctioneer is authenticated; Auction and related auctions exist,"1. Send PATCH /auctions/:id/relations
+2. Body: {relatedAuctionIds: ['uuid1', 'uuid2']}",Returns 200 OK,Auction relations updated successfully,,New,
+3.3 Auction Management,TC-3.3.6-02,Fail update relations with invalid auction ID,Auctioneer is authenticated,"1. Send PATCH /auctions/invalid-uuid/relations
+2. Body: {relatedAuctionIds: ['uuid1']}",Returns 400 Bad Request,Error message indicating invalid auction ID,,New,
+3.4 Registration to Bid,TC-3.4.1-01,Verify bidder registers for auction,Bidder is authenticated; Auction in registration period,"1. Send POST /register-to-bid
+2. Body: {auctionId: 'valid-auction-uuid'}
+3. Upload required documents",Returns 201 Created with registration object,Registration created with submittedAt timestamp,,New,Rule: Registration period closes at depositEndAt
+3.4 Registration to Bid,TC-3.4.1-02,Fail registration after deposit deadline,Bidder is authenticated; Auction past depositEndAt,"1. Send POST /register-to-bid
+2. Body: {auctionId: 'expired-auction-uuid'}",Returns 400 Bad Request,Error message indicating registration period closed,,New,Rule: Registration period closes at depositEndAt
+3.4 Registration to Bid,TC-3.4.1-03,Fail duplicate registration for same auction,Bidder already registered for auction,"1. Send POST /register-to-bid
+2. Body: {auctionId: 'already-registered-uuid'}",Returns 409 Conflict,Error message indicating already registered,,New,
+3.4 Registration to Bid,TC-3.4.2-01,Verify bidder withdraws registration,Bidder is registered; Auction not started; Not checked in,"1. Send POST /register-to-bid/withdraw
+2. Body: {auctionId: 'valid-auction-uuid'}",Returns 200 OK,Registration withdrawn successfully,,New,Rule: Bidders can withdraw before auction starts and before check-in
+3.4 Registration to Bid,TC-3.4.2-02,Fail withdrawal after check-in,Bidder has checked in for auction,"1. Send POST /register-to-bid/withdraw
+2. Body: {auctionId: 'checked-in-auction-uuid'}",Returns 400 Bad Request,Error message indicating cannot withdraw after check-in,,New,Rule: Bidders can withdraw before auction starts and before check-in
+3.4 Registration to Bid,TC-3.4.3-01,Verify bidder check-in within valid window,Bidder is confirmed; Within check-in window,"1. Send POST /register-to-bid/check-in
+2. Body: {auctionId: 'valid-auction-uuid'}",Returns 200 OK with checkedInAt timestamp,Bidder checked in successfully; ready to bid,,New,Rule: Check-in window defined by validCheckInBeforeStartMinutes and validCheckInAfterStartMinutes
+3.4 Registration to Bid,TC-3.4.3-02,Fail check-in outside valid window,Bidder is confirmed; Outside check-in window,"1. Send POST /register-to-bid/check-in
+2. Body: {auctionId: 'valid-auction-uuid'}",Returns 400 Bad Request,Error message indicating outside check-in window,,New,Rule: Check-in window defined by validCheckInBeforeStartMinutes and validCheckInAfterStartMinutes
+3.4 Registration to Bid,TC-3.4.3-03,Fail check-in without confirmation,Bidder not yet confirmed,"1. Send POST /register-to-bid/check-in
+2. Body: {auctionId: 'valid-auction-uuid'}",Returns 400 Bad Request,Error message indicating registration not confirmed,,New,
+3.4 Registration to Bid,TC-3.4.4-01,Verify submit deposit payment,Bidder is registered with verified documents,"1. Send POST /register-to-bid/submit-deposit
+2. Body: {auctionId: 'valid-auction-uuid', paymentMethod: 'bank_transfer'}",Returns 200 OK with payment session,Deposit payment session created,,New,
+3.4 Registration to Bid,TC-3.4.4-02,Fail submit deposit without document verification,Bidder documents not verified,"1. Send POST /register-to-bid/submit-deposit
+2. Body: {auctionId: 'valid-auction-uuid'}",Returns 400 Bad Request,Error message indicating documents not verified,,New,
+3.4 Registration to Bid,TC-3.4.5-01,Verify deposit payment verification,Bidder has completed deposit payment,"1. Send POST /register-to-bid/verify-deposit-payment
+2. Body: {auctionId: 'valid-auction-uuid', sessionId: 'stripe_session_id'}",Returns 200 OK with depositPaidAt,Deposit payment verified and recorded,,New,
+3.4 Registration to Bid,TC-3.4.5-02,Fail verify incomplete payment,Payment not completed in Stripe,"1. Send POST /register-to-bid/verify-deposit-payment
+2. Body: {auctionId: 'valid-auction-uuid', sessionId: 'incomplete_session'}",Returns 400 Bad Request,Error message indicating payment not completed,,New,
+3.4 Registration to Bid,TC-3.4.6-01,Verify bidder views own registrations,Bidder is authenticated with registrations,"1. Send GET /register-to-bid/users/:userId/registrations",Returns 200 OK with array of registrations,List of user's registrations returned,,New,
+3.4 Registration to Bid,TC-3.4.6-02,Fail view other user's registrations,Bidder tries to access another user's registrations,"1. Send GET /register-to-bid/users/:otherUserId/registrations",Returns 403 Forbidden,Error message indicating unauthorized access,,New,
+3.4 Registration to Bid,TC-3.4.7-01,Verify get registration for specific auction,Bidder is registered for auction,"1. Send GET /register-to-bid/auctions/:auctionId/registration",Returns 200 OK with registration details,Registration details for specific auction returned,,New,
+3.4 Registration to Bid,TC-3.4.7-02,Return empty for non-registered auction,Bidder not registered for auction,"1. Send GET /register-to-bid/auctions/:auctionId/registration",Returns 404 Not Found,No registration found for this auction,,New,
+3.4 Registration to Bid,TC-3.4.8-01,Verify Admin lists all registrations,Admin is authenticated,"1. Send GET /register-to-bid/admin/registrations",Returns 200 OK with array of all registrations,Full list of registrations across all auctions returned,,New,
+3.4 Registration to Bid,TC-3.4.8-02,Fail Bidder accessing admin registrations list,Bidder is authenticated,"1. Send GET /register-to-bid/admin/registrations
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.4 Registration to Bid,TC-3.4.9-01,Verify Admin approves registration,Admin is authenticated; Registration pending approval,"1. Send POST /register-to-bid/admin/approve
+2. Body: {registrationId: 'valid-registration-uuid'}",Returns 200 OK,Registration approved successfully,,New,
+3.4 Registration to Bid,TC-3.4.9-02,Fail approve already approved registration,Admin is authenticated; Registration already approved,"1. Send POST /register-to-bid/admin/approve
+2. Body: {registrationId: 'approved-registration-uuid'}",Returns 400 Bad Request,Error message indicating registration already approved,,New,
+3.4 Registration to Bid,TC-3.4.10-01,Verify Admin rejects registration,Admin is authenticated; Registration pending,"1. Send POST /register-to-bid/admin/reject
+2. Body: {registrationId: 'valid-registration-uuid', reason: 'Invalid documents'}",Returns 200 OK,Registration rejected with reason recorded,,New,
+3.4 Registration to Bid,TC-3.4.10-02,Fail reject without reason,Admin is authenticated; Registration pending,"1. Send POST /register-to-bid/admin/reject
+2. Body: {registrationId: 'valid-registration-uuid'}",Returns 400 Bad Request,Error message indicating rejection reason required,,New,
+3.4 Registration to Bid,TC-3.4.11-01,Verify Admin verifies documents Tier 1,Admin is authenticated; Documents submitted,"1. Send POST /register-to-bid/admin/verify-documents
+2. Body: {registrationId: 'valid-registration-uuid'}",Returns 200 OK with documentsVerifiedAt,Documents verified at Tier 1 successfully,,New,Rule: Two-tier approval - Tier 1 is document verification
+3.4 Registration to Bid,TC-3.4.11-02,Fail verify documents without submission,Admin is authenticated; No documents submitted,"1. Send POST /register-to-bid/admin/verify-documents
+2. Body: {registrationId: 'no-docs-registration-uuid'}",Returns 400 Bad Request,Error message indicating no documents to verify,,New,
+3.4 Registration to Bid,TC-3.4.12-01,Verify Admin rejects documents,Admin is authenticated; Documents submitted,"1. Send POST /register-to-bid/admin/reject-documents
+2. Body: {registrationId: 'valid-registration-uuid', reason: 'Documents unclear'}",Returns 200 OK with documentsRejectedAt,Documents rejected; bidder can resubmit,,New,Rule: Rejected bidders can resubmit after fixing issues
+3.4 Registration to Bid,TC-3.4.12-02,Fail reject already verified documents,Admin is authenticated; Documents already verified,"1. Send POST /register-to-bid/admin/reject-documents
+2. Body: {registrationId: 'verified-docs-uuid'}",Returns 400 Bad Request,Error message indicating documents already verified,,New,
+3.4 Registration to Bid,TC-3.4.13-01,Verify Admin final approval Tier 2,Admin is authenticated; Documents verified; Deposit paid,"1. Send POST /register-to-bid/admin/final-approval
+2. Body: {registrationId: 'valid-registration-uuid'}",Returns 200 OK with confirmedAt,Final approval granted; bidder eligible for check-in,,New,Rule: Two-tier approval - Tier 2 is final approval after deposit
+3.4 Registration to Bid,TC-3.4.13-02,Fail final approval without deposit payment,Admin is authenticated; Deposit not paid,"1. Send POST /register-to-bid/admin/final-approval
+2. Body: {registrationId: 'no-deposit-uuid'}",Returns 400 Bad Request,Error message indicating deposit payment required,,New,Rule: Tier 2 requires deposit verification
+3.5 Bidding System,TC-3.5.1-01,Verify place first bid at starting price,Bidder is checked-in; Auction is live,"1. Send POST /manual-bid
+2. Body: {auctionId: 'live-auction-uuid', amount: 100000000}",Returns 201 Created with bid object,First bid placed successfully at starting price,,New,Rule: First bid must be >= starting price
+3.5 Bidding System,TC-3.5.1-02,Verify place subsequent bid with increment,Bidder is checked-in; Auction has existing bids,"1. Send POST /manual-bid
+2. Body: {auctionId: 'live-auction-uuid', amount: current_bid + bidIncrement}",Returns 201 Created with bid object,Bid placed successfully following increment rule,,New,Rule: Subsequent bids must be > current highest bid and follow increment
+3.5 Bidding System,TC-3.5.1-03,Fail bid below minimum amount,Bidder is checked-in; Auction is live with existing bids,"1. Send POST /manual-bid
+2. Body: {auctionId: 'live-auction-uuid', amount: 100000}",Returns 400 Bad Request,Error message indicating bid below minimum required,,New,Rule: All bids must follow the defined increment
+3.5 Bidding System,TC-3.5.1-04,Fail bid when auction not live,Bidder is checked-in; Auction is scheduled,"1. Send POST /manual-bid
+2. Body: {auctionId: 'scheduled-auction-uuid', amount: 100000000}",Returns 400 Bad Request,Error message indicating auction not active,,New,Rule: Bids only accepted when auction status is live
+3.5 Bidding System,TC-3.5.1-05,Fail bid without check-in,Bidder is confirmed but not checked-in,"1. Send POST /manual-bid
+2. Body: {auctionId: 'live-auction-uuid', amount: 100000000}",Returns 403 Forbidden,Error message indicating bidder not checked in,,New,Rule: Bidder must be confirmed and checked-in
+3.5 Bidding System,TC-3.5.2-01,Verify Admin denies bid,Admin is authenticated; Valid bid exists,"1. Send POST /manual-bid/deny
+2. Body: {bidId: 'valid-bid-uuid', reason: 'Fraudulent activity'}",Returns 200 OK,Bid denied successfully; excluded from winning calculation,,New,Rule: Denied bids are excluded from winning bid calculation
+3.5 Bidding System,TC-3.5.2-02,Fail deny already withdrawn bid,Admin is authenticated; Bid already withdrawn,"1. Send POST /manual-bid/deny
+2. Body: {bidId: 'withdrawn-bid-uuid'}",Returns 400 Bad Request,Error message indicating cannot deny withdrawn bid,,New,Rule: Cannot deny already withdrawn bids
+3.5 Bidding System,TC-3.5.2-03,Fail Bidder attempting to deny bid,Bidder is authenticated,"1. Send POST /manual-bid/deny
+2. Body: {bidId: 'valid-bid-uuid'}
+3. Use Bidder token",Returns 403 Forbidden,Error message indicating insufficient permissions,,New,Rule: Only auction owner; admin; or super_admin can deny bids
+3.5 Bidding System,TC-3.5.3-01,Verify join auction room via WebSocket,Bidder is checked-in; WebSocket connected,"1. Connect to WebSocket server
+2. Emit 'joinAuction' event with {auctionId: 'live-auction-uuid'}",Server acknowledges join,Bidder joins auction room and receives auctionState,,New,
+3.5 Bidding System,TC-3.5.3-02,Fail join non-existent auction room,Bidder is checked-in; WebSocket connected,"1. Connect to WebSocket server
+2. Emit 'joinAuction' event with {auctionId: 'non-existent-uuid'}",Server sends error event,Error notification indicating auction not found,,New,
+3.5 Bidding System,TC-3.5.4-01,Verify leave auction room via WebSocket,Bidder is in auction room,"1. Emit 'leaveAuction' event with {auctionId: 'current-auction-uuid'}",Server acknowledges leave,Bidder removed from auction room; stops receiving updates,,New,
+3.5 Bidding System,TC-3.5.4-02,Fail leave room never joined,Bidder not in auction room,"1. Emit 'leaveAuction' event with {auctionId: 'not-joined-uuid'}",Server handles gracefully,No error; request ignored or informational message sent,,New,
+3.5 Bidding System,TC-3.5.5-01,Verify receive auction state on join,Bidder joins auction room,"1. Emit 'joinAuction' event
+2. Listen for 'auctionState' event",Server emits 'auctionState' with full state,Auction state received with status; timeRemaining; currentWinningBid; bidHistory,,New,
+3.5 Bidding System,TC-3.5.5-02,Verify auction state contains required fields,Bidder in auction room,"1. Listen for 'auctionState' event
+2. Verify payload structure",State includes all documented fields,auctionId; name; status; hasStarted; hasEnded; isActive; timeRemaining; currentWinningBid present,,New,
+3.5 Bidding System,TC-3.5.6-01,Verify receive new bid notification,Bidder in auction room; Another bidder places bid,"1. Listen for 'newBid' event after bid placed by another user",Server emits 'newBid' with updated state,New bid notification received with updated currentWinningBid and totalBids,,New,
+3.5 Bidding System,TC-3.5.6-02,Verify new bid shows correct bidder info,Bidder in auction room,"1. Listen for 'newBid' event
+2. Verify bidder information in payload",Event contains bidderName in currentWinningBid,Bidder name displayed correctly without exposing sensitive info,,New,
+3.5 Bidding System,TC-3.5.7-01,Verify receive time updates every second,Bidder in active auction room,"1. Listen for 'timeUpdate' events
+2. Monitor frequency",Server emits 'timeUpdate' approximately every second,Time remaining decrements correctly with {event: 'timeUpdate'; data: {...}} wrapper,,New,Rule: timeUpdate uses {event; data} wrapper format
+3.5 Bidding System,TC-3.5.7-02,Verify time update stops when auction ends,Bidder in auction room; Auction ends,"1. Listen for 'timeUpdate' events until auction ends",Time updates stop at 0 or auction end,No more timeUpdate events after auction ends,,New,
+3.5 Bidding System,TC-3.5.8-01,Verify receive bid denied notification,Bidder whose bid was denied is in room,"1. Listen for 'bidDenied' event after admin denies bid",Server emits 'bidDenied' to affected bidder,Bid denied notification received with reason,,New,
+3.5 Bidding System,TC-3.5.8-02,Verify other bidders see updated state after denial,Other bidders in auction room,"1. Listen for 'auctionUpdate' or 'newBid' after bid denial",Server broadcasts updated state,Winning bid recalculated excluding denied bid,,New,
+3.5 Bidding System,TC-3.5.9-01,Verify receive auction update on status change,Bidder in auction room; Auction status changes,"1. Listen for 'auctionUpdate' event when auction goes from live to awaiting_result",Server emits 'auctionUpdate',Auction update received with new status,,New,
+3.5 Bidding System,TC-3.5.9-02,Verify auction update on admin override,Bidder in auction room; Admin overrides status,"1. Listen for 'auctionUpdate' event after admin override",Server emits 'auctionUpdate' with new status,Status change reflected in real-time,,New,
+3.6 Auction Finalization,TC-3.6.1-01,Verify evaluate auction after end,Admin is authenticated; Auction status is awaiting_result,"1. Send GET /auction-finalization/evaluate/:auctionId",Returns 200 OK with evaluation summary,Auction evaluation with winner; bids summary; financial preview returned,,New,
+3.6 Auction Finalization,TC-3.6.1-02,Fail evaluate auction still live,Admin is authenticated; Auction status is live,"1. Send GET /auction-finalization/evaluate/:auctionId",Returns 400 Bad Request,Error message indicating auction must end before evaluation,,New,
+3.6 Auction Finalization,TC-3.6.2-01,Verify finalize auction with winner,Admin is authenticated; Auction has winning bid,"1. Send POST /auction-finalization/finalize
+2. Body: {auctionId: 'valid-auction-uuid'}",Returns 200 OK with finalized auction,Auction finalized with success status; winner determined; financial snapshot frozen,,New,Rule: Financial fields frozen after finalization
+3.6 Auction Finalization,TC-3.6.2-02,Verify finalize auction without bids,Admin is authenticated; Auction has no bids,"1. Send POST /auction-finalization/finalize
+2. Body: {auctionId: 'no-bids-auction-uuid'}",Returns 200 OK with failed status,Auction finalized with failed status due to no bids,,New,
+3.6 Auction Finalization,TC-3.6.2-03,Fail finalize already finalized auction,Admin is authenticated; Auction already finalized,"1. Send POST /auction-finalization/finalize
+2. Body: {auctionId: 'finalized-auction-uuid'}",Returns 400 Bad Request,Error message indicating auction already finalized,,New,
+3.6 Auction Finalization,TC-3.6.3-01,Verify Super Admin overrides auction status,Super Admin is authenticated; Auction exists,"1. Send POST /auction-finalization/override
+2. Body: {auctionId: 'valid-auction-uuid', newStatus: 'failed', reason: 'Legal issue discovered'}",Returns 200 OK with updated status,Auction status overridden; audit log created,,New,Rule: STATUS_OVERRIDE action logged in audit
+3.6 Auction Finalization,TC-3.6.3-02,Fail Admin override without super_admin role,Admin is authenticated (not super_admin),"1. Send POST /auction-finalization/override
+2. Body: {auctionId: 'valid-auction-uuid', newStatus: 'failed'}
+3. Use Admin token",Returns 403 Forbidden,Error message indicating super_admin required,,New,
+3.6 Auction Finalization,TC-3.6.4-01,Verify get auction results as participant,Authenticated user participated in auction,"1. Send GET /auction-finalization/results/:auctionId",Returns 200 OK with results,Auction results including winner; final price; participant summary returned,,New,
+3.6 Auction Finalization,TC-3.6.4-02,Fail get results for non-participant,Authenticated user did not participate,"1. Send GET /auction-finalization/results/:auctionId
+2. User not registered for this auction",Returns 403 Forbidden or limited results,Access restricted for non-participants,,New,
+3.6 Auction Finalization,TC-3.6.5-01,Verify get audit logs,Admin is authenticated; Auction has audit history,"1. Send GET /auction-finalization/audit-logs/:auctionId",Returns 200 OK with audit log array,Full audit history including STATUS_OVERRIDE; BID_DENIED; PARTICIPANT_APPROVED actions,,New,
+3.6 Auction Finalization,TC-3.6.5-02,Fail Bidder accessing audit logs,Bidder is authenticated,"1. Send GET /auction-finalization/audit-logs/:auctionId
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.6 Auction Finalization,TC-3.6.6-01,Verify winner gets payment requirements,Winner is authenticated; Auction finalized with winner,"1. Send GET /auction-finalization/winner-payment-requirements/:auctionId",Returns 200 OK with payment details,Payment breakdown including finalSalePrice; commissionFee; totalAuctionCosts returned,,New,
+3.6 Auction Finalization,TC-3.6.6-02,Fail non-winner accessing payment requirements,Non-winner bidder accessing endpoint,"1. Send GET /auction-finalization/winner-payment-requirements/:auctionId
+2. Use non-winner token",Returns 403 Forbidden,Error message indicating only winner can access,,New,
+3.6 Auction Finalization,TC-3.6.7-01,Verify winner initiates payment,Winner is authenticated; Has payment requirements,"1. Send POST /auction-finalization/submit-winner-payment
+2. Body: {auctionId: 'valid-auction-uuid', paymentMethod: 'bank_transfer'}",Returns 200 OK with payment session,Winner payment session created via Stripe,,New,
+3.6 Auction Finalization,TC-3.6.7-02,Fail initiate payment for non-finalized auction,Winner trying to pay for awaiting_result auction,"1. Send POST /auction-finalization/submit-winner-payment
+2. Body: {auctionId: 'awaiting-result-uuid'}",Returns 400 Bad Request,Error message indicating auction not finalized,,New,
+3.6 Auction Finalization,TC-3.6.8-01,Verify winner payment verification,Winner has completed payment,"1. Send POST /auction-finalization/verify-winner-payment
+2. Body: {auctionId: 'valid-auction-uuid', sessionId: 'stripe_session'}",Returns 200 OK,Winner payment verified; CONTRACT_CREATED audit action logged,,New,Rule: CONTRACT_CREATED action logged on successful payment
+3.6 Auction Finalization,TC-3.6.8-02,Fail verify payment with invalid session,Winner provides wrong session ID,"1. Send POST /auction-finalization/verify-winner-payment
+2. Body: {auctionId: 'valid-auction-uuid', sessionId: 'invalid_session'}",Returns 400 Bad Request,Error message indicating invalid payment session,,New,
+3.7 Payment,TC-3.7.1-01,Verify create deposit payment session,Bidder is authenticated with verified documents,"1. Send POST /payments
+2. Body: {type: 'deposit', auctionId: 'valid-auction-uuid', amount: 50000000}",Returns 201 Created with Stripe session URL,Payment session created; user can redirect to Stripe,,New,
+3.7 Payment,TC-3.7.1-02,Verify create winning payment session,Winner is authenticated,"1. Send POST /payments
+2. Body: {type: 'winning_payment', auctionId: 'valid-auction-uuid', amount: 500000000}",Returns 201 Created with Stripe session URL,Winning payment session created,,New,
+3.7 Payment,TC-3.7.1-03,Fail create payment with invalid type,User is authenticated,"1. Send POST /payments
+2. Body: {type: 'invalid_type', auctionId: 'valid-auction-uuid'}",Returns 400 Bad Request,Error message indicating invalid payment type,,New,
+3.7 Payment,TC-3.7.2-01,Verify payment verification after Stripe success,User completed Stripe payment,"1. Send GET /payments/verify?session_id=valid_stripe_session",Returns 200 OK with completed status,Payment status updated to completed in database,,New,
+3.7 Payment,TC-3.7.2-02,Fail verify cancelled Stripe payment,User cancelled Stripe payment,"1. Send GET /payments/verify?session_id=cancelled_session",Returns 400 Bad Request or status failed,Payment marked as failed or cancelled,,New,
+3.7 Payment,TC-3.7.2-03,Fail verify with invalid session ID,Invalid session ID provided,"1. Send GET /payments/verify?session_id=invalid_session",Returns 404 Not Found,Error message indicating payment session not found,,New,
+3.8 Auction Costs,TC-3.8.1-01,Verify create auction costs,Admin is authenticated; Auction exists,"1. Send POST /auction-costs/auction/:auctionId
+2. Body: {advertisingCost: 5000000, venueRentalCost: 10000000, appraisalCost: 3000000}",Returns 201 Created with costs object,Auction costs created successfully with totalCosts calculated,,New,
+3.8 Auction Costs,TC-3.8.1-02,Verify update existing auction costs,Admin is authenticated; Costs exist,"1. Send POST /auction-costs/auction/:auctionId
+2. Body: {advertisingCost: 7000000}",Returns 200 OK with updated costs,Existing costs updated; totalCosts recalculated,,New,
+3.8 Auction Costs,TC-3.8.1-03,Fail Bidder creating auction costs,Bidder is authenticated,"1. Send POST /auction-costs/auction/:auctionId
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.8 Auction Costs,TC-3.8.2-01,Verify get auction costs,Authenticated user; Costs exist,"1. Send GET /auction-costs/auction/:auctionId",Returns 200 OK with costs,All cost categories including otherCosts array returned,,New,
+3.8 Auction Costs,TC-3.8.2-02,Return empty for no costs,Authenticated user; No costs exist,"1. Send GET /auction-costs/auction/:auctionId",Returns 404 Not Found or null,Indication that no costs defined for this auction,,New,
+3.8 Auction Costs,TC-3.8.3-01,Verify partial update of costs,Admin is authenticated; Costs exist,"1. Send PATCH /auction-costs/auction/:auctionId
+2. Body: {venueRentalCost: 15000000}",Returns 200 OK with updated field,Only specified field updated; others unchanged,,New,
+3.8 Auction Costs,TC-3.8.3-02,Fail update with negative cost,Admin is authenticated,"1. Send PATCH /auction-costs/auction/:auctionId
+2. Body: {advertisingCost: -5000}",Returns 400 Bad Request,Error message indicating costs cannot be negative,,New,
+3.8 Auction Costs,TC-3.8.4-01,Verify Admin deletes auction costs,Admin is authenticated; Costs exist,"1. Send DELETE /auction-costs/auction/:auctionId",Returns 200 OK or 204 No Content,Auction costs deleted successfully,,New,
+3.8 Auction Costs,TC-3.8.4-02,Fail Auctioneer deletes auction costs,Auctioneer is authenticated,"1. Send DELETE /auction-costs/auction/:auctionId
+2. Use Auctioneer token",Returns 403 Forbidden,Error message indicating only Admin can delete costs,,New,
+3.8 Auction Costs,TC-3.8.5-01,Verify add other cost item,Admin is authenticated; Costs exist,"1. Send POST /auction-costs/auction/:auctionId/other-cost
+2. Body: {name: 'Security Fee', amount: 2000000, description: 'Security personnel'}",Returns 200 OK with updated otherCosts,New item added to otherCosts JSON array; totalCosts updated,,New,
+3.8 Auction Costs,TC-3.8.5-02,Fail add other cost without name,Admin is authenticated,"1. Send POST /auction-costs/auction/:auctionId/other-cost
+2. Body: {amount: 2000000}",Returns 400 Bad Request,Error message indicating name is required,,New,
+3.9 System Configuration,TC-3.9.1-01,Verify get all system variables,Admin is authenticated,"1. Send GET /system-variables",Returns 200 OK with variable array,All system variables across categories returned,,New,
+3.9 System Configuration,TC-3.9.1-02,Fail Bidder accessing system variables,Bidder is authenticated,"1. Send GET /system-variables
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.9 System Configuration,TC-3.9.2-01,Verify get specific system variable,Admin is authenticated; Variable exists,"1. Send GET /system-variables/deposit/default_percentage",Returns 200 OK with variable value,Specific variable with category; key; value; dataType returned,,New,
+3.9 System Configuration,TC-3.9.2-02,Fail get non-existent variable,Admin is authenticated,"1. Send GET /system-variables/invalid/key",Returns 404 Not Found,Error message indicating variable not found,,New,
+3.9 System Configuration,TC-3.9.3-01,Verify update system variable,Admin is authenticated; Variable exists,"1. Send PATCH /system-variables/commission/default_rate
+2. Body: {value: '0.05'}",Returns 200 OK with updated variable,Variable value updated; updatedBy recorded,,New,
+3.9 System Configuration,TC-3.9.3-02,Fail update with wrong data type,Admin is authenticated,"1. Send PATCH /system-variables/deposit/default_percentage
+2. Body: {value: 'not-a-number'} for number type variable",Returns 400 Bad Request,Error message indicating value must match dataType,,New,
+3.9 System Configuration,TC-3.9.4-01,Verify create new system variable,Admin is authenticated,"1. Send POST /system-variables
+2. Body: {category: 'general', key: 'new_setting', value: 'true', dataType: 'boolean'}",Returns 201 Created with new variable,New system variable created successfully,,New,
+3.9 System Configuration,TC-3.9.4-02,Fail create duplicate variable,Admin is authenticated; Variable exists,"1. Send POST /system-variables
+2. Body: {category: 'deposit', key: 'default_percentage', value: '0.10', dataType: 'number'}",Returns 409 Conflict,Error message indicating variable already exists,,New,
+3.9 System Configuration,TC-3.9.5-01,Verify clear cache,Admin is authenticated,"1. Send POST /system-variables/cache/clear",Returns 200 OK,System cache cleared successfully,,New,
+3.9 System Configuration,TC-3.9.5-02,Fail Bidder clearing cache,Bidder is authenticated,"1. Send POST /system-variables/cache/clear
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.9 System Configuration,TC-3.9.6-01,Verify get cache statistics,Admin is authenticated,"1. Send GET /system-variables/cache/stats",Returns 200 OK with statistics,Cache statistics including hit rate; size; entries returned,,New,
+3.9 System Configuration,TC-3.9.6-02,Fail Bidder accessing cache stats,Bidder is authenticated,"1. Send GET /system-variables/cache/stats
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.10 Location,TC-3.10.1-01,Verify get all locations publicly,No authentication required,"1. Send GET /locations",Returns 200 OK with location hierarchy,All provinces; districts; wards returned in hierarchical structure,,New,
+3.10 Location,TC-3.10.1-02,Verify location hierarchy structure,No authentication required,"1. Send GET /locations
+2. Verify response structure",Locations have parentId relationships,Province → District → Ward hierarchy maintained,,New,
+3.11 Article,TC-3.11.1-01,Verify list all articles publicly,No authentication required,"1. Send GET /articles",Returns 200 OK with article array,List of articles with type; title; description; published date returned,,New,
+3.11 Article,TC-3.11.1-02,Verify filter articles by type,No authentication required,"1. Send GET /articles?type=auction_notice",Returns 200 OK with filtered results,Only auction_notice type articles returned,,New,
+3.11 Article,TC-3.11.2-01,Verify get article details,Valid article ID exists,"1. Send GET /articles/:id",Returns 200 OK with full article,Article with full content; author; images; related articles returned,,New,
+3.11 Article,TC-3.11.2-02,Fail get non-existent article,Invalid article ID,"1. Send GET /articles/non-existent-uuid",Returns 404 Not Found,Error message indicating article not found,,New,
+3.11 Article,TC-3.11.3-01,Verify Admin creates article,Admin is authenticated,"1. Send POST /articles
+2. Body: {type: 'news', title: 'New Auction Announcement', description: 'Summary', content: 'Full content', author: 'Admin'}",Returns 201 Created with article object,Article created successfully with all fields,,New,
+3.11 Article,TC-3.11.3-02,Fail Bidder creating article,Bidder is authenticated,"1. Send POST /articles
+2. Use Bidder token",Returns 403 Forbidden,Error message indicating admin access required,,New,
+3.11 Article,TC-3.11.3-03,Fail create article without required fields,Admin is authenticated,"1. Send POST /articles
+2. Body: {title: 'Title only'}",Returns 400 Bad Request,Error message indicating required fields missing,,New,
+3.11 Article,TC-3.11.4-01,Verify Admin updates article,Admin is authenticated; Article exists,"1. Send PUT /articles/:id
+2. Body: {title: 'Updated Title', content: 'Updated content'}",Returns 200 OK with updated article,Article updated successfully,,New,
+3.11 Article,TC-3.11.4-02,Fail update non-existent article,Admin is authenticated,"1. Send PUT /articles/non-existent-uuid
+2. Body: {title: 'New Title'}",Returns 404 Not Found,Error message indicating article not found,,New,
+3.11 Article,TC-3.11.5-01,Verify update article relations,Admin is authenticated; Article and related articles exist,"1. Send PATCH /articles/:id/relations
+2. Body: {relatedArticleIds: ['uuid1', 'uuid2']}",Returns 200 OK,Article relations updated successfully,,New,
+3.11 Article,TC-3.11.5-02,Fail update relations with self-reference,Admin is authenticated,"1. Send PATCH /articles/:id/relations
+2. Body: {relatedArticleIds: [':id']} (same article ID)",Returns 400 Bad Request,Error message indicating cannot relate article to itself,,New,
+3.11 Article,TC-3.11.6-01,Verify Admin deletes article,Admin is authenticated; Article exists,"1. Send DELETE /articles/:id",Returns 200 OK or 204 No Content,Article deleted successfully,,New,
+3.11 Article,TC-3.11.6-02,Fail Auctioneer deleting article,Auctioneer is authenticated,"1. Send DELETE /articles/:id
+2. Use Auctioneer token",Returns 403 Forbidden,Error message indicating only Admin can delete articles,,New,
+4.1 Security Testing - IDOR,TC-4.1.1-01,IDOR: Attempt to access another user's registrations via userId parameter,Bidder A is authenticated; Bidder B exists with registrations,"1. Send GET /register-to-bid/users/:userIdB/registrations
+2. Use Bidder A's valid JWT token
+3. userIdB belongs to a different user",Returns 403 Forbidden,Access denied - cannot view another user's registrations; Bidder A's token cannot access Bidder B's data,,New,OWASP A01:2021 - Broken Access Control (IDOR)
+4.1 Security Testing - IDOR,TC-4.1.1-02,IDOR: Attempt to access another user's specific auction registration,Bidder A is authenticated; Bidder B registered for auction,"1. Send GET /register-to-bid/auctions/:auctionId/registration
+2. Use Bidder A's token for auction where only Bidder B is registered
+3. Manipulate participantId in query if exposed",Returns 403 Forbidden or returns only Bidder A's own registration,System does not leak Bidder B's registration data to Bidder A,,New,OWASP A01:2021 - Broken Access Control (IDOR)
+4.1 Security Testing - BOLA,TC-4.1.2-01,BOLA: Download contract PDF for auction user did not win,"Bidder A is authenticated; Bidder B won auction and has contract; Contract ID is known","1. Send GET /api/contracts/:contractId/pdf/vi
+2. Use Bidder A's token
+3. contractId belongs to Bidder B's winning contract",Returns 403 Forbidden,Access denied - cannot download contract belonging to another winner,,New,OWASP A01:2021 - Broken Access Control (BOLA)
+4.1 Security Testing - BOLA,TC-4.1.2-02,BOLA: Access winner payment requirements for auction user did not win,Bidder A is authenticated; Bidder B is winner of auction,"1. Send GET /auction-finalization/winner-payment-requirements/:auctionId
+2. Use Bidder A's token (non-winner)
+3. auctionId has Bidder B as winner",Returns 403 Forbidden,Access denied - only the actual winner can access payment requirements,,New,OWASP A01:2021 - Broken Access Control (BOLA)
+4.1 Security Testing - Mass Assignment,TC-4.1.3-01,Mass Assignment: Inject isWinningBid field in manual bid request,Bidder is checked-in; Auction is live,"1. Send POST /manual-bid
+2. Body: {auctionId: 'uuid'; amount: 100000000; isWinningBid: true}
+3. Verify bid is processed but isWinningBid is not accepted",Returns 201 Created but isWinningBid field is ignored,Bid created successfully but isWinningBid is determined by server logic not client input,,New,OWASP A08:2021 - Mass Assignment vulnerability
+4.1 Security Testing - Mass Assignment,TC-4.1.3-02,Mass Assignment: Inject role field in profile update,Bidder is authenticated,"1. Send PUT /auth/me
+2. Body: {fullName: 'New Name'; role: 'admin'}
+3. Verify role is not changed to admin",Returns 200 OK but role field is ignored,Profile updated but role remains 'bidder' - cannot self-promote via mass assignment,,New,OWASP A08:2021 - Mass Assignment vulnerability
+4.1 Security Testing - Mass Assignment,TC-4.1.3-03,Mass Assignment: Inject status field in registration submission,Bidder is authenticated; Auction in registration period,"1. Send POST /register-to-bid
+2. Body: {auctionId: 'uuid'; confirmedAt: '2024-01-01'; depositPaidAt: '2024-01-01'}
+3. Verify confirmation timestamps are ignored",Returns 201 Created but timestamp fields are ignored,Registration created but confirmedAt/depositPaidAt remain null - cannot bypass approval process,,New,OWASP A08:2021 - Mass Assignment vulnerability
+4.1 Security Testing - Rate Limiting,TC-4.1.4-01,Rate Limiting: Brute force OTP/verification endpoint,Guest has access to API,"1. Send POST /auth/verify-email 50 times in 60 seconds
+2. Use different invalid tokens each request
+3. Monitor for rate limiting response",Returns 429 Too Many Requests after threshold,Rate limiting applied - endpoint protected from brute force token enumeration,,New,OWASP A07:2021 - Rate Limiting / Brute Force protection
+4.1 Security Testing - Rate Limiting,TC-4.1.4-02,Rate Limiting: Spam bid placement endpoint,Bidder is checked-in; Auction is live,"1. Send POST /manual-bid 100 times in 10 seconds
+2. Use incrementing amounts each request
+3. Monitor for rate limiting or throttling",Returns 429 or system handles gracefully without performance degradation,Rate limiting applied or system gracefully handles spam without affecting other users,,New,OWASP A04:2021 - Rate Limiting for resource exhaustion prevention
+5.1 Non-Functional - Race Conditions,TC-5.1.1-01,Race Condition: Two simultaneous bids with exact same amount,Two bidders (A and B) checked-in; Auction live; Both prepare same bid amount,"1. Prepare two POST /manual-bid requests with identical amount
+2. Send both requests exactly simultaneously (within 10ms)
+3. Amount = currentHighest + bidIncrement",Only one request returns 201 Created; other returns 400/409,Exactly one bid succeeds; other fails with 'bid amount no longer valid' - no duplicate winning bids,,New,Critical: Database transaction isolation must prevent duplicate bids
+5.1 Non-Functional - Race Conditions,TC-5.1.1-02,Race Condition: Bid placed during auction status transition,Bidder checked-in; Auction is exactly at auctionEndAt millisecond,"1. Send POST /manual-bid at exact moment auctionEndAt occurs
+2. Time bid to hit server precisely at boundary
+3. Monitor response and auction state",Returns 400 Bad Request if auction ended OR 201 if bid processed before cutoff,Consistent behavior - either bid accepted before end or rejected after; no ambiguous state,,New,Critical: Auction end boundary must be deterministic
+5.1 Non-Functional - Race Conditions,TC-5.1.1-03,Race Condition: Simultaneous check-in requests from same user,Bidder confirmed; Within check-in window,"1. Send POST /register-to-bid/check-in twice simultaneously
+2. Both requests with same auctionId and user token
+3. Monitor for duplicate checkedInAt records",Only one request returns 200 OK; other returns 400 already checked in,Only one check-in record created; no duplicate registrations,,New,Idempotency check for check-in operation
+5.1 Non-Functional - Double Spend,TC-5.1.2-01,Double Spend: Concurrent deposit payment submissions,Bidder with verified documents; Ready to pay deposit,"1. Send POST /register-to-bid/submit-deposit twice simultaneously
+2. Both requests with same auctionId
+3. Monitor for duplicate Stripe sessions or payments",Only one payment session created OR second request returns 409,No double payment sessions - user cannot be charged twice for same deposit,,New,Critical: Payment idempotency must prevent double charges
+5.1 Non-Functional - Double Spend,TC-5.1.2-02,Double Spend: Concurrent winner payment submissions,Winner authenticated; Ready to pay final amount,"1. Send POST /auction-finalization/submit-winner-payment twice simultaneously
+2. Both requests with same auctionId
+3. Monitor for duplicate payment records",Only one payment session created; second request blocked,No duplicate winner payment sessions - prevents double charging winner,,New,Critical: Winner payment must be idempotent
+5.1 Non-Functional - Double Spend,TC-5.1.2-03,Double Spend: Multiple verify-deposit-payment calls with same session,Bidder completed Stripe payment; Has valid session_id,"1. Send POST /register-to-bid/verify-deposit-payment 5 times rapidly
+2. All requests with same sessionId
+3. Monitor depositPaidAt and Payment records",First request returns 200 OK; subsequent requests return 200 (idempotent) or 400 already verified,Only one deposit payment record created; subsequent calls are idempotent,,New,Idempotency for payment verification
+5.1 Non-Functional - Edge Cases,TC-5.1.3-01,Edge Case: Bid at exact auctionStartAt moment,Bidder checked-in; Auction status about to transition to live,"1. Send POST /manual-bid precisely when auctionStartAt occurs
+2. Monitor if bid is accepted or rejected
+3. Verify auction status transitions correctly",Returns 201 Created if auction is live OR 400 if not yet live,Consistent boundary handling - bid only accepted when auction is definitely live,,New,Boundary condition for auction start
+5.1 Non-Functional - Edge Cases,TC-5.1.3-02,Edge Case: Registration submission at exact depositEndAt deadline,Bidder authenticated; Registration period ending,"1. Send POST /register-to-bid precisely at depositEndAt millisecond
+2. Monitor if registration is accepted or rejected
+3. Check timestamp comparison logic",Returns 201 if before deadline OR 400 if past deadline,Consistent deadline enforcement - clear accept/reject at boundary,,New,Boundary condition for registration deadline
+5.1 Non-Functional - Edge Cases,TC-5.1.3-03,Edge Case: High volume concurrent WebSocket connections,50 bidders ready to join auction room simultaneously,"1. Connect 50 WebSocket clients simultaneously
+2. All join same auction room via 'joinAuction'
+3. Place one bid and verify all 50 receive 'newBid' event",All 50 clients receive auctionState and newBid events,System handles concurrent WebSocket connections without dropping events or crashing,,New,Stress test for WebSocket gateway scalability
