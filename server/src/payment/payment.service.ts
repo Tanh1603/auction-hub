@@ -3,19 +3,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaymentCreateRequestDto } from './dto/PaymentCreateRequest.dto';
 import { Payment } from './dto/Payment.dto';
 import { PaymentVerificationDto } from './dto/PaymentVerification.dto';
-import { PaymentStatus } from '../../generated';
 import Stripe from 'stripe';
 import * as QRCode from 'qrcode';
+import { PaymentStatus } from '../../generated';
 
 @Injectable()
 export class PaymentService {
-  private stripe: Stripe;
+    private stripe: Stripe;
 
   constructor(private prisma: PrismaService) {
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
     this.stripe = new Stripe(stripeSecretKey, {
-      // @ts-ignore
+      // @ts-expect-error - Stripe API version might be newer than types
       apiVersion: '2024-12-18.acacia',
     });
   }
@@ -39,7 +39,9 @@ export class PaymentService {
                 )} - Auction Payment`,
                 description: `Payment for auction ${paymentRequest.auctionId}`,
               },
-              unit_amount: Math.round(paymentRequest.amount * 100),
+              unit_amount: this.isZeroDecimalCurrency('vnd')
+                ? Math.round(paymentRequest.amount)
+                : Math.round(paymentRequest.amount * 100),
             },
             quantity: 1,
           },
@@ -55,72 +57,69 @@ export class PaymentService {
         },
       });
 
-      const qrCodeDataUrl = await QRCode.toDataURL(session.url, {
-        errorCorrectionLevel: 'H',
-        type: 'image/png',
-        width: 300,
-        margin: 2,
-      });
+            const qrCodeDataUrl = await QRCode.toDataURL(session.url, {
+                errorCorrectionLevel: 'H',
+                type: 'image/png',
+                width: 300,
+                margin: 2,
+            });
 
-      const paymentDeadline = new Date();
-      paymentDeadline.setHours(paymentDeadline.getHours() + 24);
+            const paymentDeadline = new Date();
+            paymentDeadline.setHours(paymentDeadline.getHours() + 24);
 
-      const bankInfo = {
-        bank_name: 'Stripe',
-        account_number: 'Stripe',
-        account_name: 'Auction Hub',
-        transfer_content: `Payment for ${paymentRequest.paymentType}`,
-      };
+            const bankInfo = {
+                bank_name: 'Stripe',
+                account_number: 'Stripe',
+                account_name: 'Auction Hub',
+                transfer_content: `Payment for ${paymentRequest.paymentType}`,
+            };
 
-      // Map Stripe payment status to our PaymentStatus enum
-      const statusMapping: Record<string, PaymentStatus> = {
-        unpaid: PaymentStatus.pending,
-        paid: PaymentStatus.completed,
-        no_payment_required: PaymentStatus.completed,
-      };
-      const paymentStatus =
-        statusMapping[session.payment_status] || PaymentStatus.pending;
+            // Map Stripe payment status to our PaymentStatus enum
+            const statusMapping: Record<string, PaymentStatus> = {
+                'unpaid': PaymentStatus.pending,
+                'paid': PaymentStatus.completed,
+                'no_payment_required': PaymentStatus.completed,
+            };
+            const paymentStatus = statusMapping[session.payment_status] || PaymentStatus.pending;
 
-      await this.prisma.payment.create({
-        data: {
-          userId: userId,
-          auctionId: paymentRequest.auctionId,
-          registrationId: paymentRequest.registrationId,
-          paymentType: paymentRequest.paymentType,
-          amount: paymentRequest.amount,
-          currency: 'VND',
-          status: paymentStatus,
-          paymentMethod: paymentRequest.paymentMethod,
-          transactionId: session.id,
-          paymentDetails: {
-            payment_url: session.url,
-            qr_code: qrCodeDataUrl,
-            bank_info: bankInfo,
-            payment_deadline: paymentDeadline.toISOString(),
-            stripe_session_id: session.id,
-          },
-        },
-      });
+            await this.prisma.payment.create({
+                data: {
+                    userId: userId,
+                    auctionId: paymentRequest.auctionId,
+                    registrationId: paymentRequest.registrationId,
+                    paymentType: paymentRequest.paymentType,
+                    amount: paymentRequest.amount,
+                    currency: 'USD',
+                    status: paymentStatus,
+                    paymentMethod: paymentRequest.paymentMethod,
+                    transactionId: session.id,
+                    paymentDetails: {
+                        payment_url: session.url,
+                        qr_code: qrCodeDataUrl,
+                        bank_info: bankInfo,
+                        payment_deadline: paymentDeadline.toISOString(),
+                        stripe_session_id: session.id,
+                    },
+                },
+            });
 
-      const payment: Payment = {
-        payment_id: session.id,
-        amount: paymentRequest.amount,
-        currency: 'VND',
-        status: session.payment_status || 'unpaid',
-        payment_url: session.url,
-        qr_code: qrCodeDataUrl,
-        bank_info: bankInfo,
-        payment_deadline: paymentDeadline.toISOString(),
-      };
+            const payment: Payment = {
+                payment_id: session.id,
+                amount: paymentRequest.amount,
+                currency: 'USD',
+                status: session.payment_status || 'unpaid',
+                payment_url: session.url,
+                qr_code: qrCodeDataUrl,
+                bank_info: bankInfo,
+                payment_deadline: paymentDeadline.toISOString(),
+            };
 
-      return payment;
-    } catch (error) {
-      console.error('Error creating Stripe payment:', error);
-      throw new BadRequestException(
-        `Failed to create payment: ${error.message}`
-      );
+            return payment;
+        } catch (error) {
+            console.error('Error creating Stripe payment:', error);
+            throw new BadRequestException(`Failed to create payment: ${error.message}`);
+        }
     }
-  }
 
   async verifyPayment(sessionId: string): Promise<PaymentVerificationDto> {
     try {
@@ -138,7 +137,9 @@ export class PaymentService {
       return {
         payment_id: session.id,
         status: session.payment_status,
-        amount: session.amount_total / 100,
+        amount: this.isZeroDecimalCurrency(session.currency)
+          ? session.amount_total
+          : session.amount_total / 100,
         currency: session.currency.toUpperCase(),
         metadata: session.metadata,
       };
@@ -164,5 +165,31 @@ export class PaymentService {
       signature,
       webhookSecret
     );
+  }
+
+  /**
+   * Check if a currency is zero-decimal
+   * @see https://stripe.com/docs/currencies#zero-decimal
+   */
+  private isZeroDecimalCurrency(currency: string): boolean {
+    const zeroDecimalCurrencies = [
+      'bif',
+      'clp',
+      'djf',
+      'gnf',
+      'jpy',
+      'kmf',
+      'krw',
+      'mga',
+      'pyg',
+      'rwf',
+      'ugx',
+      'vnd',
+      'vuv',
+      'xaf',
+      'xof',
+      'xpf',
+    ];
+    return zeroDecimalCurrencies.includes(currency.toLowerCase());
   }
 }

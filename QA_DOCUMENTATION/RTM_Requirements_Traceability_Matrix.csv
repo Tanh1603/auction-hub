@@ -66,3 +66,10 @@ No,Req ID,Req Desc,TC ID,TC Desc,Test Design,Test Designer,UAT Test Req?,Test Ex
 65,3.11.4,Update Article (Actor: Admin),"TC-3.11.4-01, TC-3.11.4-02","Verify update existing/non-existent article",Complete,QA Team,Yes,Pending,,,No,Covered
 66,3.11.5,Update Article Relations (Actor: Admin),"TC-3.11.5-01, TC-3.11.5-02","Verify update article relations; self-reference restriction",Complete,QA Team,Yes,Pending,,,No,Covered
 67,3.11.6,Delete Article (Actor: Admin),"TC-3.11.6-01, TC-3.11.6-02","Verify Admin deletes article; Auctioneer restriction",Complete,QA Team,Yes,Pending,,,No,Covered
+68,4.1.1,IDOR - Insecure Direct Object Reference (Security),"TC-4.1.1-01, TC-4.1.1-02","Verify IDOR protection on user registrations endpoints",Complete,QA Team,Yes,Pending,,,No,Covered
+69,4.1.2,BOLA - Broken Object Level Authorization (Security),"TC-4.1.2-01, TC-4.1.2-02","Verify BOLA protection on contracts and winner payment endpoints",Complete,QA Team,Yes,Pending,,,No,Covered
+70,4.1.3,Mass Assignment / Parameter Tampering (Security),"TC-4.1.3-01, TC-4.1.3-02, TC-4.1.3-03","Verify rejection of injected isWinningBid/role/status fields",Complete,QA Team,Yes,Pending,,,No,Covered
+71,4.1.4,Rate Limiting / Brute Force Protection (Security),"TC-4.1.4-01, TC-4.1.4-02","Verify rate limiting on OTP verification and bid placement",Complete,QA Team,Yes,Pending,,,No,Covered
+72,5.1.1,Race Condition - Concurrent Bidding (Non-Functional),"TC-5.1.1-01, TC-5.1.1-02, TC-5.1.1-03","Verify concurrent bid handling; auction boundary; check-in idempotency",Complete,QA Team,Yes,Pending,,,No,Covered
+73,5.1.2,Double Spend Prevention (Non-Functional),"TC-5.1.2-01, TC-5.1.2-02, TC-5.1.2-03","Verify payment idempotency for deposit and winner payments",Complete,QA Team,Yes,Pending,,,No,Covered
+74,5.1.3,Auction Timing Edge Cases (Non-Functional),"TC-5.1.3-01, TC-5.1.3-02, TC-5.1.3-03","Verify boundary behavior at auction start/end and registration deadline",Complete,QA Team,Yes,Pending,,,No,Covered
