@@ -84,12 +84,13 @@ export class WinnerPaymentService {
       const depositPaid = winningBid.participant.depositAmount
         ? parseFloat(winningBid.participant.depositAmount.toString())
         : 0;
-      const dossierFee = auction.saleFee
-        ? parseFloat(auction.saleFee.toString())
-        : 0;
-
+      // Participation fee (dossier fee) is now collected upfront during registration.
+      // Winners pay: Final Bid Amount - Deposit Already Paid.
       const remainingAmount = winningAmount - depositPaid;
-      const totalDue = remainingAmount + dossierFee;
+      const totalDue = remainingAmount;
+
+      // We maintain dossierFee for the breakdown display, but mark it as 0 further due
+      const dossierFeeDue = 0;
 
       // Calculate payment deadline (e.g., 7 days after auction end)
       const paymentDeadline = new Date(auction.auctionEndAt);
@@ -107,7 +108,7 @@ export class WinnerPaymentService {
         auctionName: auction.name,
         winningAmount: winningAmount.toLocaleString(),
         depositAlreadyPaid: depositPaid.toLocaleString(),
-        dossierFee: dossierFee.toLocaleString(),
+        dossierFee: dossierFeeDue.toLocaleString(),
         totalDue: totalDue.toLocaleString(),
         paymentDeadline: paymentDeadline,
       });
@@ -126,9 +127,9 @@ export class WinnerPaymentService {
         paymentBreakdown: {
           winningAmount,
           depositAlreadyPaid: depositPaid,
-          dossierFee,
+          dossierFee: dossierFeeDue,
           remainingAmount,
-          totalDue,
+          totalDue: totalDue,
           paymentDeadline: paymentDeadline.toISOString(),
         },
         financialSummary: auction.netAmountToPropertyOwner

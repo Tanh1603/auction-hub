@@ -64,14 +64,18 @@ export class PaymentProcessingService {
         throw new BadRequestException('Deposit already paid');
       }
 
-      // Validate deposit amount matches policy
-      const expectedDepositAmount = parseFloat(
+      // Validate deposit amount matches policy (now includes participation fee)
+      const depositAmountRequired = parseFloat(
         registration.auction.depositAmountRequired.toString()
       );
+      const saleFee = parseFloat(
+        registration.auction.saleFee?.toString() || '0'
+      );
+      const expectedTotal = depositAmountRequired + saleFee;
 
-      if (Math.abs(depositAmount - expectedDepositAmount) > 0.01) {
+      if (Math.abs(depositAmount - expectedTotal) > 0.01) {
         throw new BadRequestException(
-          `Deposit amount mismatch. Expected: ${expectedDepositAmount}, Received: ${depositAmount}`
+          `Payment amount mismatch. Expected (Deposit + Fee): ${expectedTotal}, Received: ${depositAmount}`
         );
       }
 
@@ -218,10 +222,8 @@ export class PaymentProcessingService {
       // Calculate remaining amount to pay
       const remainingAmount = winningAmount - depositPaid;
 
-      // Additional fees winner might need to pay (dossier fee if not paid yet)
-      const dossierFee = auction.saleFee
-        ? parseFloat(auction.saleFee.toString())
-        : 0;
+      // Additional fees winner might need to pay (dossier fee is now collected at registration)
+      const dossierFee = 0;
 
       const totalDue = remainingAmount + dossierFee;
 
@@ -513,6 +515,17 @@ export class PaymentProcessingService {
         throw new NotFoundException('No completed deposit payment found');
       }
 
+      // Retrieve the participant's actual deposit amount (excluding non-refundable fee)
+      const participant = registrationId
+        ? await this.prisma.auctionParticipant.findUnique({
+            where: { id: registrationId },
+          })
+        : null;
+
+      const refundAmount = participant?.depositAmount
+        ? parseFloat(participant.depositAmount.toString())
+        : parseFloat(depositPayment.amount.toString());
+
       // Create refund record
       const refund = await this.prisma.payment.create({
         data: {
@@ -520,7 +533,7 @@ export class PaymentProcessingService {
           auctionId: depositPayment.auctionId,
           registrationId,
           paymentType: PaymentType.refund,
-          amount: depositPayment.amount,
+          amount: refundAmount,
           currency: depositPayment.currency,
           status: PaymentStatus.completed,
           refundedAt: new Date(),
@@ -538,12 +551,14 @@ export class PaymentProcessingService {
         },
       });
 
-      this.logger.log(`Deposit refunded for registration ${registrationId}`);
+      this.logger.log(
+        `Deposit refunded for registration ${registrationId}. Amount: ${refundAmount}`
+      );
 
       return {
         success: true,
         refundId: refund.id,
-        amount: parseFloat(refund.amount.toString()),
+        amount: refundAmount,
         reason,
       };
     } catch (error) {

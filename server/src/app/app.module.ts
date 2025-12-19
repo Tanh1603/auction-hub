@@ -18,6 +18,8 @@ import { AppService } from './app.service';
 
 import { QueueModule } from '../common/queue/queue.module';
 import { ContractModule } from '../contracts/contract.module';
+import { DashboardModule } from '../feature/dashboard/dashboard.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,6 +39,7 @@ import { ContractModule } from '../contracts/contract.module';
     LocationModule,
     ContractModule,
     QueueModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

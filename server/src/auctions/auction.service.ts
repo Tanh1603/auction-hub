@@ -63,6 +63,7 @@ export class AuctionService {
       saleStartAt: dto.saleStartAt,
       saleEndAt: dto.saleEndAt,
       saleFee: dto.saleFee,
+      dossierFee: dto.saleFee,
       viewTime: dto.viewTime,
       depositEndAt: dto.depositEndAt,
       depositAmountRequired: dto.depositAmountRequired,
@@ -100,6 +101,7 @@ export class AuctionService {
         ? { connect: { id: assetProvinceId } }
         : undefined,
       assetWard: assetWardId ? { connect: { id: assetWardId } } : undefined,
+      dossierFee: dto.saleFee ? dto.saleFee : undefined,
     };
   }
 
