@@ -224,14 +224,68 @@ scheduled → live → awaiting_result → success/failed
 
 #### Sub-Feature List (Admin Actions):
 
-| ID     | Function Name (EN)        | Function Name (VI) | Trigger/API Endpoint                           | Actor             |
-| ------ | ------------------------- | ------------------ | ---------------------------------------------- | ----------------- |
-| 3.4.8  | List All Registrations    | Danh sách đăng ký  | `GET /register-to-bid/admin/registrations`     | Admin, Auctioneer |
-| 3.4.9  | Approve Registration      | Duyệt đăng ký      | `POST /register-to-bid/admin/approve`          | Admin, Auctioneer |
-| 3.4.10 | Reject Registration       | Từ chối đăng ký    | `POST /register-to-bid/admin/reject`           | Admin, Auctioneer |
-| 3.4.11 | Verify Documents (Tier 1) | Xác minh tài liệu  | `POST /register-to-bid/admin/verify-documents` | Admin, Auctioneer |
-| 3.4.12 | Reject Documents          | Từ chối tài liệu   | `POST /register-to-bid/admin/reject-documents` | Admin, Auctioneer |
-| 3.4.13 | Final Approval (Tier 2)   | Duyệt cuối cùng    | `POST /register-to-bid/admin/final-approval`   | Admin, Auctioneer |
+| ID     | Function Name (EN)        | Function Name (VI) | Trigger/API Endpoint                                   | Actor             |
+| ------ | ------------------------- | ------------------ | ------------------------------------------------------ | ----------------- |
+| 3.4.8  | List All Registrations    | Danh sách đăng ký  | `GET /register-to-bid/admin/registrations`             | Admin, Auctioneer |
+| 3.4.9  | Approve Registration      | Duyệt đăng ký      | `POST /register-to-bid/admin/approve`                  | Admin, Auctioneer |
+| 3.4.10 | Reject Registration       | Từ chối đăng ký    | `POST /register-to-bid/admin/reject`                   | Admin, Auctioneer |
+| 3.4.11 | Verify Documents (Tier 1) | Xác minh tài liệu  | `POST /register-to-bid/admin/verify-documents`         | Admin, Auctioneer |
+| 3.4.12 | Reject Documents          | Từ chối tài liệu   | `POST /register-to-bid/admin/reject-documents`         | Admin, Auctioneer |
+| 3.4.13 | Final Approval (Tier 2)   | Duyệt cuối cùng    | `POST /register-to-bid/admin/final-approval`           | Admin, Auctioneer |
+| 3.4.14 | Request Refund            | Yêu cầu hoàn cọc   | `POST /register-to-bid/request-refund`                 | Bidder            |
+| 3.4.15 | List Refund Requests      | Danh sách hoàn cọc | `GET /register-to-bid/admin/refunds`                   | Admin, Auctioneer |
+| 3.4.16 | Get Refund Detail         | Chi tiết hoàn cọc  | `GET /register-to-bid/admin/refunds/:id`               | Admin, Auctioneer |
+| 3.4.17 | Update Refund Status      | Cập nhật hoàn cọc  | `PATCH /register-to-bid/admin/refunds/:id`             | Admin, Auctioneer |
+| 3.4.18 | Batch Process Refunds     | Xử lý hàng loạt    | `POST /register-to-bid/admin/refunds/batch/:auctionId` | Admin, Auctioneer |
+
+#### Refund & Disqualification System:
+
+The refund system follows Vietnamese auction regulations (Nghị định 17/2010/NĐ-CP) for deposit handling:
+
+> **⚠️ IMPORTANT: Deposit vs Application Fee**
+>
+> - **Deposit (Tiền đặt trước)**: Refundable to eligible non-winners
+> - **Application Fee (Phí hồ sơ)**: **NON-REFUNDABLE** under any circumstances
+>
+> Refunds only apply to the deposit amount. The application fee is never refunded.
+
+**Automatic Refund (Non-Winners):**
+
+- Non-winners who did not violate rules receive **AUTOMATIC refund within 3 business days**
+- System runs scheduled job daily to process eligible refunds
+- No user action required for auto-refund
+
+**Refund Eligibility:**
+
+| Scenario                   | Deposit                 | App Fee |
+| -------------------------- | ----------------------- | ------- |
+| Non-winner (no violations) | ✅ Auto-refund (3 days) | ❌      |
+| Withdrawal BEFORE deadline | ✅ 100%                 | ❌      |
+| Withdrawal AFTER deadline  | ❌ Forfeited            | ❌      |
+| Winner payment default     | ❌ Forfeited            | ❌      |
+
+**Deposit Forfeiture Cases:**
+
+- `NO_SHOW` - Paid deposit but didn't attend auction
+- `FALSE_INFORMATION` - Provided false registration info
+- `FORGED_DOCUMENTS` - Submitted forged documents
+- `PRICE_RIGGING` - Price manipulation/collusion
+- `AUCTION_OBSTRUCTION` - Obstructed auction process
+- `BID_WITHDRAWAL` - Withdrew placed bid
+- `REFUSED_TO_SIGN` - Refused to sign minutes (2 days)
+- `REFUSED_RESULT` - Refused winning result
+- `PAYMENT_DEFAULT` - Failed payment (3 days after contract)
+- `CONTRACT_DEFAULT` - Failed to sign contract (7 days)
+- `CHECK_IN_FAILURE` - Failed to check-in before auction ends
+- `LATE_WITHDRAWAL` - Withdrew after `saleEndAt` deadline
+
+**Refund Status Flow:**
+
+```
+AUTOMATIC PATH:    Auction Ends → 3 Days → AUTO_PROCESSED
+MANUAL PATH:       User Request → PENDING → APPROVED → PROCESSED
+FORFEITURE PATH:   Disqualification → FORFEITED
+```
 
 #### Registration State Flow:
 
@@ -389,6 +443,7 @@ scheduled → live → awaiting_result → success/failed
 | 3.6.6 | Get Winner Payment Requirements | Xem yêu cầu thanh toán người thắng | `GET /auction-finalization/winner-payment-requirements/:auctionId` | Winner             |
 | 3.6.7 | Initiate Winner Payment         | Khởi tạo thanh toán người thắng    | `POST /auction-finalization/submit-winner-payment`                 | Winner             |
 | 3.6.8 | Verify Winner Payment           | Xác nhận thanh toán người thắng    | `POST /auction-finalization/verify-winner-payment`                 | Winner, Admin      |
+| 3.6.9 | Get Management Detail           | Xem chi tiết quản lý               | `GET /auction-finalization/management-detail/:auctionId`           | Admin, Super Admin |
 
 #### Audit Actions:
 
@@ -602,22 +657,22 @@ Locations are stored in a hierarchical structure:
 
 ### 4.1 Core Entities
 
-| Entity               | Description               | Key Fields                                                                                              |
-| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `User`               | Platform users            | id, email, phoneNumber, fullName, identityNumber, userType, role, ratingScore                           |
-| `Auction`            | Auction listings          | id, code, name, status, startingPrice, bidIncrement, propertyOwner (JSON), assetWardId, assetProvinceId |
-| `AuctionParticipant` | User-Auction registration | id, userId, auctionId, confirmedAt, checkedInAt, depositPaidAt, documents (JSON)                        |
-| `AuctionBid`         | Individual bids           | id, auctionId, participantId, amount, bidAt, bidType, isWinningBid, isDenied                            |
-| `Payment`            | Payment transactions      | id, userId, auctionId, registrationId, paymentType, amount, status, currency                            |
-| `Contract`           | Winner contracts          | id, auctionId, winningBidId, buyerUserId, propertyOwnerUserId, price, status                            |
-| `AuctionCost`        | Auction variable costs    | id, auctionId, advertisingCost, venueRentalCost, totalCosts, otherCosts (JSON)                          |
-| `AuctionAuditLog`    | Audit trail               | id, auctionId, performedBy, action, previousStatus, newStatus, reason, metadata                         |
-| `SystemVariable`     | System configuration      | id, category, key, value, dataType, isActive, updatedBy                                                 |
-| `AutoBidSetting`     | Auto-bid configuration    | id, participantId, maxAmount, incrementAmount, isActive                                                 |
-| `Location`           | Geographic locations      | id, name, value, sortOrder, parentId                                                                    |
-| `Article`            | Content articles          | id, type, title, description, image, author, content                                                    |
-| `AuctionRelation`    | Related auctions link     | auctionId, relatedAuctionId                                                                             |
-| `ArticleRelation`    | Related articles link     | articleId, relatedArticleId                                                                             |
+| Entity               | Description               | Key Fields                                                                                                     |
+| -------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `User`               | Platform users            | id, email, phoneNumber, fullName, identityNumber, userType, role, ratingScore                                  |
+| `Auction`            | Auction listings          | id, code, name, status, startingPrice, bidIncrement, propertyOwner (JSON), assetWardId, assetProvinceId        |
+| `AuctionParticipant` | User-Auction registration | id, userId, auctionId, confirmedAt, checkedInAt, depositPaidAt, documents (JSON), isDisqualified, refundStatus |
+| `AuctionBid`         | Individual bids           | id, auctionId, participantId, amount, bidAt, bidType, isWinningBid, isDenied                                   |
+| `Payment`            | Payment transactions      | id, userId, auctionId, registrationId, paymentType, amount, status, currency                                   |
+| `Contract`           | Winner contracts          | id, auctionId, winningBidId, buyerUserId, propertyOwnerUserId, price, status                                   |
+| `AuctionCost`        | Auction variable costs    | id, auctionId, advertisingCost, venueRentalCost, totalCosts, otherCosts (JSON)                                 |
+| `AuctionAuditLog`    | Audit trail               | id, auctionId, performedBy, action, previousStatus, newStatus, reason, metadata                                |
+| `SystemVariable`     | System configuration      | id, category, key, value, dataType, isActive, updatedBy                                                        |
+| `AutoBidSetting`     | Auto-bid configuration    | id, participantId, maxAmount, incrementAmount, isActive                                                        |
+| `Location`           | Geographic locations      | id, name, value, sortOrder, parentId                                                                           |
+| `Article`            | Content articles          | id, type, title, description, image, author, content                                                           |
+| `AuctionRelation`    | Related auctions link     | auctionId, relatedAuctionId                                                                                    |
+| `ArticleRelation`    | Related articles link     | articleId, relatedArticleId                                                                                    |
 
 ### 4.2 Enumerations
 
@@ -680,6 +735,11 @@ Locations are stored in a hierarchical structure:
 | POST   | `/register-to-bid/admin/verify-documents`           | Verify documents             | Admin         |
 | POST   | `/register-to-bid/admin/reject-documents`           | Reject documents             | Admin         |
 | POST   | `/register-to-bid/admin/final-approval`             | Final approval               | Admin         |
+| POST   | `/register-to-bid/request-refund`                   | Request refund               | Bidder        |
+| GET    | `/register-to-bid/admin/refunds`                    | List refund requests         | Admin         |
+| GET    | `/register-to-bid/admin/refunds/:participantId`     | Get refund detail            | Admin         |
+| PATCH  | `/register-to-bid/admin/refunds/:participantId`     | Update refund status         | Admin         |
+| POST   | `/register-to-bid/admin/refunds/batch/:auctionId`   | Batch process refunds        | Admin         |
 
 ### Bidding Endpoints
 
@@ -700,6 +760,7 @@ Locations are stored in a hierarchical structure:
 | GET    | `/auction-finalization/winner-payment-requirements/:auctionId` | Get payment requirements | Winner        |
 | POST   | `/auction-finalization/submit-winner-payment`                  | Submit winner payment    | Winner        |
 | POST   | `/auction-finalization/verify-winner-payment`                  | Verify winner payment    | Winner        |
+| GET    | `/auction-finalization/management-detail/:auctionId`           | Get management detail    | Admin         |
 
 ### Payment Endpoints
 

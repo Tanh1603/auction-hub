@@ -830,4 +830,147 @@ export class WinnerPaymentService {
       'Payment could not be completed. Please try again or contact support.'
     );
   }
+
+  /**
+   * Handle winner payment default
+   * Called when winner fails to pay within the deadline
+   * - Disqualifies the winner (deposit forfeited)
+   * - Optionally offers the auction to the second-highest bidder
+   */
+  async handleWinnerPaymentDefault(
+    auctionId: string,
+    adminId: string,
+    offerToSecondBidder = false
+  ): Promise<{
+    disqualifiedParticipantId: string;
+    newWinnerId?: string;
+    message: string;
+  }> {
+    this.logger.log(
+      `Handling payment default for auction ${auctionId}. Offer to second bidder: ${offerToSecondBidder}`
+    );
+
+    // Get the current winning bid
+    const winningBid = await this.prisma.auctionBid.findFirst({
+      where: {
+        auctionId,
+        isWinningBid: true,
+      },
+      include: {
+        participant: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!winningBid) {
+      throw new NotFoundException('No winning bid found for this auction');
+    }
+
+    const defaultingParticipant = winningBid.participant;
+
+    // 1. Disqualify the original winner - forfeit deposit
+    await this.prisma.auctionParticipant.update({
+      where: { id: defaultingParticipant.id },
+      data: {
+        isDisqualified: true,
+        disqualifiedAt: new Date(),
+        disqualifiedReason: 'PAYMENT_DEFAULT',
+        refundStatus: 'forfeited',
+      },
+    });
+
+    // 2. Mark the winning bid as withdrawn/forfeited
+    await this.prisma.auctionBid.update({
+      where: { id: winningBid.id },
+      data: {
+        isWinningBid: false,
+        isWithdrawn: true,
+      },
+    });
+
+    this.logger.log(
+      `Participant ${defaultingParticipant.id} disqualified due to payment default. Deposit forfeited.`
+    );
+
+    const result: {
+      disqualifiedParticipantId: string;
+      newWinnerId?: string;
+      message: string;
+    } = {
+      disqualifiedParticipantId: defaultingParticipant.id,
+      message:
+        'Original winner disqualified due to payment default. Deposit forfeited.',
+    };
+
+    // 3. Optionally offer to second-highest bidder
+    if (offerToSecondBidder) {
+      const secondHighestBid = await this.prisma.auctionBid.findFirst({
+        where: {
+          auctionId,
+          isWinningBid: false,
+          isWithdrawn: false,
+          isDenied: false,
+          participantId: { not: defaultingParticipant.id },
+        },
+        orderBy: { amount: 'desc' },
+        include: {
+          participant: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (secondHighestBid) {
+        // Check if second bidder is not disqualified
+        if (!secondHighestBid.participant.isDisqualified) {
+          // Mark as new winning bid
+          await this.prisma.auctionBid.update({
+            where: { id: secondHighestBid.id },
+            data: { isWinningBid: true },
+          });
+
+          result.newWinnerId = secondHighestBid.participant.userId;
+          result.message += ` Auction offered to second-highest bidder: ${secondHighestBid.participant.user.fullName}`;
+
+          this.logger.log(
+            `Auction ${auctionId} offered to second-highest bidder: ${secondHighestBid.participant.user.email}`
+          );
+
+          // TODO: Send email notification to new winner
+        } else {
+          result.message += ' No eligible second-highest bidder available.';
+        }
+      } else {
+        result.message += ' No second-highest bidder found.';
+      }
+    }
+
+    // 4. Create audit log entry
+    try {
+      await this.prisma.auctionAuditLog.create({
+        data: {
+          auctionId,
+          action: 'AUCTION_UPDATED',
+          performedBy: adminId,
+          reason: 'Winner payment default',
+          metadata: {
+            type: 'PAYMENT_DEFAULT',
+            disqualifiedUserId: defaultingParticipant.userId,
+            depositForfeited: defaultingParticipant.depositAmount?.toString(),
+            newWinnerOffered: offerToSecondBidder,
+            newWinnerId: result.newWinnerId,
+          },
+        },
+      });
+    } catch {
+      this.logger.warn('AuctionAuditLog table may not exist');
+    }
+
+    return result;
+  }
 }

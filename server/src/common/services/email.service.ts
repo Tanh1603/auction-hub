@@ -154,6 +154,50 @@ export interface AdminWinnerPaymentNotificationEmailData {
   contractId: string;
 }
 
+/**
+ * Refund notification emails
+ */
+export interface AdminRefundRequestedEmailData {
+  recipientEmail: string;
+  adminName: string;
+  userName: string;
+  userEmail: string;
+  auctionCode: string;
+  auctionName: string;
+  depositAmount: string;
+  requestedAt: Date;
+  reason?: string;
+  adminDashboardUrl?: string;
+}
+
+export interface RefundApprovedEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  auctionCode: string;
+  auctionName: string;
+  refundAmount: string;
+  approvedAt: Date;
+}
+
+export interface RefundRejectedEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  auctionCode: string;
+  auctionName: string;
+  depositAmount: string;
+  rejectedAt: Date;
+  rejectionReason: string;
+}
+
+export interface RefundProcessedEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  auctionCode: string;
+  auctionName: string;
+  refundAmount: string;
+  processedAt: Date;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -1011,6 +1055,168 @@ export class EmailService {
         'Admin Winner Payment Notification',
         ''
       );
+    }
+  }
+
+  /**
+   * Send refund requested notification to admin
+   */
+  async sendAdminRefundRequestedEmail(
+    data: AdminRefundRequestedEmailData
+  ): Promise<void> {
+    try {
+      const templatePath = 'admin/refund-requested';
+      const subject = this.templateService.getSubject(templatePath, data);
+      const htmlContent = await this.templateService.render(
+        templatePath,
+        data,
+        subject
+      );
+
+      if (this.emailProvider === 'brevo') {
+        await this.sendEmailViaBrevoGeneric(
+          data.recipientEmail,
+          data.adminName,
+          subject,
+          htmlContent
+        );
+      } else {
+        await this.sendEmailViaSMTPGeneric(
+          data.recipientEmail,
+          subject,
+          htmlContent
+        );
+      }
+
+      this.logger.log(
+        `Admin refund request notification sent to ${data.recipientEmail}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send admin refund request notification to ${data.recipientEmail}`,
+        error
+      );
+      this.logEmailContentGeneric(
+        data.recipientEmail,
+        'Admin Refund Request Notification',
+        ''
+      );
+    }
+  }
+
+  /**
+   * Send refund approved notification to user
+   */
+  async sendRefundApprovedEmail(data: RefundApprovedEmailData): Promise<void> {
+    try {
+      const templatePath = 'registration/refund-approved';
+      const subject = this.templateService.getSubject(templatePath, data);
+      const htmlContent = await this.templateService.render(
+        templatePath,
+        data,
+        subject
+      );
+
+      if (this.emailProvider === 'brevo') {
+        await this.sendEmailViaBrevoGeneric(
+          data.recipientEmail,
+          data.recipientName,
+          subject,
+          htmlContent
+        );
+      } else {
+        await this.sendEmailViaSMTPGeneric(
+          data.recipientEmail,
+          subject,
+          htmlContent
+        );
+      }
+
+      this.logger.log(`Refund approved email sent to ${data.recipientEmail}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send refund approved email to ${data.recipientEmail}`,
+        error
+      );
+      this.logEmailContentGeneric(data.recipientEmail, 'Refund Approved', '');
+    }
+  }
+
+  /**
+   * Send refund rejected notification to user
+   */
+  async sendRefundRejectedEmail(data: RefundRejectedEmailData): Promise<void> {
+    try {
+      const templatePath = 'registration/refund-rejected';
+      const subject = this.templateService.getSubject(templatePath, data);
+      const htmlContent = await this.templateService.render(
+        templatePath,
+        data,
+        subject
+      );
+
+      if (this.emailProvider === 'brevo') {
+        await this.sendEmailViaBrevoGeneric(
+          data.recipientEmail,
+          data.recipientName,
+          subject,
+          htmlContent
+        );
+      } else {
+        await this.sendEmailViaSMTPGeneric(
+          data.recipientEmail,
+          subject,
+          htmlContent
+        );
+      }
+
+      this.logger.log(`Refund rejected email sent to ${data.recipientEmail}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send refund rejected email to ${data.recipientEmail}`,
+        error
+      );
+      this.logEmailContentGeneric(data.recipientEmail, 'Refund Rejected', '');
+    }
+  }
+
+  /**
+   * Send refund processed notification to user
+   */
+  async sendRefundProcessedEmail(
+    data: RefundProcessedEmailData
+  ): Promise<void> {
+    try {
+      const templatePath = 'registration/refund-processed';
+      const subject = this.templateService.getSubject(templatePath, data);
+      const htmlContent = await this.templateService.render(
+        templatePath,
+        data,
+        subject
+      );
+
+      if (this.emailProvider === 'brevo') {
+        await this.sendEmailViaBrevoGeneric(
+          data.recipientEmail,
+          data.recipientName,
+          subject,
+          htmlContent
+        );
+      } else {
+        await this.sendEmailViaSMTPGeneric(
+          data.recipientEmail,
+          subject,
+          htmlContent
+        );
+      }
+
+      this.logger.log(`Refund processed email sent to ${data.recipientEmail}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send refund processed email to ${data.recipientEmail}`,
+        error
+      );
+      this.logEmailContentGeneric(data.recipientEmail, 'Refund Processed', '');
     }
   }
 }

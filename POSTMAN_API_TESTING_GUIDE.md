@@ -875,6 +875,234 @@ http://localhost:3000/api/register-to-bid/admin/registrations?page=1&limit=20&st
 
 **Expected Response**: Registration object for the specified auction.
 
+## 💸 Refund Management Flow
+
+### Understanding Refunds
+
+**⚠️ IMPORTANT: Deposit vs Application Fee**
+
+When a user pays to participate in an auction, they pay TWO components:
+
+- **Deposit (Tiền đặt trước)**: Refundable to eligible non-winners
+- **Application Fee (Phí hồ sơ/Dossier Fee)**: **NON-REFUNDABLE** under any circumstances
+
+**Refund = Deposit Amount ONLY** (Application fee is never refunded)
+
+---
+
+### Automatic Refund System
+
+**Non-winning participants who did not violate any rules receive an AUTOMATIC refund of their deposit within 3 business days** after auction finalization. No action required.
+
+The system runs a scheduled job daily that:
+
+1. Finds auctions finalized 3+ business days ago
+2. Identifies eligible non-winners (not disqualified, not withdrawn after deadline)
+3. Processes refund automatically
+4. Sends email notification to participant
+
+---
+
+### 14b. Request Refund (User - Manual Request)
+
+**Purpose**: While refunds are processed automatically, users can also submit a manual refund request. This is useful for:
+
+- Expedited processing before the 3-day auto-refund
+- Early withdrawal (before registration deadline)
+- Tracking refund status
+
+**Method**: `POST`
+**URL**: `http://localhost:3000/api/register-to-bid/request-refund`
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body** (JSON):
+
+```json
+{
+  "auctionId": "auction-uuid-here",
+  "reason": "Requesting deposit refund"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "message": "Refund request submitted successfully",
+  "data": {
+    "participantId": "participant-uuid",
+    "refundStatus": "pending",
+    "refundRequestedAt": "2025-12-20T10:00:00.000Z",
+    "depositAmount": 50000000,
+    "applicationFee": 500000,
+    "refundableAmount": 50000000,
+    "eligibility": {
+      "eligible": true,
+      "refundPercentage": 100,
+      "reason": "Eligible for full deposit refund - non-winning participant"
+    }
+  }
+}
+```
+
+**Business Rules**:
+
+- ✅ Auction must be finalized (status: `success` or `failed`)
+- ✅ Participant must have paid deposit
+- ✅ Participant must NOT be the winner
+- ✅ Participant must NOT be disqualified
+- ✅ If withdrawn, must have withdrawn BEFORE deadline (`saleEndAt`)
+- ❌ Application fee is NEVER refunded
+
+### 14c. List Refund Requests (Admin)
+
+**Method**: `GET`
+**URL**: `http://localhost:3000/api/register-to-bid/admin/refunds`
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Query Parameters** (optional):
+
+- `auctionId` - Filter by auction UUID
+- `status` - Filter by refund status: `pending`, `approved`, `rejected`, `processed`, `forfeited`
+- `page` (default: 1) - Page number
+- `limit` (default: 20) - Items per page
+
+**Example URL**:
+
+```
+http://localhost:3000/api/register-to-bid/admin/refunds?auctionId=auction-uuid&status=pending
+```
+
+**Expected Response**:
+
+```json
+{
+  "data": [
+    {
+      "participantId": "participant-uuid",
+      "user": { "id": "user-uuid", "fullName": "John Doe", "email": "john@example.com" },
+      "auction": { "id": "auction-uuid", "code": "AUC-001", "name": "Auction Name" },
+      "deposit": { "amount": 50000000, "paidAt": "2025-12-15T10:00:00.000Z" },
+      "refund": { "status": "pending", "requestedAt": "2025-12-20T10:00:00.000Z" },
+      "eligibility": { "eligible": true, "refundPercentage": 100, "reason": "Non-winning participant" }
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 5 }
+}
+```
+
+### 14d. Get Refund Detail (Admin)
+
+**Method**: `GET`
+**URL**: `http://localhost:3000/api/register-to-bid/admin/refunds/{participantId}`
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**: Detailed refund information including eligibility evaluation and disqualification status.
+
+### 14e. Update Refund Status (Admin)
+
+**Method**: `PATCH`
+**URL**: `http://localhost:3000/api/register-to-bid/admin/refunds/{participantId}`
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body** (JSON) - Approve:
+
+```json
+{
+  "action": "approve"
+}
+```
+
+**Body** (JSON) - Reject:
+
+```json
+{
+  "action": "reject",
+  "reason": "Participant violated auction rules by withdrawing bid"
+}
+```
+
+**Body** (JSON) - Process (execute refund):
+
+```json
+{
+  "action": "process"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "message": "Refund approved successfully",
+  "data": {
+    "participantId": "participant-uuid",
+    "refundStatus": "approved",
+    "processedAt": null
+  }
+}
+```
+
+### 14f. Batch Process Refunds (Admin)
+
+**Process all eligible refunds for an auction at once.**
+
+**Method**: `POST`
+**URL**: `http://localhost:3000/api/register-to-bid/admin/refunds/batch/{auctionId}`
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "message": "Batch refund processing completed",
+  "data": {
+    "processed": 8,
+    "skipped": 2,
+    "failed": 0,
+    "details": [
+      { "participantId": "uuid-1", "status": "processed", "amount": 50000000 },
+      { "participantId": "uuid-2", "status": "skipped", "reason": "Already processed" }
+    ]
+  }
+}
+```
+
 ## 💰 Manual Bidding Flow
 
 ### 15. Place Manual Bid
@@ -1902,6 +2130,156 @@ Open Prisma Studio → Users table → Check `role` column values
   "message": "Error message",
   "error": "Bad Request"
 }
+```
+
+---
+
+## 🔧 Admin Override Flow (Winner Refusal / Payment Default)
+
+This flow is used when an auction winner refuses to pay or fails to complete payment within the deadline.
+
+### Step 1: Get Management Detail (Admin Only)
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/auction-finalization/management-detail/:auctionId`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "auctionId": "auction-uuid",
+  "auctionCode": "VNA-2024-001",
+  "auctionName": "Sample Auction",
+  "status": "awaiting_result",
+  "startingPrice": "1000000000",
+  "reservePrice": "1200000000",
+  "bidIncrement": "10000000",
+  "currentHighestBid": "1500000000",
+  "bids": [
+    {
+      "bidId": "bid-uuid-1",
+      "amount": "1500000000",
+      "isWinningBid": true,
+      "participant": {
+        "userId": "user-uuid-1",
+        "fullName": "Nguyen Van A",
+        "depositPaid": true,
+        "checkedIn": true,
+        "isDisqualified": false
+      }
+    },
+    {
+      "bidId": "bid-uuid-2",
+      "amount": "1400000000",
+      "isWinningBid": false,
+      "participant": {
+        "userId": "user-uuid-2",
+        "fullName": "Tran Thi B",
+        "depositPaid": true,
+        "checkedIn": true,
+        "isDisqualified": false
+      }
+    }
+  ],
+  "summary": {
+    "totalBids": 15,
+    "validBids": 14,
+    "deniedBids": 1,
+    "totalParticipants": 5
+  }
+}
+```
+
+**Use this to:**
+
+- Review all bids sorted by amount (highest first)
+- Check participant statuses (deposit paid, checked in, disqualified)
+- Select a different `bidId` for the override
+
+### Step 2: Override to New Winner (Admin Only)
+
+**Method**: `POST`  
+**URL**: `http://localhost:3000/api/auction-finalization/override`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body** (JSON):
+
+```json
+{
+  "auctionId": "auction-uuid-here",
+  "newStatus": "success",
+  "winningBidId": "bid-uuid-2",
+  "reason": "Original winner (Nguyen Van A) refused to pay within 7-day deadline",
+  "notes": "Contacted via phone on 2024-12-05, confirmed refusal"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "auctionId": "auction-uuid",
+  "previousStatus": "awaiting_result",
+  "newStatus": "success",
+  "reason": "Original winner refused to pay within 7-day deadline",
+  "overriddenBy": "admin-uuid",
+  "overriddenAt": "2024-12-08T10:00:00Z",
+  "winningBidId": "bid-uuid-2",
+  "contractId": "new-contract-uuid"
+}
+```
+
+**🎯 Result**:
+
+- The 2nd highest bidder is now the official winner
+- A new contract is created for the new winner
+- The new winner receives payment request email
+- Audit log is created with `STATUS_OVERRIDE` action
+
+### Step 3: Verify via Audit Logs (Optional)
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/auction-finalization/audit-logs/:auctionId`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**:
+
+```json
+[
+  {
+    "id": "log-uuid",
+    "action": "STATUS_OVERRIDE",
+    "previousStatus": "awaiting_result",
+    "newStatus": "success",
+    "reason": "Original winner refused to pay within 7-day deadline",
+    "performedBy": {
+      "userId": "admin-uuid",
+      "fullName": "Admin Name",
+      "email": "admin@example.com"
+    },
+    "createdAt": "2024-12-08T10:00:00Z"
+  }
+]
 ```
 
 ---

@@ -7,6 +7,7 @@ import { FinalizeAuctionDto } from './dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from './dto/override-auction-status.dto';
 import { AuctionResultDto } from './dto/auction-result.dto';
 import { EvaluationResultDto } from './dto/evaluation-result.dto';
+import { ManagementDetailDto } from './dto/management-detail.dto';
 
 /**
  * Main orchestrator service for auction finalization
@@ -123,5 +124,17 @@ export class AuctionFinalizationService {
       auctionId,
       userId
     );
+  }
+
+  /**
+   * Get management detail for admin override operations
+   * Context: Admin/Super Admin
+   * Delegates to: AuctionOwnerService
+   */
+  async getManagementDetail(
+    auctionId: string,
+    adminId: string
+  ): Promise<ManagementDetailDto> {
+    return this.ownerService.getManagementDetail(auctionId, adminId);
   }
 }

@@ -79,6 +79,138 @@
 
 ---
 
+#### 3a. Get Management Detail (NEW)
+
+**Endpoint**: `GET /auction-finalization/management-detail/:auctionId`
+**Access**: Admin/Super Admin ONLY
+
+**Description**: Returns detailed internal view for admin override operations. Provides full bidding pool and participant status to enable manual winner selection.
+
+**Use Cases**:
+
+- Winner refuses to pay → Admin picks 2nd highest bidder
+- Payment deadline expired → Admin reassigns winner
+- Manual intervention needed for edge cases
+
+**Response** (200):
+
+```json
+{
+  "auctionId": "uuid",
+  "auctionCode": "VNA-2024-001",
+  "auctionName": "Auction Name",
+  "status": "awaiting_result",
+  "auctionStartAt": "2024-12-01T10:00:00Z",
+  "auctionEndAt": "2024-12-01T12:00:00Z",
+  "depositEndAt": "2024-11-30T12:00:00Z",
+  "startingPrice": "1000000000",
+  "reservePrice": "1200000000",
+  "bidIncrement": "10000000",
+  "currentHighestBid": "1500000000",
+  "bids": [
+    {
+      "bidId": "bid-uuid-1",
+      "participantId": "participant-uuid-1",
+      "amount": "1500000000",
+      "bidAt": "2024-12-01T11:55:00Z",
+      "bidType": "manual",
+      "isWinningBid": true,
+      "isDenied": false,
+      "isWithdrawn": false,
+      "participant": {
+        "userId": "user-uuid-1",
+        "fullName": "Nguyen Van A",
+        "email": "nguyenvana@example.com",
+        "depositPaid": true,
+        "checkedIn": true,
+        "isDisqualified": false
+      }
+    },
+    {
+      "bidId": "bid-uuid-2",
+      "participantId": "participant-uuid-2",
+      "amount": "1400000000",
+      "bidAt": "2024-12-01T11:50:00Z",
+      "bidType": "manual",
+      "isWinningBid": false,
+      "isDenied": false,
+      "isWithdrawn": false,
+      "participant": {
+        "userId": "user-uuid-2",
+        "fullName": "Tran Thi B",
+        "email": "tranthib@example.com",
+        "depositPaid": true,
+        "checkedIn": true,
+        "isDisqualified": false
+      }
+    }
+  ],
+  "participants": [
+    {
+      "participantId": "participant-uuid-1",
+      "userId": "user-uuid-1",
+      "fullName": "Nguyen Van A",
+      "email": "nguyenvana@example.com",
+      "registeredAt": "2024-11-20T10:00:00Z",
+      "confirmedAt": "2024-11-25T10:00:00Z",
+      "checkedInAt": "2024-12-01T09:00:00Z",
+      "depositPaidAt": "2024-11-22T10:00:00Z",
+      "depositAmount": "100000000",
+      "isDisqualified": false,
+      "disqualifiedReason": null,
+      "withdrawnAt": null,
+      "totalBids": 5,
+      "highestBidAmount": "1500000000"
+    }
+  ],
+  "currentWinningBid": {
+    /* Same as bids[0] if marked winning */
+  },
+  "evaluation": {
+    "meetsReservePrice": true,
+    "hasMinimumParticipants": true,
+    "hasValidBids": true,
+    "recommendedStatus": "success",
+    "issues": []
+  },
+  "contract": {
+    "contractId": "contract-uuid",
+    "status": "draft",
+    "createdAt": "2024-12-01T12:05:00Z"
+  },
+  "summary": {
+    "totalBids": 15,
+    "validBids": 14,
+    "deniedBids": 1,
+    "totalParticipants": 5,
+    "checkedInParticipants": 4,
+    "depositPaidParticipants": 5,
+    "disqualifiedParticipants": 0
+  }
+}
+```
+
+**Error Responses**:
+
+- 403: User is not admin or super_admin
+- 404: Auction not found
+
+**Usage with Override Endpoint**:
+
+1. Call `GET /auction-finalization/management-detail/:auctionId` to get all bids
+2. Select the desired bid from `bids[]` array (e.g., 2nd highest bidder)
+3. Call `POST /auction-finalization/override` with:
+   ```json
+   {
+     "auctionId": "uuid",
+     "newStatus": "success",
+     "winningBidId": "selected-bid-uuid",
+     "reason": "Original winner refused to pay"
+   }
+   ```
+
+---
+
 #### 4. Get Results
 
 **Endpoint**: `GET /auction-finalization/results/:auctionId`

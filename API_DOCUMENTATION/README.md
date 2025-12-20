@@ -21,6 +21,7 @@ Complete API documentation for the Auction Hub backend system.
 5. **[Auctions](05_AUCTIONS.md)** - Browse and view auction listings
 6. **[Auction Policy](06_AUCTION_POLICY.md)** - Policy configuration, validation, and calculations
 7. **[Auction Costs](07_AUCTION_COSTS.md)** - Track operational expenses per auction
+8. **[Refunds & Disqualification](08_REFUNDS.md)** - Deposit refund management and participant disqualification
 
 ---
 
@@ -50,6 +51,7 @@ Complete API documentation for the Auction Hub backend system.
 | Bidding      | `POST /manual-bid`                                 | Place manual bid         |
 | Finalization | `GET /auction-finalization/results/:auctionId`     | View auction results     |
 | Finalization | `POST /auction-finalization/submit-winner-payment` | Submit winner payment    |
+| Refunds      | `POST /register-to-bid/request-refund`             | Request deposit refund   |
 | Policy       | `POST /auction-policy/calculate/*`                 | Calculate fees/deposits  |
 | Costs        | `GET /auction-costs/auction/:auctionId`            | View auction costs       |
 
@@ -65,11 +67,15 @@ Complete API documentation for the Auction Hub backend system.
 | Finalization | `POST /auction-finalization/finalize`               | Finalize auction          |
 | Finalization | `GET /auction-finalization/evaluate/:auctionId`     | Evaluate auction status   |
 | Finalization | `POST /auction-finalization/override`               | Override auction status   |
+| Finalization | `GET /auction-finalization/management-detail/:id`   | Get management detail     |
 | Auctions     | `PATCH /auctions/:id/resources`                     | Update auction resources  |
 | SysVars      | `GET /system-variables`                             | Manage system variables   |
 | SysVars      | `PATCH /system-variables/:category/:key`            | Update system variable    |
 | Costs        | `POST /auction-costs/auction/:auctionId`            | Create/update costs       |
 | Costs        | `POST /auction-costs/auction/:auctionId/other-cost` | Add other cost item       |
+| Refunds      | `GET /register-to-bid/admin/refunds`                | List refund requests      |
+| Refunds      | `PATCH /register-to-bid/admin/refunds/:id`          | Update refund status      |
+| Refunds      | `POST /register-to-bid/admin/refunds/batch/:id`     | Batch process refunds     |
 
 ---
 
@@ -113,6 +119,13 @@ Complete API documentation for the Auction Hub backend system.
 2. Winner initiates payment: `POST /auction-finalization/submit-winner-payment`
 3. Winner completes Stripe payment
 4. Winner verifies payment: `POST /auction-finalization/verify-winner-payment`
+
+### Phase 7: Refunds (Non-Winners)
+
+1. Non-winners request refund: `POST /register-to-bid/request-refund`
+2. Admin reviews and approves: `PATCH /register-to-bid/admin/refunds/:id`
+3. Admin processes refund: `PATCH /register-to-bid/admin/refunds/:id` with `action=process`
+4. Or batch process all: `POST /register-to-bid/admin/refunds/batch/:auctionId`
 
 ---
 
@@ -281,7 +294,7 @@ For issues or questions about the API:
 
 ### [04_FINALIZATION_PAYMENT.md](04_FINALIZATION_PAYMENT.md)
 
-8 endpoints for auction finalization, results, audit logs, winner payment processing, and generic payment operations.
+9 endpoints for auction finalization, results, audit logs, winner payment processing, management detail for admin override, and generic payment operations.
 
 ### [05_AUCTIONS.md](05_AUCTIONS.md)
 
@@ -295,6 +308,10 @@ For issues or questions about the API:
 
 5 endpoints for tracking and managing operational expenses per auction.
 
+### [08_REFUNDS.md](08_REFUNDS.md)
+
+6 endpoints for deposit refund management: request refund, list/view/update refund status, batch processing, and participant disqualification.
+
 ---
 
-**Total API Surface**: 49 HTTP endpoints + 8 WebSocket events
+**Total API Surface**: 57 HTTP endpoints + 8 WebSocket events
