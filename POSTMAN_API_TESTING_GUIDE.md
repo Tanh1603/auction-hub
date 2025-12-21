@@ -1272,6 +1272,58 @@ The auction finalization process has been updated to ensure payment security. **
 }
 ```
 
+### 17b. Finalize Auction (Admin/Auctioneer Only)
+
+**⚠️ CRITICAL STEP: This "closes" the auction and declares the winner.**
+
+**Method**: `POST`  
+**URL**: `http://localhost:3000/api/auction-finalization/finalize`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body** (JSON):
+
+```json
+{
+  "auctionId": "auction-uuid-here",
+  "winningBidId": null, // Optional: Specify a specific bid ID if overriding auto-selection
+  "notes": "Finalized after successful bidding session",
+  "skipAutoEvaluation": false
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "message": "Auction finalized successfully",
+  "data": {
+    "auctionId": "auction-uuid",
+    "finalStatus": "success",
+    "winner": {
+      "userId": "winner-user-uuid",
+      "fullName": "Winner Name",
+      "winningAmount": "1200000000"
+    },
+    "contractCreated": true,
+    "emailsSent": ["winner", "seller", "admins"]
+  }
+}
+```
+
+**Business Rules**:
+
+- ✅ Must be called AFTER the auction end time (`saleEndAt`)
+- ✅ System will automatically pick the highest valid bid unless `winningBidId` is provided
+- ✅ Triggers the **Winner Payment Notification** email with 7-day deadline
+
 ### 18. Get Winner Payment Requirements
 
 **Winner checks payment breakdown and deadline.**
