@@ -13,6 +13,7 @@ export interface AuctionResultEmailData {
   winningAmount?: string;
   winnerName?: string;
   totalBids: number;
+  depositAmount?: string; // For non-winners: shows refund amount
 }
 
 /**
@@ -196,6 +197,16 @@ export interface RefundProcessedEmailData {
   auctionName: string;
   refundAmount: string;
   processedAt: Date;
+}
+
+export interface UserRefundRequestedEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  auctionCode: string;
+  auctionName: string;
+  depositAmount: string;
+  requestedAt: Date;
+  reason?: string;
 }
 
 @Injectable()
@@ -1217,6 +1228,52 @@ export class EmailService {
         error
       );
       this.logEmailContentGeneric(data.recipientEmail, 'Refund Processed', '');
+    }
+  }
+
+  /**
+   * Send refund request confirmation to user
+   */
+  async sendUserRefundRequestedEmail(
+    data: UserRefundRequestedEmailData
+  ): Promise<void> {
+    try {
+      const templatePath = 'registration/refund-requested';
+      const subject = this.templateService.getSubject(templatePath, data);
+      const htmlContent = await this.templateService.render(
+        templatePath,
+        data,
+        subject
+      );
+
+      if (this.emailProvider === 'brevo') {
+        await this.sendEmailViaBrevoGeneric(
+          data.recipientEmail,
+          data.recipientName,
+          subject,
+          htmlContent
+        );
+      } else {
+        await this.sendEmailViaSMTPGeneric(
+          data.recipientEmail,
+          subject,
+          htmlContent
+        );
+      }
+
+      this.logger.log(
+        `Refund requested confirmation email sent to ${data.recipientEmail}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send refund requested email to ${data.recipientEmail}`,
+        error
+      );
+      this.logEmailContentGeneric(
+        data.recipientEmail,
+        'Refund Request Received',
+        ''
+      );
     }
   }
 }

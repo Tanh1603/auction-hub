@@ -83,6 +83,14 @@ async function main() {
     `;
     console.log('   ✅ Index idx_mv_unique_id (unique) created.');
 
+    // Composite index for common filter combinations (status + date range)
+    await prisma.$executeRaw`
+      CREATE INDEX IF NOT EXISTS idx_mv_analytics_status_date ON mv_auction_analytics(status, auction_end_at);
+    `;
+    console.log(
+      '   ✅ Index idx_mv_analytics_status_date (composite) created.'
+    );
+
     console.log('');
     console.log('🎉 Materialized View setup complete.');
   } catch (error) {

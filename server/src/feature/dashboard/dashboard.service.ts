@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '../../../generated';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -27,6 +31,9 @@ interface AnalyticsRawResult {
  * for aggregated auction performance metrics.
  *
  * SECURITY: Uses Prisma.sql tagged template literals to prevent SQL injection.
+ *
+ * PREREQUISITE: The materialized view must be created by running:
+ *   npx ts-node scripts/setup-analytics-view.ts
  */
 @Injectable()
 export class DashboardService {
@@ -46,74 +53,102 @@ export class DashboardService {
   async getAnalytics(
     filters: DashboardFiltersDto
   ): Promise<DashboardAnalyticsResponseDto> {
-    const conditions: Prisma.Sql[] = [];
+    try {
+      const conditions: Prisma.Sql[] = [];
 
-    // Default dates to avoid "undefined" errors
-    const startDate = filters.startDate
-      ? new Date(filters.startDate)
-      : new Date('2000-01-01');
-    const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+      // Default dates to avoid "undefined" errors
+      const startDate = filters.startDate
+        ? new Date(filters.startDate)
+        : new Date('2000-01-01');
+      const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
 
-    // 1. Base Time Filter
-    conditions.push(
-      Prisma.sql`auction_end_at >= ${startDate} AND auction_end_at <= ${endDate}`
-    );
+      // 1. Base Time Filter
+      conditions.push(
+        Prisma.sql`auction_end_at >= ${startDate} AND auction_end_at <= ${endDate}`
+      );
 
-    // 2. Dynamic Filters (using Prisma.sql for SQL injection prevention)
-    if (filters.assetType) {
-      conditions.push(Prisma.sql`asset_type = ${filters.assetType}`);
-    }
+      // 2. Dynamic Filters (using Prisma.sql for SQL injection prevention)
+      if (filters.assetType) {
+        conditions.push(Prisma.sql`asset_type = ${filters.assetType}`);
+      }
 
-    if (filters.provinceId) {
-      conditions.push(Prisma.sql`asset_province_id = ${filters.provinceId}`);
-    }
+      if (filters.provinceId) {
+        conditions.push(Prisma.sql`asset_province_id = ${filters.provinceId}`);
+      }
 
-    // 3. Secure Query Construction
-    const whereClause = conditions.length
-      ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
-      : Prisma.empty;
+      // 3. Secure Query Construction
+      const whereClause = conditions.length
+        ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+        : Prisma.empty;
 
-    // Execute the query against the materialized view
-    const result = await this.prisma.$queryRaw<AnalyticsRawResult[]>`
-      SELECT
-        SUM(gmv) as total_gmv,
-        SUM(total_revenue) as platform_revenue,
-        COUNT(*) FILTER (WHERE status = 'success') as success_count,
-        COUNT(*) as total_count,
-        ROUND(AVG(bid_count), 1) as avg_bids_per_auction
-      FROM mv_auction_analytics
-      ${whereClause}
-    `;
+      // Execute the query against the materialized view
+      const result = await this.prisma.$queryRaw<AnalyticsRawResult[]>`
+        SELECT
+          SUM(gmv) as total_gmv,
+          SUM(total_revenue) as platform_revenue,
+          COUNT(*) FILTER (WHERE status = 'success') as success_count,
+          COUNT(*) as total_count,
+          ROUND(AVG(bid_count), 1) as avg_bids_per_auction
+        FROM mv_auction_analytics
+        ${whereClause}
+      `;
 
-    // Transform the raw result to the response DTO
-    const rawData = result[0] || {
-      total_gmv: null,
-      platform_revenue: null,
-      success_count: BigInt(0),
-      total_count: BigInt(0),
-      avg_bids_per_auction: null,
-    };
+      // Transform the raw result to the response DTO
+      const rawData = result[0] || {
+        total_gmv: null,
+        platform_revenue: null,
+        success_count: BigInt(0),
+        total_count: BigInt(0),
+        avg_bids_per_auction: null,
+      };
 
-    const totalCountNum = Number(rawData.total_count);
-    const successCountNum = Number(rawData.success_count);
+      const totalCountNum = Number(rawData.total_count);
+      const successCountNum = Number(rawData.success_count);
 
-    const summary: DashboardSummaryDto = {
-      totalGmv: rawData.total_gmv ? Number(rawData.total_gmv) : 0,
-      totalRevenue: rawData.platform_revenue
-        ? Number(rawData.platform_revenue)
-        : 0,
-      avgBids: rawData.avg_bids_per_auction
-        ? Number(rawData.avg_bids_per_auction)
-        : 0,
-      successRatePercentage:
-        totalCountNum > 0
-          ? Math.round((successCountNum / totalCountNum) * 10000) / 100
+      const summary: DashboardSummaryDto = {
+        totalGmv: rawData.total_gmv ? Number(rawData.total_gmv) : 0,
+        totalRevenue: rawData.platform_revenue
+          ? Number(rawData.platform_revenue)
           : 0,
-      totalAuctions: totalCountNum,
-      successfulAuctions: successCountNum,
-    };
+        avgBids: rawData.avg_bids_per_auction
+          ? Number(rawData.avg_bids_per_auction)
+          : 0,
+        successRatePercentage:
+          totalCountNum > 0
+            ? Math.round((successCountNum / totalCountNum) * 10000) / 100
+            : 0,
+        totalAuctions: totalCountNum,
+        successfulAuctions: successCountNum,
+      };
 
-    return { summary };
+      return { summary };
+    } catch (error) {
+      // Handle missing materialized view error with helpful message
+      if (
+        error instanceof Error &&
+        error.message?.includes('mv_auction_analytics') &&
+        (error.message?.includes('does not exist') ||
+          error.message?.includes('relation') ||
+          error.message?.includes('undefined'))
+      ) {
+        this.logger.error(
+          'Materialized view mv_auction_analytics not found. Please run setup script.',
+          error.stack
+        );
+        throw new InternalServerErrorException(
+          'Analytics view not initialized. Please run: npx ts-node scripts/setup-analytics-view.ts'
+        );
+      }
+
+      // Log and rethrow other errors
+      this.logger.error(
+        'Failed to fetch analytics data',
+        error instanceof Error ? error.stack : String(error)
+      );
+      throw new InternalServerErrorException(
+        'Failed to retrieve analytics data. Please try again later.'
+      );
+    }
   }
 
   /**

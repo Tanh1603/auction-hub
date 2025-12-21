@@ -324,6 +324,10 @@ export class AuctionOwnerService {
         winningAmount: winningBid?.amount.toString(),
         winnerName: winningBid?.participant.user.fullName,
         totalBids: auction.bids.length,
+        // Include deposit amount for non-winners to show refund info
+        depositAmount: !isWinner
+          ? participant.depositAmount?.toString()
+          : undefined,
       });
     });
 

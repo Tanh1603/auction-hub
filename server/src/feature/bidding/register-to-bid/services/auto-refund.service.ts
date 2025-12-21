@@ -108,7 +108,7 @@ export class AutoRefundService {
             notIn: [
               RefundStatus.PROCESSED,
               RefundStatus.FORFEITED,
-              'auto_processed',
+              RefundStatus.AUTO_PROCESSED,
             ],
           },
           // Not a winning bid holder
@@ -171,7 +171,7 @@ export class AutoRefundService {
           await this.prisma.auctionParticipant.update({
             where: { id: participant.id },
             data: {
-              refundStatus: 'auto_processed',
+              refundStatus: RefundStatus.AUTO_PROCESSED,
               refundProcessedAt: new Date(),
             },
           });
@@ -181,12 +181,12 @@ export class AutoRefundService {
 
           // Send notification email
           await this.refundService.notifyUserOfRefundProcessed({
-            participant: {
-              ...participant,
+            user: {
+              email: participant.user.email,
               fullName: participant.user.fullName,
             },
             auction: {
-              ...participant.auction,
+              code: participant.auction.code,
               name: participant.auction.name || '',
             },
             depositAmount: participant.depositAmount,

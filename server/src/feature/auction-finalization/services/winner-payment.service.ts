@@ -106,10 +106,10 @@ export class WinnerPaymentService {
         recipientName: winningBid.participant.user.fullName,
         auctionCode: auction.code,
         auctionName: auction.name,
-        winningAmount: winningAmount.toLocaleString(),
-        depositAlreadyPaid: depositPaid.toLocaleString(),
-        dossierFee: dossierFeeDue.toLocaleString(),
-        totalDue: totalDue.toLocaleString(),
+        winningAmount: winningAmount.toString(),
+        depositAlreadyPaid: depositPaid.toString(),
+        dossierFee: dossierFeeDue.toString(),
+        totalDue: totalDue.toString(),
         paymentDeadline: paymentDeadline,
       });
 
@@ -681,12 +681,11 @@ export class WinnerPaymentService {
         recipientName: secondHighestBid.participant.user.fullName,
         auctionCode: auction.code,
         auctionName: auction.name,
-        winningAmount:
-          requirements.paymentBreakdown.winningAmount.toLocaleString(),
+        winningAmount: requirements.paymentBreakdown.winningAmount.toString(),
         depositAlreadyPaid:
-          requirements.paymentBreakdown.depositAlreadyPaid.toLocaleString(),
-        dossierFee: requirements.paymentBreakdown.dossierFee.toLocaleString(),
-        totalDue: requirements.paymentBreakdown.totalDue.toLocaleString(),
+          requirements.paymentBreakdown.depositAlreadyPaid.toString(),
+        dossierFee: requirements.paymentBreakdown.dossierFee.toString(),
+        totalDue: requirements.paymentBreakdown.totalDue.toString(),
         paymentDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
@@ -727,7 +726,7 @@ export class WinnerPaymentService {
       auctionCode: auction.code,
       auctionName: auction.name,
       paymentType: 'winning_payment',
-      attemptedAmount: totalDue.paymentBreakdown.totalDue.toLocaleString(),
+      attemptedAmount: totalDue.paymentBreakdown.totalDue.toString(),
       failureReason: this.getPaymentFailureReason(failureStatus),
       retryUrl: `${process.env.FRONTEND_URL}/auctions/${auction.id}/winner-payment/retry?paymentId=${paymentId}`,
       deadline: paymentDeadline,
@@ -756,7 +755,7 @@ export class WinnerPaymentService {
       recipientName: contract.buyer.fullName,
       auctionCode: contract.auction.code,
       auctionName: contract.auction.name,
-      totalPaid: amount.toLocaleString(),
+      totalPaid: amount.toString(),
       contractReady: true,
     });
 
@@ -768,7 +767,7 @@ export class WinnerPaymentService {
         buyerName: contract.buyer.fullName,
         auctionCode: contract.auction.code,
         auctionName: contract.auction.name,
-        totalPaid: amount.toLocaleString(),
+        totalPaid: amount.toString(),
         contractReady: true,
       });
     }
@@ -791,7 +790,7 @@ export class WinnerPaymentService {
         sellerName: propertyOwnerSnapshot?.fullName || 'Unknown',
         auctionCode: contract.auction.code,
         auctionName: contract.auction.name,
-        totalPaid: amount.toLocaleString(),
+        totalPaid: amount.toString(),
         paidAt: new Date(),
         contractId: contract.id,
       })

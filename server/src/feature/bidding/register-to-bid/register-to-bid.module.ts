@@ -1,5 +1,4 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { RegisterToBidService } from './register-to-bid.service';
 import { PrismaModule } from '../../../prisma/prisma.module';
 import { PaymentModule } from '../../../payment/payment.module';
@@ -20,13 +19,13 @@ import {
 } from './controllers';
 import { RegisterToBidController } from './register-to-bid.controller';
 
+// Note: ScheduleModule.forRoot() is initialized in AppModule
 @Module({
   imports: [
     PrismaModule,
     forwardRef(() => PaymentModule),
     EmailModule,
     CloudinaryModule,
-    ScheduleModule.forRoot(),
   ],
   controllers: [
     RegisterToBidController,

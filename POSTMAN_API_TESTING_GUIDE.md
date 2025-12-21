@@ -1216,17 +1216,18 @@ http://localhost:3000/api/register-to-bid/admin/refunds?auctionId=auction-uuid&s
 
 ### Overview of Winner Payment Process
 
-The auction finalization process has been updated to ensure payment security. **The winner must complete payment BEFORE the auction can be finalized and the contract created.**
+The auction finalization process involves automatic contract creation in a **draft** state. The winner must complete payment within the specified deadline to transition the contract to a **signed** status.
 
 **Correct Flow:**
 
-1. **Evaluate Auction** → Admin checks auction status and winner
-2. **Finalize Auction** → Owner/Admin finalizes and declares winner
-3. **Winner Receives Email** → Payment breakdown and deadline (7 days) ✉️
-4. **Winner Submits Payment** → Via payment gateway
-5. **Verify Winner Payment** → System verifies payment
-6. **Payment Success** → Contract ready for signatures ✉️ Emails to winner, seller, admins
-7. **Payment Failure** → Auto-retry or deposit forfeiture if deadline expires
+1. **Evaluate Auction** → Admin checks auction status and recommended winner.
+2. **Finalize Auction** → Owner/Admin finalizes the auction. **System creates a contract in `draft` status** and declares the winner.
+3. **Winner Receives Email** → Includes payment breakdown and 7-day deadline. ✉️
+4. **Winner Submits Payment** → Remaining balance (Winning Bid - Deposit) via payment gateway.
+5. **Verify Winner Payment** → System verifies payment.
+6. **Payment Success** → **Contract status updated to `signed`**. Emails sent to winner, seller, and admins. ✉️
+7. **Contract Signing** → Parties can now review and officially sign/complete the contract process.
+8. **Payment Failure** → Auto-retry or deposit forfeiture if deadline expires.
 
 **Payment Failure Handling:**
 
@@ -1322,6 +1323,7 @@ The auction finalization process has been updated to ensure payment security. **
 
 - ✅ Must be called AFTER the auction end time (`saleEndAt`)
 - ✅ System will automatically pick the highest valid bid unless `winningBidId` is provided
+- ✅ **Triggers creation of a contract in `draft` status**
 - ✅ Triggers the **Winner Payment Notification** email with 7-day deadline
 
 ### 18. Get Winner Payment Requirements
@@ -1408,7 +1410,7 @@ The auction finalization process has been updated to ensure payment security. **
     "transfer_content": "Payment for winning_payment"
   },
   "deadline": "2025-11-23T14:00:00.000Z",
-  "message": "Please complete payment to finalize the contract. Contract will be ready for signatures after payment confirmation."
+  "message": "Please complete payment to update the contract status to 'signed'. Contract documents will be available for final review after payment confirmation."
 }
 ```
 
@@ -1550,8 +1552,9 @@ The auction finalization process has been updated to ensure payment security. **
     "userBids": [],
     "contract": {
       "id": "contract-uuid",
-      "status": "draft",
-      "price": "1200000000"
+      "status": "draft", // Will be 'signed' after payment
+      "price": "1200000000",
+      "createdAt": "2025-11-14T15:00:00.000Z"
     }
   },
   "meta": {},
@@ -1599,9 +1602,110 @@ The auction finalization process has been updated to ensure payment security. **
 
 ---
 
-## 📜 Contract Management Flow
+## 📜 Contract Management API
 
-### 25. View Contract Details
+Contracts are automatically generated during auction finalization in `draft` status and updated to `signed` after winner payment. This section covers manual management and retrieval of contracts.
+
+### 25. Get Auction Management Details (Admin Only)
+
+**Returns full bidding pool and participant status for manual winner selection. Only accessible by ADMIN/SUPER_ADMIN.**
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/auction-finalization/management-detail/{auctionId}`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "auctionId": "auction-uuid",
+    "participants": [
+      {
+        "userId": "user-uuid",
+        "fullName": "John Doe",
+        "email": "john@example.com",
+        "bidCount": 5,
+        "highestBid": 1200000000,
+        "isWinner": true,
+        "registrationStatus": "CHECKED_IN",
+        "paymentStatus": "PAID"
+      }
+    ],
+    "allBids": [
+      {
+        "id": "bid-uuid",
+        "amount": 1200000000,
+        "bidAt": "2025-11-14T14:55:00.000Z",
+        "bidType": "manual"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 26. List User Contracts
+
+**Retrieve list of contracts where the user is an owner, buyer, or creator.**
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/contracts`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+}
+```
+
+**Query Parameters (Optional)**:
+
+- `page`: default 1
+- `limit`: default 10
+- `status`: Filter by `draft`, `signed`, `completed`, `cancelled`
+- `auctionId`: Filter by auction
+- `buyerId`: Filter by buyer
+- `sellerId`: Filter by seller
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "contract-uuid",
+      "auctionName": "Test Auction",
+      "auctionCode": "AUC001",
+      "sellerName": "Seller Name",
+      "buyerName": "Buyer Name",
+      "price": 1200000000,
+      "status": "signed",
+      "signedAt": "2025-11-14T16:00:00.000Z",
+      "createdAt": "2025-11-14T15:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  }
+}
+```
+
+### 27. Get Contract Details
+
+**Retrieve full details for a specific contract.**
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/contracts/{contractId}`  
@@ -1613,9 +1717,30 @@ The auction finalization process has been updated to ensure payment security. **
 }
 ```
 
-**Note**: Available to Admin, Seller, and Buyer only.
+**Expected Response**:
 
-### 26. Export Contract PDF (Vietnamese)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "contract-uuid",
+    "auctionId": "auction-uuid",
+    "auctionName": "Test Auction",
+    "auctionCode": "AUC001",
+    "sellerFullName": "Seller Name",
+    "buyerFullName": "Buyer Name",
+    "creatorFullName": "Admin Name",
+    "price": 1200000000,
+    "status": "signed",
+    "docUrl": "https://example.com/contract.pdf",
+    "signedAt": "2025-11-14T16:00:00.000Z",
+    "createdAt": "2025-11-14T15:00:00.000Z",
+    "updatedAt": "2025-11-14T16:00:00.000Z"
+  }
+}
+```
+
+### 28. Export Contract PDF (Vietnamese)
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/contracts/{contractId}/pdf/vi`  
@@ -1629,7 +1754,7 @@ The auction finalization process has been updated to ensure payment security. **
 
 **Result**: Downloads a PDF file for the Vietnamese contract.
 
-### 27. Export Contract PDF (English)
+### 29. Export Contract PDF (English)
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/contracts/{contractId}/pdf/en`  
@@ -1643,9 +1768,9 @@ The auction finalization process has been updated to ensure payment security. **
 
 **Result**: Downloads a PDF file for the English contract.
 
-### 28. Sign Contract
+### 30. Sign Contract
 
-**Once satisfied with the PDF, parties can sign the contract.**
+**Mark a `draft` contract as `signed`. Usually handled automatically by payment verification.**
 
 **Method**: `POST`  
 **URL**: `http://localhost:3000/api/contracts/{contractId}/sign`  
@@ -1662,7 +1787,7 @@ The auction finalization process has been updated to ensure payment security. **
 
 ```json
 {
-  "docUrl": "https://url-to-signed-document.pdf" // Optional: URL to uploaded signed doc
+  "docUrl": "https://url-to-signed-document.pdf" // Optional
 }
 ```
 
@@ -1676,6 +1801,118 @@ The auction finalization process has been updated to ensure payment security. **
     "status": "signed",
     "signedAt": "2025-11-14T16:00:00.000Z"
   }
+}
+```
+
+### 31. Cancel Contract
+
+**Cancel an existing contract (except `completed` ones).**
+
+**Method**: `POST`  
+**URL**: `http://localhost:3000/api/contracts/{contractId}/cancel`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE",
+  "Content-Type": "application/json"
+}
+```
+
+**Body**:
+
+```json
+{
+  "reason": "Mutual agreement to cancel due to unforeseen circumstances"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "success": true,
+  "message": "Contract cancelled successfully",
+  "data": {
+    "id": "contract-uuid",
+    "status": "cancelled",
+    "cancelledAt": "2025-11-14T17:00:00.000Z"
+  }
+}
+```
+
+---
+
+### 📊 Admin Dashboard & Reports
+
+The dashboard uses a **PostgreSQL Materialized View** (`mv_auction_analytics`) for high-performance analytics.
+
+### ⚙️ Database Setup (Required Once)
+
+Before using the dashboard, you must create the materialized view on your database instance:
+
+```bash
+# From the project root
+npx ts-node scripts/setup-analytics-view.ts
+```
+
+_Note: This script is idempotent and can be run safely on development or production environments._
+
+### 32. Get Dashboard Analytics
+
+**Retrieve aggregated performance metrics. Requires ADMIN/SUPER_ADMIN role.**
+
+**Method**: `GET`  
+**URL**: `http://localhost:3000/api/dashboard/analytics`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Query Parameters (Optional)**:
+
+- `startDate`: Filter from date (ISO 8601, e.g., `2024-01-01`)
+- `endDate`: Filter to date (ISO 8601, e.g., `2024-12-31`)
+- `assetType`: Filter by asset type
+- `provinceId`: Filter by province
+
+**Expected Response**:
+
+```json
+{
+  "summary": {
+    "totalGmv": 15000000000,
+    "totalRevenue": 450000000,
+    "avgBids": 12.4,
+    "successRatePercentage": 82.5,
+    "totalAuctions": 150,
+    "successfulAuctions": 124
+  }
+}
+```
+
+### 33. Refresh Analytics View
+
+**Manually trigger a refresh of the materialized view. Automatic refresh runs hourly.**
+
+**Method**: `POST`  
+**URL**: `http://localhost:3000/api/dashboard/analytics/refresh`  
+**Headers**:
+
+```json
+{
+  "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
+}
+```
+
+**Expected Response**:
+
+```json
+{
+  "message": "Analytics view refreshed successfully"
 }
 ```
 

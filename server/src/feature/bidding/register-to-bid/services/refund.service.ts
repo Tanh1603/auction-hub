@@ -233,6 +233,9 @@ export class RefundService {
     // Send email notification to admin
     await this.notifyAdminOfRefundRequest(updated, reason);
 
+    // Send confirmation email to user
+    await this.notifyUserOfRefundRequest(updated, reason);
+
     return this.toRefundDetailDto(updated, eligibility);
   }
 
@@ -614,6 +617,25 @@ export class RefundService {
     };
   }
 
+  async notifyUserOfRefundProcessed(data: {
+    user: { email: string; fullName: string };
+    auction: { code: string; name: string };
+    depositAmount: { toString: () => string } | null;
+  }): Promise<void> {
+    try {
+      await this.emailService.sendRefundProcessedEmail({
+        recipientEmail: data.user.email,
+        recipientName: data.user.fullName,
+        auctionCode: data.auction.code,
+        auctionName: data.auction.name,
+        refundAmount: data.depositAmount?.toString() || '0',
+        processedAt: new Date(),
+      });
+    } catch (error) {
+      this.logger.error('Failed to notify user of refund processing', error);
+    }
+  }
+
   private async notifyAdminOfRefundRequest(
     participant: {
       user: { email: string; fullName: string };
@@ -644,6 +666,29 @@ export class RefundService {
       }
     } catch (error) {
       this.logger.error('Failed to notify admins of refund request', error);
+    }
+  }
+
+  private async notifyUserOfRefundRequest(
+    participant: {
+      user: { email: string; fullName: string };
+      auction: { code: string; name: string };
+      depositAmount: { toString: () => string } | null;
+    },
+    reason?: string
+  ): Promise<void> {
+    try {
+      await this.emailService.sendUserRefundRequestedEmail({
+        recipientEmail: participant.user.email,
+        recipientName: participant.user.fullName,
+        auctionCode: participant.auction.code,
+        auctionName: participant.auction.name,
+        depositAmount: participant.depositAmount?.toString() || '0',
+        requestedAt: new Date(),
+        reason: reason,
+      });
+    } catch (error) {
+      this.logger.error('Failed to notify user of refund request', error);
     }
   }
 

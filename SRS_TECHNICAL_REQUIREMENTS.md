@@ -145,3 +145,74 @@ The system uses `@nestjs/schedule` to manage background tasks.
 | `ADMIN_001` | "Status override completed. Audit log updated." | Ok |
 | `PAY_001` | "Payment confirmed. You are now authorized to bid." | Ok |
 | `SYS_ERR_001` | "An unexpected error occurred. Please try again." | Ok |
+| `MSG_001` | "Mandatory Field" | Ok |
+| `MSG_002` | "Duplicate Email" | Ok |
+| `MSG_002` | "Email already registered" | Ok |
+| `MSG_003` | "Invalid Email/Password" | Ok |
+| `MSG_004` | "Invalid Format" | Ok |
+| `MSG_004` | "Unauthorized" | Ok |
+| `MSG_004` | "Weak Password" | Ok |
+| `MSG_004` | "Invalid Timeline" | Ok |
+| `MSG_004` | "Negative Price" | Ok |
+| `MSG_004` | "Invalid Type" | Ok |
+| `MSG_004` | "File too large" | Ok |
+| `MSG_004` | "Invalid increment" | Ok |
+| `MSG_004` | "Invalid amount" | Ok |
+| `MSG_004` | "Cost value cannot be negative" | Ok |
+| `MSG_004` | "Invalid cost value" | Ok |
+| `MSG_005` | "Forbidden" | Ok |
+| `MSG_005` | "Not the winning bidder" | Ok |
+| `MSG_006` | "Insufficient Permissions" | Ok |
+| `MSG_006` | "Cannot ban superior/peer" | Ok |
+| `MSG_007` | "Success" | Ok |
+| `MSG_007` | "Email not verified" | Ok |
+| `MSG_007` | "Verification successful" | Ok |
+| `MSG_007` | "Deposit payment verified successfully" | Ok |
+| `MSG_007` | "Bid denied successfully" | Ok |
+| `MSG_007` | "Auction finalized" | Ok |
+| `MSG_007` | "Status override applied" | Ok |
+| `MSG_007` | "Payment verified successfully" | Ok |
+| `MSG_008` | "User banned" | Ok |
+| `MSG_009` | "System Error" | Ok |
+| `MSG_009` | "User already verified" | Ok |
+| `MSG_009` | "Too many requests" | Ok |
+| `MSG_009` | "Invalid payment type" | Ok |
+| `MSG_010` | "Verification failed" | Ok |
+| `MSG_011` | "Confirm ban action for user [Name]?" | Confirm |
+| `MSG_011` | "Delete article [Title]? Action cannot be undone." | Confirm |
+| `MSG_011` | "Auction Not Found" | Ok |
+| `MSG_011` | "Delete auction? Action cannot be undone." | Confirm |
+| `MSG_011` | "Confirm document verification?" | Confirm |
+| `MSG_011` | "Confirm final approval? This will mark deposit as paid." | Confirm |
+| `MSG_011` | "Confirm withdrawal? Deposit refund may apply." | Confirm |
+| `MSG_011` | "Force approve registration? This bypasses tier checks." | Confirm |
+| `MSG_011` | "Confirm bid denial?" | Confirm |
+| `MSG_011` | "Confirm finalization?" | Confirm |
+| `MSG_011` | "Confirm status override? This is an administrative action." | Confirm |
+| `MSG_011` | "Proceed to payment for [Amount]?" | Confirm |
+| `MSG_011` | "Proceed with [type] payment of [amount]?" | Confirm |
+| `MSG_011` | "Delete all costs for auction [Auction Name]?" | Confirm |
+| `MSG_012` | "Duplicate Code" | Ok |
+| `MSG_012` | "Key already exists" | Ok |
+| `MSG_012` | "Already Registered" | Ok |
+| `MSG_013` | "Cannot edit active auction" | Ok |
+| `MSG_013` | "Cannot modify resources" | Ok |
+| `MSG_014` | "Authentication Failed" | Ok |
+| `MSG_015` | "Deposit period ended" | Ok |
+| `MSG_016` | "Invalid status for this operation" | Ok |
+| `MSG_016` | "Bid already denied" | Ok |
+| `MSG_016` | "Payment already completed" | Ok |
+| `MSG_019` | "Registration incomplete" | Ok |
+| `MSG_019` | "Not eligible to bid" | Ok |
+| `MSG_020` | "Article not found" | Ok |
+| `MSG_020` | "Registration not found" | Ok |
+| `MSG_020` | "Check-in window closed/not open" | Ok |
+| `MSG_020` | "Auction not found" | Ok |
+| `MSG_020` | "Costs not recorded" | Ok |
+| `MSG_020` | "No cost record exists" | Ok |
+| `MSG_020` | "Create base cost record first" | Ok |
+| `MSG_021` | "Documents not verified" | Ok |
+| `MSG_022` | "Auction not active" | Ok |
+| `MSG_024` | "Bid too low" | Ok |
+| `MSG_026` | "Results not available" | Ok |
+| `MSG_026` | "Payment requirements not available" | Ok |
