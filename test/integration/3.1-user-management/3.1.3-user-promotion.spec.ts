@@ -89,7 +89,7 @@ describe('3.1.3 User Promotion', () => {
   describe('Admin Promotion', () => {
     it('TC-3.1.3-01: Verify Admin promotes Bidder to Auctioneer', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ role: 'auctioneer' })
         .expect(200);
@@ -104,7 +104,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-02: Fail Admin promotes to Admin', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ role: 'admin' })
         .expect(403);
@@ -112,7 +112,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-03: Fail Admin promotes to Super Admin', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ role: 'super_admin' })
         .expect(403);
@@ -125,7 +125,7 @@ describe('3.1.3 User Promotion', () => {
   describe('Super Admin Promotion', () => {
     it('TC-3.1.3-04: Verify Super Admin promotes to Admin', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ role: 'admin' })
         .expect(200);
@@ -135,7 +135,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-05: Verify Super Admin demotes Admin to Bidder', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${admin.id}/role`)
+        .put(`/api/auth/admin/users/${admin.id}/promote`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ role: 'bidder' })
         .expect(200);
@@ -150,7 +150,7 @@ describe('3.1.3 User Promotion', () => {
   describe('Role-Based Access Control', () => {
     it('TC-3.1.3-06: Fail Auctioneer promotes users', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${auctioneerToken}`)
         .send({ role: 'auctioneer' })
         .expect(403);
@@ -158,7 +158,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-07: Fail Bidder promotes users', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${auctioneer.id}/role`)
+        .put(`/api/auth/admin/users/${auctioneer.id}/promote`)
         .set('Authorization', `Bearer ${bidderToken}`)
         .send({ role: 'admin' })
         .expect(403);
@@ -166,7 +166,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-08: Fail promotion without authentication', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .send({ role: 'auctioneer' })
         .expect(401);
     });
@@ -178,7 +178,7 @@ describe('3.1.3 User Promotion', () => {
   describe('Validation', () => {
     it('TC-3.1.3-09: Fail with invalid role enum', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ role: 'invalid_role' })
         .expect(400);
@@ -186,7 +186,9 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-10: Fail promote non-existent user', async () => {
       const response = await request(app.getHttpServer())
-        .patch('/api/users/550e8400-e29b-41d4-a716-446655440000/role')
+        .put(
+          '/api/auth/admin/users/550e8400-e29b-41d4-a716-446655440000/promote'
+        )
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ role: 'auctioneer' })
         .expect(404);
@@ -194,7 +196,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-11: Fail promote self', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${admin.id}/role`)
+        .put(`/api/auth/admin/users/${admin.id}/promote`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ role: 'super_admin' });
 
@@ -204,7 +206,7 @@ describe('3.1.3 User Promotion', () => {
 
     it('TC-3.1.3-12: Fail with missing role field', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/api/users/${bidder.id}/role`)
+        .put(`/api/auth/admin/users/${bidder.id}/promote`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({})
         .expect(400);

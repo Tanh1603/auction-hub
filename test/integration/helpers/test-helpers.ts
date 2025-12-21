@@ -195,7 +195,7 @@ export const validRegistrationPayload = () => ({
   password: 'SecurePass123!',
   full_name: 'Test User',
   user_type: 'individual',
-  phone: generateVietnamesePhone(),
+  phone_number: generateVietnamesePhone(),
   identity_number: generateCCCD(),
 });
 

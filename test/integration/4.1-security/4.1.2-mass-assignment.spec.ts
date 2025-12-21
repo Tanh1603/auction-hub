@@ -59,7 +59,7 @@ describe('4.1.2 Mass Assignment', () => {
         password: 'SecurePass123!',
         full_name: 'Mass Test',
         user_type: 'individual',
-        phone: generateVietnamesePhone(),
+        phone_number: generateVietnamesePhone(),
         identity_number: generateCCCD(),
         role: 'admin', // Malicious attempt
       };
@@ -82,7 +82,7 @@ describe('4.1.2 Mass Assignment', () => {
         password: 'SecurePass123!',
         full_name: 'Mass Test 2',
         user_type: 'individual',
-        phone: generateVietnamesePhone(),
+        phone_number: generateVietnamesePhone(),
         identity_number: generateCCCD(),
         isVerified: true, // Malicious attempt
       };
@@ -107,7 +107,7 @@ describe('4.1.2 Mass Assignment', () => {
         password: 'SecurePass123!',
         full_name: 'Mass Test 3',
         user_type: 'individual',
-        phone: generateVietnamesePhone(),
+        phone_number: generateVietnamesePhone(),
         identity_number: generateCCCD(),
         id: maliciousId, // Malicious attempt
       };

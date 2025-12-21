@@ -195,7 +195,7 @@ describe('3.1.1 User Registration', () => {
       const payload2 = {
         ...validRegistrationPayload(),
         email: baseEmail.toUpperCase(),
-        phone: generateVietnamesePhone(),
+        phone_number: generateVietnamesePhone(),
         identity_number: generateCCCD(),
       };
 
@@ -280,7 +280,7 @@ describe('3.1.1 User Registration', () => {
     it('TC-3.1.1-14: Fail with invalid phone format', async () => {
       const payload = {
         ...validRegistrationPayload(),
-        phone: '123',
+        phone_number: '123',
       };
 
       const response = await request(app.getHttpServer())
@@ -296,7 +296,7 @@ describe('3.1.1 User Registration', () => {
 
     it('TC-3.1.1-15: Fail with duplicate phone', async () => {
       const sharedPhone = generateVietnamesePhone();
-      const payload1 = { ...validRegistrationPayload(), phone: sharedPhone };
+      const payload1 = { ...validRegistrationPayload(), phone_number: sharedPhone };
 
       await request(app.getHttpServer())
         .post('/api/auth/register')
@@ -305,7 +305,7 @@ describe('3.1.1 User Registration', () => {
 
       const payload2 = {
         ...validRegistrationPayload(),
-        phone: sharedPhone,
+        phone_number: sharedPhone,
       };
 
       const response = await request(app.getHttpServer())
