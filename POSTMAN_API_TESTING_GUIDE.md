@@ -1518,7 +1518,7 @@ The auction finalization process involves automatic contract creation in a **dra
 
 ### 23. Get Auction Results
 
-**Anyone can view the final results of a completed auction.**
+**Anyone can view the final results of a completed auction. Confirmed participants and owners can also access this during live auctions to view current bid history.**
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/auction-finalization/results/{auctionId}`  
@@ -1537,23 +1537,44 @@ The auction finalization process involves automatic contract creation in a **dra
   "success": true,
   "message": "Request successful",
   "data": {
-    "auction": {
-      "id": "auction-uuid",
-      "code": "AUC001",
-      "name": "Test Auction",
-      "status": "success"
+    "auctionId": "auction-uuid",
+    "auctionCode": "AUC001",
+    "auctionName": "Test Auction",
+    "status": "success",
+    "totalBids": 2,
+    "winningBid": {
+      "bidId": "winning-bid-uuid",
+      "amount": "1200000000",
+      "bidAt": "2025-11-14T14:55:00.000Z",
+      "bidType": "manual",
+      "winner": {
+        "userId": "winner-user-uuid",
+        "fullName": "Winner Name",
+        "email": "winner@example.com"
+      }
     },
-    "winner": {
-      "userId": "winner-user-uuid",
-      "fullName": "Winner Name",
-      "winningAmount": "1200000000"
-    },
-    "allBids": [],
+    "allBids": [
+      {
+        "bidId": "winning-bid-uuid",
+        "amount": "1200000000",
+        "bidAt": "2025-11-14T14:55:00.000Z",
+        "bidType": "manual",
+        "isWinningBid": true,
+        "bidderName": "Winner Name"
+      },
+      {
+        "bidId": "other-bid-uuid",
+        "amount": "1100000000",
+        "bidAt": "2025-11-14T14:50:00.000Z",
+        "bidType": "manual",
+        "isWinningBid": false,
+        "bidderName": "Participant Name"
+      }
+    ],
     "userBids": [],
     "contract": {
-      "id": "contract-uuid",
-      "status": "draft", // Will be 'signed' after payment
-      "price": "1200000000",
+      "contractId": "contract-uuid",
+      "status": "draft",
       "createdAt": "2025-11-14T15:00:00.000Z"
     }
   },

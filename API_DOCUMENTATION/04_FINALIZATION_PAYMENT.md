@@ -211,13 +211,45 @@
 
 ---
 
-#### 4. Get Results
+#### 4. Get Results (Auction Summary)
 
 **Endpoint**: `GET /auction-finalization/results/:auctionId`
-**Access**: Any authenticated user
+**Access**: Authenticated (Restricted to Participants and Owner)
 
-**Returns**: Auction results from user perspective
-**Shows**: isWinner, winner details, user's bids
+**Returns**: Auction results and bid history from user perspective
+**Shows**: isWinner, winner details, user's bids, financial summary (if finalized)
+
+**Note**: This endpoint can be called while the auction is live to view the current bid history, but final results (contract, winner, financial summary) will be partial/null until finalization.
+
+**Response** (200):
+
+```json
+{
+  "auctionId": "uuid",
+  "status": "success",
+  "totalBids": 15,
+  "winningBid": { ... },
+  "allBids": [
+    {
+      "bidId": "bid-uuid-1",
+      "amount": "1500000000",
+      "bidAt": "2024-12-01T11:55:00Z",
+      "bidderName": "Nguyen Van A",
+      "isWinningBid": true
+    }
+  ],
+  "userBids": [
+    {
+      "bidId": "bid-uuid-1",
+      "amount": "1500000000",
+      "bidAt": "2024-12-01T11:55:00Z",
+      "bidderName": "Nguyen Van A",
+      "isWinningBid": true
+    }
+  ],
+  "contract": { ... }
+}
+```
 
 ---
 
