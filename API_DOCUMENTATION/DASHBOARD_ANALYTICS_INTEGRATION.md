@@ -4,6 +4,20 @@
 
 This guide explains how to integrate the analytics view refresh into your existing `AuctionFinalizationService` to ensure the dashboard data is always up-to-date after an auction closes.
 
+npx tsx scripts/setup-analytics-view.ts
+
+🚀 Starting materialized view setup...
+✅ Materialized view checked/created.
+✅ Index idx_mv_analytics_status created.
+✅ Index idx_mv_analytics_date created.
+✅ Index idx_mv_analytics_asset created.
+✅ Index idx_mv_analytics_province created.
+✅ Index idx_mv_unique_id (unique) created.
+✅ Index idx_mv_analytics_status_date (composite)
+) created.
+
+🎉 Materialized View setup complete.
+
 ## Files Created
 
 | File                                                                   | Description                                              |
