@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ArticleModule } from '../article/article.module';
 import { AuctionModule } from '../auctions/auction.module';
 import { AuthModule } from '../auth/auth.module';
@@ -18,12 +19,15 @@ import { AppService } from './app.service';
 
 import { QueueModule } from '../common/queue/queue.module';
 import { ContractModule } from '../contracts/contract.module';
+import { DashboardModule } from '../feature/dashboard/dashboard.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'server/.env',
     }),
+    ScheduleModule.forRoot(), // Initialize scheduling globally (enables @Cron decorators)
     CommonModule,
     PrismaModule,
     AuthModule,
@@ -37,6 +41,7 @@ import { ContractModule } from '../contracts/contract.module';
     LocationModule,
     ContractModule,
     QueueModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

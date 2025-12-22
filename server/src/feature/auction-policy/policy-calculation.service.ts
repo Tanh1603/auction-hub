@@ -74,11 +74,11 @@ export class PolicyCalculationService {
     // Apply min and max constraints from system variables
     const minCommission = await this.sysVars.get<number>(
       'commission',
-      'commission.min_amount'
+      'min_amount'
     );
     const maxCommission = await this.sysVars.get<number>(
       'commission',
-      'commission.max_amount'
+      'max_amount'
     );
 
     commission = Math.max(commission, minCommission);
@@ -106,26 +106,11 @@ export class PolicyCalculationService {
     this.validateFinancialValue(startingPrice, 'Starting price');
 
     // Get tier limits from system variables (Circular 48/2017)
-    const tier1Max = await this.sysVars.get<number>(
-      'dossier',
-      'dossier.tier1_max'
-    );
-    const tier1Fee = await this.sysVars.get<number>(
-      'dossier',
-      'dossier.tier1_fee'
-    );
-    const tier2Max = await this.sysVars.get<number>(
-      'dossier',
-      'dossier.tier2_max'
-    );
-    const tier2Fee = await this.sysVars.get<number>(
-      'dossier',
-      'dossier.tier2_fee'
-    );
-    const tier3Fee = await this.sysVars.get<number>(
-      'dossier',
-      'dossier.tier3_fee'
-    );
+    const tier1Max = await this.sysVars.get<number>('dossier', 'tier1_max');
+    const tier1Fee = await this.sysVars.get<number>('dossier', 'tier1_fee');
+    const tier2Max = await this.sysVars.get<number>('dossier', 'tier2_max');
+    const tier2Fee = await this.sysVars.get<number>('dossier', 'tier2_fee');
+    const tier3Fee = await this.sysVars.get<number>('dossier', 'tier3_fee');
 
     let maxFee: number;
     if (startingPrice <= tier1Max) {
@@ -175,11 +160,11 @@ export class PolicyCalculationService {
     // Get deposit percentage ranges from system variables (Circular 48/2017)
     const minPercentage = await this.sysVars.get<number>(
       'deposit',
-      `deposit.${categoryPrefix}.min_percentage`
+      `${categoryPrefix}.min_percentage`
     );
     const maxPercentage = await this.sysVars.get<number>(
       'deposit',
-      `deposit.${categoryPrefix}.max_percentage`
+      `${categoryPrefix}.max_percentage`
     );
 
     if (percentage < minPercentage || percentage > maxPercentage) {
@@ -286,7 +271,7 @@ export class PolicyCalculationService {
       // Get min deposit amount from system variables
       const minDepositAmount = await this.sysVars.get<number>(
         'deposit',
-        'deposit.min_amount'
+        'min_amount'
       );
 
       depositAmount = await this.calculateDepositAmount(

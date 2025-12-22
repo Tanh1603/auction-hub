@@ -6,15 +6,21 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EmailService } from '../../../common/services/email.service';
+import { EmailQueueService } from '../../../common/email/email-queue.service';
 import { BiddingGateway } from '../../bidding/bidding.gateway';
 import { PolicyCalculationService } from '../../auction-policy/policy-calculation.service';
 import { AuctionEvaluationService } from './auction-evaluation.service';
+import { WinnerPaymentService } from './winner-payment.service';
 import { PaymentService } from '../../../payment/payment.service';
 import { FinalizeAuctionDto } from '../dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from '../dto/override-auction-status.dto';
 import { AuctionStatus, ContractStatus } from '../../../../generated';
 import { getPropertyOwnerId } from '../../../common/types/property-owner-snapshot.interface';
+import {
+  ManagementDetailDto,
+  BidSummaryDto,
+  ParticipantSummaryDto,
+} from '../dto/management-detail.dto';
 
 /**
  * Service responsible for auction owner/auctioneer operations
@@ -26,11 +32,12 @@ export class AuctionOwnerService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
+    private readonly emailQueueService: EmailQueueService,
     private readonly biddingGateway: BiddingGateway,
     private readonly policyCalc: PolicyCalculationService,
     private readonly evaluationService: AuctionEvaluationService,
-    private readonly paymentService: PaymentService
+    private readonly paymentService: PaymentService,
+    private readonly winnerPaymentService: WinnerPaymentService
   ) {}
 
   /**
@@ -307,25 +314,37 @@ export class AuctionOwnerService {
       };
     });
 
-    // Send emails to all participants
-    const emailPromises = auction.participants.map((participant) => {
+    const emailQueuePromises = [];
+    auction.participants.forEach((participant) => {
       const isWinner = winningBid?.participant.userId === participant.userId;
-      return this.emailService.sendAuctionResultEmail({
-        recipientEmail: participant.user.email,
-        recipientName: participant.user.fullName,
-        auctionCode: auction.code,
-        auctionName: auction.name,
-        isWinner,
-        winningAmount: winningBid?.amount.toString(),
-        winnerName: winningBid?.participant.user.fullName,
-        totalBids: auction.bids.length,
-      });
+
+      // 1. All participants get the result email (Winner/Non-winner)
+      emailQueuePromises.push(
+        this.emailQueueService.queueAuctionResultEmail({
+          recipientEmail: participant.user.email,
+          recipientName: participant.user.fullName,
+          auctionCode: auction.code,
+          auctionName: auction.name,
+          isWinner,
+          winningAmount: winningBid?.amount.toString(),
+          winnerName: winningBid?.participant.user.fullName,
+          totalBids: auction.bids.length,
+        })
+      );
+
+      // 2. Winner also gets the detailed payment request email
+      if (isWinner) {
+        emailQueuePromises.push(
+          this.winnerPaymentService.sendWinnerPaymentRequestEmail(auction.id)
+        );
+      }
     });
 
-    // Send emails asynchronously
-    Promise.allSettled(emailPromises).catch((err) => {
-      this.logger.error('Error sending auction result emails:', err);
-    });
+    // Queue emails to background
+    await Promise.all(emailQueuePromises);
+    this.logger.log(
+      `Queued ${auction.participants.length} auction result emails`
+    );
 
     // Emit WebSocket event for auction finalization
     this.biddingGateway.emitAuctionUpdate(auction.id, {
@@ -530,22 +549,34 @@ export class AuctionOwnerService {
       dto.newStatus === AuctionStatus.success ||
       dto.newStatus === AuctionStatus.failed
     ) {
-      const emailPromises = auction.participants.map((participant) => {
+      const emailQueuePromises = [];
+      auction.participants.forEach((participant) => {
         const isWinner = winningBid?.participant.userId === participant.userId;
-        return this.emailService.sendAuctionResultEmail({
-          recipientEmail: participant.user.email,
-          recipientName: participant.user.fullName,
-          auctionCode: auction.code,
-          auctionName: auction.name,
-          isWinner,
-          winningAmount: winningBid?.amount.toString(),
-          winnerName: winningBid?.participant.user.fullName,
-          totalBids: auction.bids.length,
-        });
+
+        // 1. All participants get the result email
+        emailQueuePromises.push(
+          this.emailQueueService.queueAuctionResultEmail({
+            recipientEmail: participant.user.email,
+            recipientName: participant.user.fullName,
+            auctionCode: auction.code,
+            auctionName: auction.name,
+            isWinner,
+            winningAmount: winningBid?.amount.toString(),
+            winnerName: winningBid?.participant.user.fullName,
+            totalBids: auction.bids.length,
+          })
+        );
+
+        // 2. Winner also gets the detailed payment request email
+        if (isWinner) {
+          emailQueuePromises.push(
+            this.winnerPaymentService.sendWinnerPaymentRequestEmail(auction.id)
+          );
+        }
       });
 
-      Promise.allSettled(emailPromises).catch((err) => {
-        this.logger.error('Error sending auction result emails:', err);
+      Promise.all(emailQueuePromises).catch((err) => {
+        this.logger.error('Error queuing auction result emails:', err);
       });
     }
 
@@ -646,5 +677,189 @@ export class AuctionOwnerService {
       },
       createdAt: log.createdAt,
     }));
+  }
+
+  /**
+   * Get management detail for admin override operations
+   * Returns full bidding pool and participant status for manual winner selection
+   * Only accessible by admin/super_admin
+   */
+  async getManagementDetail(
+    auctionId: string,
+    adminId: string
+  ): Promise<ManagementDetailDto> {
+    // Verify admin role
+    const user = await this.prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+      throw new ForbiddenException(
+        'Only admin or super_admin can access management details'
+      );
+    }
+
+    // Fetch auction with all related data
+    const auction = await this.prisma.auction.findUnique({
+      where: { id: auctionId },
+      include: {
+        bids: {
+          orderBy: { amount: 'desc' },
+          include: {
+            participant: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+            bids: {
+              where: { isDenied: false, isWithdrawn: false },
+              orderBy: { amount: 'desc' },
+              take: 1,
+            },
+          },
+        },
+        contracts: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!auction) {
+      throw new NotFoundException('Auction not found');
+    }
+
+    // Get evaluation data
+    let evaluationData = null;
+    try {
+      const evaluation = await this.evaluationService.evaluateAuction(
+        auctionId
+      );
+      evaluationData = {
+        meetsReservePrice: evaluation.meetsReservePrice,
+        hasMinimumParticipants: evaluation.hasMinimumParticipants,
+        hasValidBids: evaluation.hasValidBids,
+        recommendedStatus: evaluation.recommendedStatus,
+        issues: evaluation.issues || [],
+      };
+    } catch (error) {
+      this.logger.warn(`Could not get evaluation for ${auctionId}: ${error}`);
+    }
+
+    // Build bid summaries
+    const bids: BidSummaryDto[] = auction.bids.map((bid) => ({
+      bidId: bid.id,
+      participantId: bid.participantId,
+      amount: bid.amount.toString(),
+      bidAt: bid.bidAt,
+      bidType: bid.bidType,
+      isWinningBid: bid.isWinningBid,
+      isDenied: bid.isDenied,
+      isWithdrawn: bid.isWithdrawn,
+      deniedReason: bid.deniedReason || undefined,
+      participant: {
+        userId: bid.participant.user.id,
+        fullName: bid.participant.user.fullName,
+        email: bid.participant.user.email,
+        depositPaid: !!bid.participant.depositPaidAt,
+        checkedIn: !!bid.participant.checkedInAt,
+        isDisqualified: bid.participant.isDisqualified,
+      },
+    }));
+
+    // Build participant summaries
+    const participants: ParticipantSummaryDto[] = auction.participants.map(
+      (p) => ({
+        participantId: p.id,
+        userId: p.user.id,
+        fullName: p.user.fullName,
+        email: p.user.email,
+        registeredAt: p.registeredAt,
+        confirmedAt: p.confirmedAt,
+        checkedInAt: p.checkedInAt,
+        depositPaidAt: p.depositPaidAt,
+        depositAmount: p.depositAmount?.toString() || null,
+        isDisqualified: p.isDisqualified,
+        disqualifiedReason: p.disqualifiedReason,
+        withdrawnAt: p.withdrawnAt,
+        totalBids: auction.bids.filter((b) => b.participantId === p.id).length,
+        highestBidAmount: p.bids[0]?.amount.toString() || null,
+      })
+    );
+
+    // Find current winning bid
+    const currentWinningBid = bids.find((b) => b.isWinningBid) || null;
+
+    // Get highest valid bid
+    const validBids = auction.bids.filter((b) => !b.isDenied && !b.isWithdrawn);
+    const currentHighestBid =
+      validBids.length > 0 ? validBids[0].amount.toString() : null;
+
+    // Build contract info if exists
+    const contract = auction.contracts[0]
+      ? {
+          contractId: auction.contracts[0].id,
+          status: auction.contracts[0].status,
+          createdAt: auction.contracts[0].createdAt,
+        }
+      : null;
+
+    // Calculate summary counts
+    const summary = {
+      totalBids: auction.bids.length,
+      validBids: validBids.length,
+      deniedBids: auction.bids.filter((b) => b.isDenied).length,
+      totalParticipants: auction.participants.length,
+      checkedInParticipants: auction.participants.filter((p) => p.checkedInAt)
+        .length,
+      depositPaidParticipants: auction.participants.filter(
+        (p) => p.depositPaidAt
+      ).length,
+      disqualifiedParticipants: auction.participants.filter(
+        (p) => p.isDisqualified
+      ).length,
+    };
+
+    return {
+      auctionId: auction.id,
+      auctionCode: auction.code,
+      auctionName: auction.name,
+      status: auction.status,
+      auctionStartAt: auction.auctionStartAt,
+      auctionEndAt: auction.auctionEndAt,
+      depositEndAt: auction.depositEndAt,
+      startingPrice: auction.startingPrice.toString(),
+      reservePrice: auction.reservePrice?.toString() || null,
+      bidIncrement: auction.bidIncrement.toString(),
+      currentHighestBid,
+      bids,
+      participants,
+      currentWinningBid,
+      evaluation: evaluationData,
+      contract,
+      summary,
+    };
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 // @ts-ignore
 import PDFDocument from 'pdfkit';
 import * as path from 'path';
+import * as fs from 'fs';
 import type {
   Auction,
   User,
@@ -34,43 +35,10 @@ interface ContractWithRelations {
 export class PdfGeneratorService {
   generateContractPdf(contract: ContractWithRelations): any {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
-    const projectRoot = path.join(__dirname, '..', '..');
-    const fontPath = path.join(
-      projectRoot,
-      'server',
-      'src',
-      'assets',
-      'font',
-      'Inter',
-      'static'
-    );
-
-    let normalFont = 'Helvetica';
-    let boldFont = 'Helvetica-Bold';
-    let semiBoldFont = 'Helvetica-Bold';
-
-    try {
-      doc.registerFont(
-        'Inter-Regular',
-        path.join(fontPath, 'Inter_18pt-Regular.ttf')
-      );
-      doc.registerFont(
-        'Inter-Bold',
-        path.join(fontPath, 'Inter_18pt-Bold.ttf')
-      );
-      doc.registerFont(
-        'Inter-SemiBold',
-        path.join(fontPath, 'Inter_18pt-SemiBold.ttf')
-      );
-      normalFont = 'Inter-Regular';
-      boldFont = 'Inter-Bold';
-      semiBoldFont = 'Inter-SemiBold';
-    } catch (error) {
-      console.warn(
-        'Inter fonts not found — using Helvetica fallback. Error: ',
-        error
-      );
-    }
+    const fonts = this.registerFonts(doc);
+    const normalFont = fonts.normal;
+    const boldFont = fonts.bold;
+    const semiBoldFont = fonts.semiBold;
 
     const drawSeparator = (yOffset = 10) => {
       doc.moveDown(0.3);
@@ -262,43 +230,10 @@ export class PdfGeneratorService {
   generateContractPdfEnglish(contract: ContractWithRelations): any {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-    const projectRoot = path.join(__dirname, '..', '..');
-    const fontPath = path.join(
-      projectRoot,
-      'server',
-      'src',
-      'assets',
-      'font',
-      'Inter',
-      'static'
-    );
-
-    let normalFont = 'Helvetica';
-    let boldFont = 'Helvetica-Bold';
-    let semiBoldFont = 'Helvetica-Bold';
-
-    try {
-      doc.registerFont(
-        'Inter-Regular',
-        path.join(fontPath, 'Inter_18pt-Regular.ttf')
-      );
-      doc.registerFont(
-        'Inter-Bold',
-        path.join(fontPath, 'Inter_18pt-Bold.ttf')
-      );
-      doc.registerFont(
-        'Inter-SemiBold',
-        path.join(fontPath, 'Inter_18pt-SemiBold.ttf')
-      );
-      normalFont = 'Inter-Regular';
-      boldFont = 'Inter-Bold';
-      semiBoldFont = 'Inter-SemiBold';
-    } catch (error) {
-      console.warn(
-        'Inter fonts not found - using Helvetica fallback. Error: ',
-        error
-      );
-    }
+    const fonts = this.registerFonts(doc);
+    const normalFont = fonts.normal;
+    const boldFont = fonts.bold;
+    const semiBoldFont = fonts.semiBold;
 
     const drawSeparator = (yOffset = 10) => {
       doc.moveDown(0.3);
@@ -499,5 +434,83 @@ export class PdfGeneratorService {
       currency: 'VND',
       minimumFractionDigits: 0,
     }).format(numAmount);
+  }
+
+  private registerFonts(doc: any): {
+    normal: string;
+    bold: string;
+    semiBold: string;
+  } {
+    // Strategy 1: Production (bundled in dist/server/main.js)
+    // Assets are typically in dist/server/assets
+    const prodPath = path.join(__dirname, 'assets', 'font', 'Inter', 'static');
+
+    // Strategy 2: Development (source)
+    // Absolute path from workspace root if running from there
+    const devPath = path.join(
+      process.cwd(),
+      'server',
+      'src',
+      'assets',
+      'font',
+      'Inter',
+      'static'
+    );
+
+    // Strategy 3: Original fallback logic (but fixed for double 'server')
+    const fallbackPath = path.join(
+      __dirname,
+      '..',
+      'assets',
+      'font',
+      'Inter',
+      'static'
+    );
+
+    const possiblePaths = [prodPath, devPath, fallbackPath];
+    let fontPath = '';
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        fontPath = p;
+        break;
+      }
+    }
+
+    let fonts = {
+      normal: 'Helvetica',
+      bold: 'Helvetica-Bold',
+      semiBold: 'Helvetica-Bold',
+    };
+
+    if (!fontPath) {
+      console.warn(
+        'Inter fonts directory not found - using Helvetica fallback'
+      );
+      return fonts;
+    }
+
+    try {
+      const regularFile = path.join(fontPath, 'Inter_18pt-Regular.ttf');
+      const boldFile = path.join(fontPath, 'Inter_18pt-Bold.ttf');
+      const semiBoldFile = path.join(fontPath, 'Inter_18pt-SemiBold.ttf');
+
+      if (fs.existsSync(regularFile)) {
+        doc.registerFont('Inter-Regular', regularFile);
+        fonts.normal = 'Inter-Regular';
+      }
+      if (fs.existsSync(boldFile)) {
+        doc.registerFont('Inter-Bold', boldFile);
+        fonts.bold = 'Inter-Bold';
+      }
+      if (fs.existsSync(semiBoldFile)) {
+        doc.registerFont('Inter-SemiBold', semiBoldFile);
+        fonts.semiBold = 'Inter-SemiBold';
+      }
+    } catch (error) {
+      console.warn('Error registering fonts:', error);
+    }
+
+    return fonts;
   }
 }

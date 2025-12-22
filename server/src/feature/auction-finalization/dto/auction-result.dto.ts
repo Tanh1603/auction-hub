@@ -57,4 +57,18 @@ export class AuctionResultDto {
     calculationDetails?: any;
     calculatedAt?: Date;
   };
+
+  // Bid history
+  allBids?: ResultBidDto[];
+  userBids?: ResultBidDto[];
+}
+
+export class ResultBidDto {
+  bidId: string;
+  amount: string;
+  bidAt: Date;
+  bidType: BidType;
+  isWinningBid: boolean;
+  participantId?: string;
+  bidderName?: string;
 }

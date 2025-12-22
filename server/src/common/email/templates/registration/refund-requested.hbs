@@ -1,0 +1,38 @@
+{{> header icon="📝" title="Refund Request Received" subtitle="Your request is being reviewed"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  {{> badge type="info" icon="⏳" text="PENDING REVIEW"}}
+
+  <p>We have received your refund request for auction <strong>{{auctionCode}}</strong>.</p>
+
+  {{#> details-box title="📋 Request Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    <p><strong>Deposit Amount:</strong> <span class="amount-highlight">{{formatCurrency depositAmount}} VND</span></p>
+    <p><strong>Requested On:</strong> {{formatDate requestedAt}}</p>
+    {{#if reason}}
+    <p><strong>Your Reason:</strong> {{reason}}</p>
+    {{/if}}
+  {{/details-box}}
+
+  <h3>📝 Refund Policy</h3>
+  <ul>
+    <li><strong>Deposit:</strong> Eligible for 100% refund (if no violations)</li>
+    <li><strong>Application Fee:</strong> Non-refundable (per auction regulations)</li>
+    <li><strong>Review Time:</strong> Your request will be reviewed within 1-2 business days</li>
+    <li><strong>Processing Time:</strong> After approval, refund takes 3-10 business days</li>
+  </ul>
+
+  <h3>⏱️ What Happens Next?</h3>
+  <ol>
+    <li>Our team will review your refund eligibility</li>
+    <li>You will receive an email notification of the decision</li>
+    <li>If approved, your deposit will be refunded to your original payment method</li>
+  </ol>
+
+  <p>If you have any questions about your refund request, please contact our support team.</p>
+
+  {{> footer message="Thank you for participating in Auction Hub!"}}
+</div>

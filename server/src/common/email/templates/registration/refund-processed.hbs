@@ -1,0 +1,29 @@
+{{> header icon="💰" title="Refund Processed" subtitle="Your refund has been sent"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  {{> badge type="success" icon="💰" text="PROCESSED"}}
+
+  <p>Your refund for auction <strong>{{auctionCode}}</strong> has been successfully processed!</p>
+
+  {{#> details-box title="💳 Refund Summary"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    <p><strong>Refund Amount:</strong> <span class="amount-highlight">{{formatCurrency refundAmount}} VND</span></p>
+    <p><strong>Processed On:</strong> {{formatDate processedAt}}</p>
+    <p><strong>Refund Method:</strong> Original payment method</p>
+  {{/details-box}}
+
+  <h3>⏱️ When will I receive my refund?</h3>
+  <p>The refund has been initiated and will typically appear in your account within:</p>
+  <ul>
+    <li><strong>Credit/Debit Cards:</strong> 5-10 business days</li>
+    <li><strong>Bank Transfer:</strong> 3-5 business days</li>
+    <li><strong>E-wallets:</strong> 1-3 business days</li>
+  </ul>
+
+  <p>Please note that the actual timing depends on your financial institution.</p>
+
+  {{> footer message="Thank you for using Auction Hub. We hope to see you again!"}}
+</div>

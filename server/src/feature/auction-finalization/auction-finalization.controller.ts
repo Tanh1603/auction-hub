@@ -144,4 +144,23 @@ export class AuctionFinalizationController {
       user.id
     );
   }
+
+  /**
+   * Get management detail for admin override operations
+   * GET /auction-finalization/management-detail/:auctionId
+   * Returns full bidding pool and participant status for manual winner selection
+   * Only accessible by admin/super_admin
+   */
+  @Get('management-detail/:auctionId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  async getManagementDetail(
+    @Param('auctionId') auctionId: string,
+    @CurrentUser() user: CurrentUserData
+  ) {
+    return this.auctionFinalizationService.getManagementDetail(
+      auctionId,
+      user.id
+    );
+  }
 }

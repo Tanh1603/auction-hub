@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EmailService } from '../../../common/services/email.service';
+import { EmailQueueService } from '../../../common/email/email-queue.service';
 import { PaymentService } from '../../../payment/payment.service';
 import {
   PaymentType,
@@ -28,7 +28,7 @@ export class WinnerPaymentService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
+    private readonly emailQueueService: EmailQueueService,
     private readonly paymentService: PaymentService
   ) {}
 
@@ -84,12 +84,13 @@ export class WinnerPaymentService {
       const depositPaid = winningBid.participant.depositAmount
         ? parseFloat(winningBid.participant.depositAmount.toString())
         : 0;
-      const dossierFee = auction.saleFee
-        ? parseFloat(auction.saleFee.toString())
-        : 0;
-
+      // Participation fee (dossier fee) is now collected upfront during registration.
+      // Winners pay: Final Bid Amount - Deposit Already Paid.
       const remainingAmount = winningAmount - depositPaid;
-      const totalDue = remainingAmount + dossierFee;
+      const totalDue = remainingAmount;
+
+      // We maintain dossierFee for the breakdown display, but mark it as 0 further due
+      const dossierFeeDue = 0;
 
       // Calculate payment deadline (e.g., 7 days after auction end)
       const paymentDeadline = new Date(auction.auctionEndAt);
@@ -97,23 +98,6 @@ export class WinnerPaymentService {
 
       this.logger.log(
         `Winner payment requirements: Total due ${totalDue} for auction ${auctionId}`
-      );
-
-      // Send email notification to winner with payment requirements
-      await this.emailService.sendWinnerPaymentRequestEmail({
-        recipientEmail: winningBid.participant.user.email,
-        recipientName: winningBid.participant.user.fullName,
-        auctionCode: auction.code,
-        auctionName: auction.name,
-        winningAmount: winningAmount.toLocaleString(),
-        depositAlreadyPaid: depositPaid.toLocaleString(),
-        dossierFee: dossierFee.toLocaleString(),
-        totalDue: totalDue.toLocaleString(),
-        paymentDeadline: paymentDeadline,
-      });
-
-      this.logger.log(
-        `Winner payment request email sent to ${winningBid.participant.user.email} for auction ${auctionId}`
       );
 
       return {
@@ -126,9 +110,9 @@ export class WinnerPaymentService {
         paymentBreakdown: {
           winningAmount,
           depositAlreadyPaid: depositPaid,
-          dossierFee,
+          dossierFee: dossierFeeDue,
           remainingAmount,
-          totalDue,
+          totalDue: totalDue,
           paymentDeadline: paymentDeadline.toISOString(),
         },
         financialSummary: auction.netAmountToPropertyOwner
@@ -204,6 +188,50 @@ export class WinnerPaymentService {
         error
       );
       throw error;
+    }
+  }
+
+  /**
+   * Calculate and send detailed winner payment request email
+   * Used during auction finalization or status override
+   */
+  async sendWinnerPaymentRequestEmail(auctionId: string) {
+    try {
+      this.logger.log(
+        `Sending detailed winner payment email for auction ${auctionId}`
+      );
+
+      const requirements = await this.getWinnerPaymentRequirements(auctionId);
+
+      const auction = await this.prisma.auction.findUnique({
+        where: { id: auctionId },
+        select: { code: true, name: true },
+      });
+
+      await this.emailQueueService.queueWinnerPaymentRequestEmail({
+        recipientEmail: requirements.winner.email,
+        recipientName: requirements.winner.fullName,
+        auctionCode: auction.code,
+        auctionName: auction.name,
+        winningAmount: requirements.paymentBreakdown.winningAmount.toString(),
+        depositAlreadyPaid:
+          requirements.paymentBreakdown.depositAlreadyPaid.toString(),
+        dossierFee: requirements.paymentBreakdown.dossierFee.toString(),
+        totalDue: requirements.paymentBreakdown.totalDue.toString(),
+        paymentDeadline: new Date(
+          requirements.paymentBreakdown.paymentDeadline
+        ),
+      });
+
+      this.logger.log(
+        `Detailed winner payment email queued for ${requirements.winner.email}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send detailed winner payment email for auction ${auctionId}`,
+        error
+      );
+      // Don't rethrow to avoid breaking the caller (e.g. finalization)
     }
   }
 
@@ -673,21 +701,8 @@ export class WinnerPaymentService {
         data: { isWinningBid: true },
       });
 
-      // Send notification to new winner
-      const requirements = await this.getWinnerPaymentRequirements(auction.id);
-      await this.emailService.sendWinnerPaymentRequestEmail({
-        recipientEmail: secondHighestBid.participant.user.email,
-        recipientName: secondHighestBid.participant.user.fullName,
-        auctionCode: auction.code,
-        auctionName: auction.name,
-        winningAmount:
-          requirements.paymentBreakdown.winningAmount.toLocaleString(),
-        depositAlreadyPaid:
-          requirements.paymentBreakdown.depositAlreadyPaid.toLocaleString(),
-        dossierFee: requirements.paymentBreakdown.dossierFee.toLocaleString(),
-        totalDue: requirements.paymentBreakdown.totalDue.toLocaleString(),
-        paymentDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+      // Send notification to new winner (via queue)
+      await this.sendWinnerPaymentRequestEmail(auction.id);
 
       this.logger.log(
         `Auction ${auction.id} offered to 2nd highest bidder ${secondHighestBid.participant.user.email}`
@@ -720,13 +735,13 @@ export class WinnerPaymentService {
   ) {
     const totalDue = await this.getWinnerPaymentRequirements(auction.id);
 
-    await this.emailService.sendPaymentFailureEmail({
+    await this.emailQueueService.queuePaymentFailureEmail({
       recipientEmail: winningBid.participant.user.email,
       recipientName: winningBid.participant.user.fullName,
       auctionCode: auction.code,
       auctionName: auction.name,
       paymentType: 'winning_payment',
-      attemptedAmount: totalDue.paymentBreakdown.totalDue.toLocaleString(),
+      attemptedAmount: totalDue.paymentBreakdown.totalDue.toString(),
       failureReason: this.getPaymentFailureReason(failureStatus),
       retryUrl: `${process.env.FRONTEND_URL}/auctions/${auction.id}/winner-payment/retry?paymentId=${paymentId}`,
       deadline: paymentDeadline,
@@ -740,7 +755,7 @@ export class WinnerPaymentService {
   }
 
   /**
-   * Send payment confirmation emails to all parties
+   * Send payment confirmation emails to all parties (via queue)
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async sendPaymentConfirmationEmails(contract: any, amount: number) {
@@ -749,30 +764,30 @@ export class WinnerPaymentService {
       contract.auction.propertyOwner
     );
 
-    // Send email notification to winner
-    await this.emailService.sendWinnerPaymentConfirmedEmail({
+    // Queue email notification to winner
+    await this.emailQueueService.queueWinnerPaymentConfirmedEmail({
       recipientEmail: contract.buyer.email,
       recipientName: contract.buyer.fullName,
       auctionCode: contract.auction.code,
       auctionName: contract.auction.name,
-      totalPaid: amount.toLocaleString(),
+      totalPaid: amount.toString(),
       contractReady: true,
     });
 
-    // Send notification to seller if we have their info
+    // Queue notification to seller if we have their info
     if (propertyOwnerSnapshot) {
-      await this.emailService.sendSellerPaymentNotificationEmail({
+      await this.emailQueueService.queueSellerPaymentNotificationEmail({
         recipientEmail: propertyOwnerSnapshot.email,
         sellerName: propertyOwnerSnapshot.fullName,
         buyerName: contract.buyer.fullName,
         auctionCode: contract.auction.code,
         auctionName: contract.auction.name,
-        totalPaid: amount.toLocaleString(),
+        totalPaid: amount.toString(),
         contractReady: true,
       });
     }
 
-    // Send notification to admin(s)/auctioneer(s)
+    // Queue notifications to admin(s)/auctioneer(s)
     const adminUsers = await this.prisma.user.findMany({
       where: {
         role: { in: ['admin', 'auctioneer'] },
@@ -781,8 +796,9 @@ export class WinnerPaymentService {
       },
     });
 
-    const adminNotificationPromises = adminUsers.map((admin) =>
-      this.emailService.sendAdminWinnerPaymentNotificationEmail({
+    // Bulk queue admin notifications
+    const adminQueuePromises = adminUsers.map((admin) =>
+      this.emailQueueService.queueAdminWinnerPaymentNotificationEmail({
         recipientEmail: admin.email,
         adminName: admin.fullName,
         buyerName: contract.buyer.fullName,
@@ -790,21 +806,16 @@ export class WinnerPaymentService {
         sellerName: propertyOwnerSnapshot?.fullName || 'Unknown',
         auctionCode: contract.auction.code,
         auctionName: contract.auction.name,
-        totalPaid: amount.toLocaleString(),
+        totalPaid: amount.toString(),
         paidAt: new Date(),
         contractId: contract.id,
       })
     );
 
-    await Promise.allSettled(adminNotificationPromises).catch((err) => {
-      this.logger.error(
-        'Error sending admin winner payment notifications:',
-        err
-      );
-    });
+    await Promise.all(adminQueuePromises);
 
     this.logger.log(
-      `Email notifications sent: winner, seller, and ${adminUsers.length} admin(s) notified`
+      `Email notifications queued: winner, seller, and ${adminUsers.length} admin(s) notified`
     );
   }
 
@@ -828,5 +839,148 @@ export class WinnerPaymentService {
       reasonMap[status] ||
       'Payment could not be completed. Please try again or contact support.'
     );
+  }
+
+  /**
+   * Handle winner payment default
+   * Called when winner fails to pay within the deadline
+   * - Disqualifies the winner (deposit forfeited)
+   * - Optionally offers the auction to the second-highest bidder
+   */
+  async handleWinnerPaymentDefault(
+    auctionId: string,
+    adminId: string,
+    offerToSecondBidder = false
+  ): Promise<{
+    disqualifiedParticipantId: string;
+    newWinnerId?: string;
+    message: string;
+  }> {
+    this.logger.log(
+      `Handling payment default for auction ${auctionId}. Offer to second bidder: ${offerToSecondBidder}`
+    );
+
+    // Get the current winning bid
+    const winningBid = await this.prisma.auctionBid.findFirst({
+      where: {
+        auctionId,
+        isWinningBid: true,
+      },
+      include: {
+        participant: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!winningBid) {
+      throw new NotFoundException('No winning bid found for this auction');
+    }
+
+    const defaultingParticipant = winningBid.participant;
+
+    // 1. Disqualify the original winner - forfeit deposit
+    await this.prisma.auctionParticipant.update({
+      where: { id: defaultingParticipant.id },
+      data: {
+        isDisqualified: true,
+        disqualifiedAt: new Date(),
+        disqualifiedReason: 'PAYMENT_DEFAULT',
+        refundStatus: 'forfeited',
+      },
+    });
+
+    // 2. Mark the winning bid as withdrawn/forfeited
+    await this.prisma.auctionBid.update({
+      where: { id: winningBid.id },
+      data: {
+        isWinningBid: false,
+        isWithdrawn: true,
+      },
+    });
+
+    this.logger.log(
+      `Participant ${defaultingParticipant.id} disqualified due to payment default. Deposit forfeited.`
+    );
+
+    const result: {
+      disqualifiedParticipantId: string;
+      newWinnerId?: string;
+      message: string;
+    } = {
+      disqualifiedParticipantId: defaultingParticipant.id,
+      message:
+        'Original winner disqualified due to payment default. Deposit forfeited.',
+    };
+
+    // 3. Optionally offer to second-highest bidder
+    if (offerToSecondBidder) {
+      const secondHighestBid = await this.prisma.auctionBid.findFirst({
+        where: {
+          auctionId,
+          isWinningBid: false,
+          isWithdrawn: false,
+          isDenied: false,
+          participantId: { not: defaultingParticipant.id },
+        },
+        orderBy: { amount: 'desc' },
+        include: {
+          participant: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (secondHighestBid) {
+        // Check if second bidder is not disqualified
+        if (!secondHighestBid.participant.isDisqualified) {
+          // Mark as new winning bid
+          await this.prisma.auctionBid.update({
+            where: { id: secondHighestBid.id },
+            data: { isWinningBid: true },
+          });
+
+          result.newWinnerId = secondHighestBid.participant.userId;
+          result.message += ` Auction offered to second-highest bidder: ${secondHighestBid.participant.user.fullName}`;
+
+          this.logger.log(
+            `Auction ${auctionId} offered to second-highest bidder: ${secondHighestBid.participant.user.email}`
+          );
+
+          // TODO: Send email notification to new winner
+        } else {
+          result.message += ' No eligible second-highest bidder available.';
+        }
+      } else {
+        result.message += ' No second-highest bidder found.';
+      }
+    }
+
+    // 4. Create audit log entry
+    try {
+      await this.prisma.auctionAuditLog.create({
+        data: {
+          auctionId,
+          action: 'AUCTION_UPDATED',
+          performedBy: adminId,
+          reason: 'Winner payment default',
+          metadata: {
+            type: 'PAYMENT_DEFAULT',
+            disqualifiedUserId: defaultingParticipant.userId,
+            depositForfeited: defaultingParticipant.depositAmount?.toString(),
+            newWinnerOffered: offerToSecondBidder,
+            newWinnerId: result.newWinnerId,
+          },
+        },
+      });
+    } catch {
+      this.logger.warn('AuctionAuditLog table may not exist');
+    }
+
+    return result;
   }
 }

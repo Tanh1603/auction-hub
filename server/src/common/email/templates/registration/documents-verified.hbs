@@ -15,6 +15,12 @@
   <p>To complete your registration, you must pay the deposit amount:</p>
   {{#> details-box backgroundColor="#fef5e7" borderColor="#f39c12"}}
     <p><strong>Deposit Amount:</strong> <span class="amount-warning">{{formatCurrency depositAmount}} VND</span></p>
+    {{#if applicationFee}}
+    <p><strong>Application Fee:</strong> <span class="amount-warning">{{formatCurrency applicationFee}} VND</span></p>
+    {{/if}}
+    {{#if totalAmount}}
+    <p style="margin-top: 10px; border-top: 1px dashed #b9770e; padding-top: 10px;"><strong>Total Amount:</strong> <span class="amount-warning" style="font-size: 1.25em;">{{formatCurrency totalAmount}} VND</span></p>
+    {{/if}}
     {{#if paymentDeadline}}
     <p><strong>Payment Deadline:</strong> {{formatDate paymentDeadline}}</p>
     {{/if}}

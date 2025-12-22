@@ -2,13 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuctionEvaluationService } from './auction-evaluation.service';
 import { AuctionResultDto } from '../dto/auction-result.dto';
-import { AuctionStatus } from '../../../../generated';
 import { getPropertyOwnerId } from '../../../common/types/property-owner-snapshot.interface';
 
 /**
@@ -75,12 +73,13 @@ export class AuctionResultsService {
 
     // Check if auction has been finalized
     // Note: no_bid and cancelled have been replaced with 'failed' in the new schema
-    if (
-      auction.status !== AuctionStatus.success &&
-      auction.status !== AuctionStatus.failed
-    ) {
-      throw new BadRequestException('Auction results are not yet available');
-    }
+    // RELAXED RESTRICTION: Allow viewing results for live auctions too (returns partial data)
+    // if (
+    //   auction.status !== AuctionStatus.success &&
+    //   auction.status !== AuctionStatus.failed
+    // ) {
+    //   throw new BadRequestException('Auction results are not yet available');
+    // }
 
     // Get total bids and participants count
     const totalBids = await this.prisma.auctionBid.count({
@@ -93,6 +92,29 @@ export class AuctionResultsService {
 
     const totalParticipants = await this.prisma.auctionParticipant.count({
       where: { auctionId: auction.id },
+    });
+
+    // Get all valid bids for history
+    const allValidBids = await this.prisma.auctionBid.findMany({
+      where: {
+        auctionId: auction.id,
+        isDenied: false,
+        isWithdrawn: false,
+      },
+      orderBy: { amount: 'desc' },
+      include: {
+        participant: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
+        },
+      },
+      take: 50, // Limit to top 50 recent bids to avoid payload being too large
     });
 
     // Build result DTO
@@ -130,6 +152,30 @@ export class AuctionResultsService {
       totalParticipants,
       evaluation: evaluationData,
     };
+
+    // Populate allBids (Public/Shared history)
+    result.allBids = allValidBids.map((bid) => ({
+      bidId: bid.id,
+      amount: bid.amount.toString(),
+      bidAt: bid.bidAt,
+      bidType: bid.bidType,
+      isWinningBid: bid.isWinningBid,
+      // For privacy, we only show bidder name, not IDs or emails
+      bidderName: bid.participant.user.fullName,
+    }));
+
+    // Populate userBids (Personal history)
+    result.userBids = allValidBids
+      .filter((bid) => bid.participant.user.id === userId)
+      .map((bid) => ({
+        bidId: bid.id,
+        amount: bid.amount.toString(),
+        bidAt: bid.bidAt,
+        bidType: bid.bidType,
+        isWinningBid: bid.isWinningBid,
+        participantId: bid.participantId,
+        bidderName: bid.participant.user.fullName,
+      }));
 
     if (winningBid) {
       result.winningBid = {

@@ -11,6 +11,7 @@ export class EmailTemplateService {
   private partialsRegistered = false;
 
   constructor() {
+    this.logger.log('EmailTemplateService initialized - reloading partials');
     this.registerHelpers();
   }
 
@@ -223,6 +224,16 @@ export class EmailTemplateService {
         `💰 Winner Payment Received - ${d.auctionCode}`,
       'admin/winner-payment-notification': (d) =>
         `💰 Winner Payment Confirmed - ${d.auctionCode}`,
+      'admin/refund-requested': (d) =>
+        `📝 New Refund Request - ${d.auctionCode}`,
+      'registration/refund-requested': (d) =>
+        `📝 Refund Request Received - ${d.auctionCode}`,
+      'registration/refund-approved': (d) =>
+        `✅ Refund Approved - ${d.auctionCode}`,
+      'registration/refund-rejected': (d) =>
+        `❌ Refund Request Declined - ${d.auctionCode}`,
+      'registration/refund-processed': (d) =>
+        `💰 Refund Processed - ${d.auctionCode}`,
     };
 
     const subjectFn = subjects[templateType];

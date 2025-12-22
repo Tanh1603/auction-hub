@@ -10,7 +10,7 @@ import {
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { PaymentService } from '../../../../payment/payment.service';
 import { PaymentProcessingService } from '../../../../payment/payment-processing.service';
-import { EmailService } from '../../../../common/services/email.service';
+import { EmailQueueService } from '../../../../common/email/email-queue.service';
 import type { AuctionParticipant } from '../../../../../generated';
 import {
   PaymentType,
@@ -25,7 +25,7 @@ export class RegistrationPaymentService {
     private readonly prisma: PrismaService,
     private readonly paymentService: PaymentService,
     private readonly paymentProcessingService: PaymentProcessingService,
-    private readonly emailService: EmailService
+    private readonly emailQueueService: EmailQueueService
   ) {}
 
   /**
@@ -111,6 +111,7 @@ export class RegistrationPaymentService {
         where: { id: registrationId },
         include: {
           auction: true,
+          user: true,
         },
       });
 
@@ -146,29 +147,33 @@ export class RegistrationPaymentService {
         );
       }
 
-      // CRITICAL: Verify the received amount matches the expected deposit amount
-      const expectedAmount = parseFloat(
+      // CRITICAL: Verify the received amount matches Expected Total (Deposit + Participation Fee)
+      const depositAmountRequired = parseFloat(
         participant.auction.depositAmountRequired.toString()
       );
+      const saleFee = parseFloat(
+        participant.auction.saleFee?.toString() || '0'
+      );
+      const expectedTotal = depositAmountRequired + saleFee;
       const receivedAmount = verification.amount;
 
       this.logger.log(
-        `[DEPOSIT AMOUNT CHECK] Expected: ${expectedAmount} VND, Received: ${receivedAmount} ${verification.currency}`
+        `[DEPOSIT AMOUNT CHECK] Expected Total: ${expectedTotal} VND (Deposit: ${depositAmountRequired}, Fee: ${saleFee}), Received: ${receivedAmount} ${verification.currency}`
       );
 
-      if (receivedAmount < expectedAmount) {
+      if (receivedAmount < expectedTotal) {
         // Payment amount is insufficient
         this.logger.error(
           `[DEPOSIT VERIFICATION FAILED] Amount mismatch for ${registrationId}. ` +
-            `Expected ${expectedAmount} VND, but received ${receivedAmount} ${verification.currency}`
+            `Expected total ${expectedTotal} VND, but received ${receivedAmount} ${verification.currency}`
         );
         throw new BadRequestException(
-          `Payment received (${receivedAmount} ${verification.currency}) is less than the required deposit (${expectedAmount} VND). Please contact support.`
+          `Payment received (${receivedAmount} ${verification.currency}) is less than the required total of ${expectedTotal} VND (Deposit + participation fee).`
         );
       }
 
       this.logger.log(
-        `[DEPOSIT VERIFICATION SUCCESS] Amount verified: ${receivedAmount} ${verification.currency} >= ${expectedAmount} VND`
+        `[DEPOSIT VERIFICATION SUCCESS] Amount verified: ${receivedAmount} ${verification.currency} >= ${expectedTotal} VND`
       );
 
       // Find the payment record by transaction ID (Stripe session ID)
@@ -199,7 +204,9 @@ export class RegistrationPaymentService {
           where: { id: registrationId },
           data: {
             depositPaidAt: new Date(),
-            depositAmount: receivedAmount, // Use receivedAmount since it matches expectedAmount
+            depositAmount: parseFloat(
+              participant.auction.depositAmountRequired.toString()
+            ), // Only store the deposit part, fee is kept by platform
             depositPaymentId: payment.id,
           },
         });
@@ -223,6 +230,48 @@ export class RegistrationPaymentService {
 
       this.logger.log(
         `Deposit payment verified for registration ${registrationId}. Session ID: ${sessionId}`
+      );
+
+      // ✅ ADDED: Queue email notifications after successful verification
+      // 1. Send email to user (Confirmation)
+      await this.emailQueueService.queueDepositConfirmedEmail({
+        recipientEmail: participant.user.email,
+        recipientName: participant.user.fullName,
+        auctionCode: participant.auction.code,
+        auctionName: participant.auction.name,
+        depositAmount: verification.amount.toString(),
+        paidAt: new Date(),
+        awaitingApproval: true,
+      });
+
+      // 2. Send notification to admin(s) for Tier 2 approval
+      const adminUsers = await this.prisma.user.findMany({
+        where: {
+          role: { in: ['admin', 'auctioneer'] },
+          isBanned: false,
+          deletedAt: null,
+        },
+      });
+
+      const adminQueuePromises = adminUsers.map((admin) =>
+        this.emailQueueService.queueAdminDepositNotificationEmail({
+          recipientEmail: admin.email,
+          adminName: admin.fullName,
+          userName: participant.user.fullName,
+          userEmail: participant.user.email,
+          auctionCode: participant.auction.code,
+          auctionName: participant.auction.name,
+          depositAmount: verification.amount.toString(),
+          paidAt: new Date(),
+          registrationId: registrationId,
+        })
+      );
+
+      await Promise.all(adminQueuePromises);
+
+      this.logger.log(
+        `[EMAIL QUEUED] Deposit verification notifications sent for ${registrationId}: ` +
+          `User (${participant.user.email}) notified, ${adminUsers.length} admin(s) notified.`
       );
 
       return {
@@ -283,9 +332,17 @@ export class RegistrationPaymentService {
         throw new BadRequestException('Deposit already paid');
       }
 
-      // Deposit amount already calculated by policy and stored in auction
-      const depositAmount = parseFloat(
+      // Calculate total payment: Deposit + Participation (Sale) Fee
+      const depositAmountRequired = parseFloat(
         participant.auction.depositAmountRequired.toString()
+      );
+      const saleFee = parseFloat(
+        participant.auction.saleFee?.toString() || '0'
+      );
+      const totalAmount = depositAmountRequired + saleFee;
+
+      this.logger.log(
+        `Initiating payment for registration ${registrationId}: Deposit ${depositAmountRequired} + Fee ${saleFee} = Total ${totalAmount}`
       );
 
       // Directly invoke PaymentService.createPayment() - SIMPLIFIED!
@@ -293,23 +350,25 @@ export class RegistrationPaymentService {
         auctionId: participant.auctionId,
         registrationId: registrationId,
         paymentType: PaymentType.deposit,
-        amount: depositAmount,
+        amount: totalAmount,
         paymentMethod: PaymentMethod.bank_transfer,
       });
 
       this.logger.log(
-        `Deposit payment created: ${paymentInfo.payment_id} for registration ${registrationId}. Amount: ${depositAmount}`
+        `Deposit payment created: ${paymentInfo.payment_id} for registration ${registrationId}. Amount: ${totalAmount}`
       );
 
       return {
         paymentId: paymentInfo.payment_id,
-        amount: depositAmount,
+        amount: totalAmount,
+        depositAmount: depositAmountRequired,
+        participationFee: saleFee,
         paymentUrl: paymentInfo.payment_url,
         qrCode: paymentInfo.qr_code,
         bankInfo: paymentInfo.bank_info,
         deadline: paymentInfo.payment_deadline,
         message:
-          'Please complete payment within 24 hours to proceed with registration.',
+          'Please complete payment within 24 hours to proceed with registration (Total includes both deposit and participation fee).',
       };
     } catch (err) {
       this.logger.error(
@@ -337,6 +396,19 @@ export class RegistrationPaymentService {
         `Verifying deposit payment ${paymentId} for registration ${registrationId}`
       );
 
+      // Get participant with user and auction info (needed for all code paths)
+      const participant = await this.prisma.auctionParticipant.findUnique({
+        where: { id: registrationId },
+        include: {
+          user: true,
+          auction: true,
+        },
+      });
+
+      if (!participant) {
+        throw new NotFoundException('Registration not found');
+      }
+
       // Step 1: Verify payment with Stripe via PaymentService
       const verification = await this.paymentService.verifyPayment(paymentId);
 
@@ -345,70 +417,63 @@ export class RegistrationPaymentService {
           `Payment ${paymentId} verification failed. Status: ${verification.status}`
         );
 
-        // Get participant with user and auction info for email
-        const participant = await this.prisma.auctionParticipant.findUnique({
-          where: { id: registrationId },
-          include: {
-            user: true,
-            auction: true,
-          },
-        });
+        // Calculate remaining time to deadline (24 hours from documents verified)
+        const deadlineDate = new Date(participant.documentsVerifiedAt);
+        deadlineDate.setHours(deadlineDate.getHours() + 24);
+        const now = new Date();
 
-        if (participant) {
-          // Calculate remaining time to deadline (24 hours from documents verified)
-          const deadlineDate = new Date(participant.documentsVerifiedAt);
-          deadlineDate.setHours(deadlineDate.getHours() + 24);
-          const now = new Date();
-
-          // Check if deadline has passed
-          if (now > deadlineDate) {
-            // Deadline expired - mark registration as needing re-submission
-            // IMPORTANT: Do NOT clear documentsVerifiedAt/documentsVerifiedBy
-            // The documents were already verified - only the payment deadline expired
-            await this.prisma.auctionParticipant.update({
-              where: { id: registrationId },
-              data: {
-                withdrawnAt: new Date(),
-                withdrawalReason:
-                  'Payment deadline expired. Deposit not received within 24 hours. Please re-register if you still wish to participate.',
-              },
-            });
-
-            this.logger.error(
-              `Registration ${registrationId} automatically withdrawn due to expired payment deadline`
-            );
-
-            throw new BadRequestException(
-              'Payment deadline has expired. Your registration has been cancelled. Please re-register if you still wish to participate.'
-            );
-          }
-
-          // Deadline not expired - send failure notification email
-          const depositAmount = parseFloat(
-            participant.auction.depositAmountRequired.toString()
-          );
-
-          // Send payment failure email to user
-          await this.emailService.sendPaymentFailureEmail({
-            recipientEmail: participant.user.email,
-            recipientName: participant.user.fullName,
-            auctionCode: participant.auction.code,
-            auctionName: participant.auction.name,
-            paymentType: 'deposit',
-            attemptedAmount: depositAmount.toString(), // Don't format here - let email template handle it
-            failureReason: this.getPaymentFailureReason(verification.status),
-            retryUrl: `${process.env.FRONTEND_URL}/auctions/${participant.auctionId}/payment/retry?paymentId=${paymentId}`,
-            deadline: deadlineDate,
-          });
-
-          // Track payment attempt
-          await this.prisma.payment.update({
-            where: { id: paymentId },
+        // Check if deadline has passed
+        if (now > deadlineDate) {
+          // Deadline expired - mark registration as needing re-submission
+          // IMPORTANT: Do NOT clear documentsVerifiedAt/documentsVerifiedBy
+          // The documents were already verified - only the payment deadline expired
+          await this.prisma.auctionParticipant.update({
+            where: { id: registrationId },
             data: {
-              status: 'failed',
+              withdrawnAt: new Date(),
+              withdrawalReason:
+                'Payment deadline expired. Deposit not received within 24 hours. Please re-register if you still wish to participate.',
             },
           });
+
+          this.logger.error(
+            `Registration ${registrationId} automatically withdrawn due to expired payment deadline`
+          );
+
+          throw new BadRequestException(
+            'Payment deadline has expired. Your registration has been cancelled. Please re-register if you still wish to participate.'
+          );
         }
+
+        // Deadline not expired - send failure notification email
+        const depositAmountRequired = parseFloat(
+          participant.auction.depositAmountRequired.toString()
+        );
+        const saleFee = parseFloat(
+          participant.auction.saleFee?.toString() || '0'
+        );
+        const totalAmount = depositAmountRequired + saleFee;
+
+        // Send payment failure email to user (via queue)
+        await this.emailQueueService.queuePaymentFailureEmail({
+          recipientEmail: participant.user.email,
+          recipientName: participant.user.fullName,
+          auctionCode: participant.auction.code,
+          auctionName: participant.auction.name,
+          paymentType: 'deposit',
+          attemptedAmount: totalAmount.toString(),
+          failureReason: this.getPaymentFailureReason(verification.status),
+          retryUrl: `${process.env.FRONTEND_URL}/auctions/${participant.auctionId}/payment/retry?paymentId=${paymentId}`,
+          deadline: deadlineDate,
+        });
+
+        // Track payment attempt
+        await this.prisma.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: 'failed',
+          },
+        });
 
         throw new BadRequestException(
           `Payment not completed. Status: ${verification.status}. Please retry payment before the deadline.`
@@ -429,7 +494,9 @@ export class RegistrationPaymentService {
         where: { id: registrationId },
         data: {
           depositPaidAt: new Date(),
-          depositAmount: verification.amount,
+          depositAmount: parseFloat(
+            participant.auction.depositAmountRequired.toString()
+          ), // Only store the deposit part
           depositPaymentId: paymentId,
         },
         include: {
@@ -439,11 +506,11 @@ export class RegistrationPaymentService {
       });
 
       this.logger.log(
-        `Deposit payment ${paymentId} verified and confirmed for registration ${registrationId}. Ready for Tier 2 approval.`
+        `Deposit payment ${paymentId} verified and confirmed for registration ${registrationId}. Amount: ${verification.amount} (Deposit: ${updated.depositAmount}, Fee: ${updated.auction.saleFee}). Ready for Tier 2 approval.`
       );
 
-      // Send email notification to user
-      await this.emailService.sendDepositConfirmedEmail({
+      // Send email notification to user (via queue for non-blocking)
+      await this.emailQueueService.queueDepositConfirmedEmail({
         recipientEmail: updated.user.email,
         recipientName: updated.user.fullName,
         auctionCode: updated.auction.code,
@@ -462,9 +529,9 @@ export class RegistrationPaymentService {
         },
       });
 
-      // Send notification to each admin
-      const adminNotificationPromises = adminUsers.map((admin) =>
-        this.emailService.sendAdminDepositNotificationEmail({
+      // Queue notification for each admin (bulk email handling via queue)
+      const adminQueuePromises = adminUsers.map((admin) =>
+        this.emailQueueService.queueAdminDepositNotificationEmail({
           recipientEmail: admin.email,
           adminName: admin.fullName,
           userName: updated.user.fullName,
@@ -477,13 +544,10 @@ export class RegistrationPaymentService {
         })
       );
 
-      // Send emails asynchronously (don't wait for completion)
-      Promise.allSettled(adminNotificationPromises).catch((err) => {
-        this.logger.error('Error sending admin deposit notifications:', err);
-      });
+      await Promise.all(adminQueuePromises);
 
       this.logger.log(
-        `Email notifications sent for deposit payment ${paymentId}: user notified, ${adminUsers.length} admin(s) notified`
+        `Email notifications queued for deposit payment ${paymentId}: user notified, ${adminUsers.length} admin(s) notified`
       );
 
       return {

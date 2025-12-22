@@ -8,14 +8,18 @@ import {
   UserRegistrationService,
   AdminApprovalService,
   RegistrationPaymentService,
+  RefundService,
+  AutoRefundService,
 } from './services';
 import {
   UserRegistrationController,
   AdminApprovalController,
   RegistrationPaymentController,
+  RefundController,
 } from './controllers';
 import { RegisterToBidController } from './register-to-bid.controller';
 
+// Note: ScheduleModule.forRoot() is initialized in AppModule
 @Module({
   imports: [
     PrismaModule,
@@ -28,13 +32,21 @@ import { RegisterToBidController } from './register-to-bid.controller';
     UserRegistrationController,
     AdminApprovalController,
     RegistrationPaymentController,
+    RefundController,
   ],
   providers: [
     RegisterToBidService,
     UserRegistrationService,
     AdminApprovalService,
     RegistrationPaymentService,
+    RefundService,
+    AutoRefundService,
   ],
-  exports: [RegisterToBidService, RegistrationPaymentService],
+  exports: [
+    RegisterToBidService,
+    RegistrationPaymentService,
+    RefundService,
+    AutoRefundService,
+  ],
 })
 export class RegisterToBidModule {}
