@@ -42,6 +42,35 @@ export class DashboardSummaryDto {
 }
 
 /**
+ * Data point for time series charts.
+ */
+export class TimeSeriesPointDto {
+  @ApiProperty({
+    description: 'The date/timestamp for this point (usually start of the day)',
+    example: '2025-12-01T00:00:00.000Z',
+  })
+  date: string;
+
+  @ApiProperty({
+    description: 'GMV for this period',
+    example: 500000000,
+  })
+  gmv: number;
+
+  @ApiProperty({
+    description: 'Revenue for this period',
+    example: 15000000,
+  })
+  revenue: number;
+
+  @ApiProperty({
+    description: 'Number of auctions ended in this period',
+    example: 5,
+  })
+  auctionCount: number;
+}
+
+/**
  * Main response DTO for dashboard analytics.
  */
 export class DashboardAnalyticsResponseDto {
@@ -50,4 +79,10 @@ export class DashboardAnalyticsResponseDto {
     type: DashboardSummaryDto,
   })
   summary: DashboardSummaryDto;
+
+  @ApiProperty({
+    description: 'Time series data for charts',
+    type: [TimeSeriesPointDto],
+  })
+  timeSeries: TimeSeriesPointDto[];
 }

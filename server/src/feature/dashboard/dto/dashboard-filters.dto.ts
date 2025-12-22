@@ -3,6 +3,12 @@ import { Type } from 'class-transformer';
 import { IsDateString, IsEnum, IsInt, IsOptional } from 'class-validator';
 import { AssetType } from '../../../../generated';
 
+export enum DashboardGroupBy {
+  day = 'day',
+  week = 'week',
+  month = 'month',
+}
+
 /**
  * DTO for filtering dashboard analytics data.
  * All filters are optional - omitting filters returns aggregated data for all records.
@@ -44,4 +50,13 @@ export class DashboardFiltersDto {
   @Type(() => Number)
   @IsInt()
   provinceId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Time interval for grouping chart data',
+    enum: DashboardGroupBy,
+    default: DashboardGroupBy.day,
+  })
+  @IsOptional()
+  @IsEnum(DashboardGroupBy)
+  groupBy?: DashboardGroupBy = DashboardGroupBy.day;
 }
