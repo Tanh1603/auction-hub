@@ -9,9 +9,16 @@ import { PrismaModule } from '../../prisma/prisma.module';
 import { BiddingModule } from '../bidding/bidding.module';
 import { AuctionPolicyModule } from '../auction-policy/auction-policy.module';
 import { PaymentModule } from '../../payment/payment.module';
+import { EmailModule } from '../../common/email/email.module';
 
 @Module({
-  imports: [PrismaModule, AuctionPolicyModule, PaymentModule, BiddingModule],
+  imports: [
+    PrismaModule,
+    AuctionPolicyModule,
+    PaymentModule,
+    BiddingModule,
+    EmailModule,
+  ],
   controllers: [AuctionFinalizationController],
   providers: [
     AuctionFinalizationService,

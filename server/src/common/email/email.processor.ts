@@ -10,6 +10,7 @@ import {
   EmailService,
   DocumentsVerifiedEmailData,
   FinalApprovalEmailData,
+  DepositPaymentEmailData,
   DepositConfirmedEmailData,
   AdminDepositNotificationEmailData,
   WinnerPaymentRequestEmailData,
@@ -18,9 +19,12 @@ import {
   AdminWinnerPaymentNotificationEmailData,
   AuctionResultEmailData,
   PaymentFailureEmailData,
+  PaymentDeadlineReminderEmailData,
   AdminRefundRequestedEmailData,
   RefundApprovedEmailData,
   RefundRejectedEmailData,
+  RefundProcessedEmailData,
+  UserRefundRequestedEmailData,
 } from '../services/email.service';
 
 @Processor(EMAIL_QUEUE)
@@ -55,6 +59,12 @@ export class EmailProcessor extends WorkerHost {
           break;
 
         // Deposit flow
+        case EmailJob.DEPOSIT_PAYMENT_REQUEST:
+          await this.emailService.sendDepositPaymentRequestEmail(
+            payload as unknown as DepositPaymentEmailData
+          );
+          break;
+
         case EmailJob.DEPOSIT_CONFIRMED:
           await this.emailService.sendDepositConfirmedEmail(
             payload as unknown as DepositConfirmedEmailData
@@ -99,10 +109,16 @@ export class EmailProcessor extends WorkerHost {
           );
           break;
 
-        // Payment failures
+        // Payment failures & reminders
         case EmailJob.PAYMENT_FAILURE:
           await this.emailService.sendPaymentFailureEmail(
             payload as unknown as PaymentFailureEmailData
+          );
+          break;
+
+        case EmailJob.PAYMENT_DEADLINE_REMINDER:
+          await this.emailService.sendPaymentDeadlineReminderEmail(
+            payload as unknown as PaymentDeadlineReminderEmailData
           );
           break;
 
@@ -110,6 +126,12 @@ export class EmailProcessor extends WorkerHost {
         case EmailJob.ADMIN_REFUND_REQUESTED:
           await this.emailService.sendAdminRefundRequestedEmail(
             payload as unknown as AdminRefundRequestedEmailData
+          );
+          break;
+
+        case EmailJob.USER_REFUND_REQUESTED:
+          await this.emailService.sendUserRefundRequestedEmail(
+            payload as unknown as UserRefundRequestedEmailData
           );
           break;
 
@@ -122,6 +144,12 @@ export class EmailProcessor extends WorkerHost {
         case EmailJob.REFUND_REJECTED:
           await this.emailService.sendRefundRejectedEmail(
             payload as unknown as RefundRejectedEmailData
+          );
+          break;
+
+        case EmailJob.REFUND_PROCESSED:
+          await this.emailService.sendRefundProcessedEmail(
+            payload as unknown as RefundProcessedEmailData
           );
           break;
 

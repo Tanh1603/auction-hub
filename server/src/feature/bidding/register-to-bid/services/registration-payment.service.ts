@@ -10,7 +10,7 @@ import {
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { PaymentService } from '../../../../payment/payment.service';
 import { PaymentProcessingService } from '../../../../payment/payment-processing.service';
-import { EmailService } from '../../../../common/services/email.service';
+import { EmailQueueService } from '../../../../common/email/email-queue.service';
 import type { AuctionParticipant } from '../../../../../generated';
 import {
   PaymentType,
@@ -25,7 +25,7 @@ export class RegistrationPaymentService {
     private readonly prisma: PrismaService,
     private readonly paymentService: PaymentService,
     private readonly paymentProcessingService: PaymentProcessingService,
-    private readonly emailService: EmailService
+    private readonly emailQueueService: EmailQueueService
   ) {}
 
   /**
@@ -411,8 +411,8 @@ export class RegistrationPaymentService {
         );
         const totalAmount = depositAmountRequired + saleFee;
 
-        // Send payment failure email to user
-        await this.emailService.sendPaymentFailureEmail({
+        // Send payment failure email to user (via queue)
+        await this.emailQueueService.queuePaymentFailureEmail({
           recipientEmail: participant.user.email,
           recipientName: participant.user.fullName,
           auctionCode: participant.auction.code,
@@ -466,8 +466,8 @@ export class RegistrationPaymentService {
         `Deposit payment ${paymentId} verified and confirmed for registration ${registrationId}. Amount: ${verification.amount} (Deposit: ${updated.depositAmount}, Fee: ${updated.auction.saleFee}). Ready for Tier 2 approval.`
       );
 
-      // Send email notification to user
-      await this.emailService.sendDepositConfirmedEmail({
+      // Send email notification to user (via queue for non-blocking)
+      await this.emailQueueService.queueDepositConfirmedEmail({
         recipientEmail: updated.user.email,
         recipientName: updated.user.fullName,
         auctionCode: updated.auction.code,
@@ -486,9 +486,9 @@ export class RegistrationPaymentService {
         },
       });
 
-      // Send notification to each admin
-      const adminNotificationPromises = adminUsers.map((admin) =>
-        this.emailService.sendAdminDepositNotificationEmail({
+      // Queue notification for each admin (bulk email handling via queue)
+      const adminQueuePromises = adminUsers.map((admin) =>
+        this.emailQueueService.queueAdminDepositNotificationEmail({
           recipientEmail: admin.email,
           adminName: admin.fullName,
           userName: updated.user.fullName,
@@ -501,13 +501,10 @@ export class RegistrationPaymentService {
         })
       );
 
-      // Send emails asynchronously (don't wait for completion)
-      Promise.allSettled(adminNotificationPromises).catch((err) => {
-        this.logger.error('Error sending admin deposit notifications:', err);
-      });
+      await Promise.all(adminQueuePromises);
 
       this.logger.log(
-        `Email notifications sent for deposit payment ${paymentId}: user notified, ${adminUsers.length} admin(s) notified`
+        `Email notifications queued for deposit payment ${paymentId}: user notified, ${adminUsers.length} admin(s) notified`
       );
 
       return {

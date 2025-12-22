@@ -94,6 +94,27 @@ export class EmailQueueService {
   // ============ Deposit Flow ============
 
   /**
+   * Queue deposit payment request email
+   */
+  async queueDepositPaymentRequestEmail(data: {
+    recipientEmail: string;
+    recipientName: string;
+    auctionCode: string;
+    auctionName: string;
+    depositAmount: string;
+    paymentUrl: string;
+    qrCode?: string;
+    deadline: Date;
+  }): Promise<string> {
+    return this.addJob(
+      EmailJob.DEPOSIT_PAYMENT_REQUEST,
+      data.recipientEmail,
+      data.recipientName,
+      data
+    );
+  }
+
+  /**
    * Queue deposit confirmed email to user
    */
   async queueDepositConfirmedEmail(data: {
@@ -244,7 +265,7 @@ export class EmailQueueService {
     );
   }
 
-  // ============ Payment Failures ============
+  // ============ Payment Failures & Reminders ============
 
   /**
    * Queue payment failure email
@@ -262,6 +283,28 @@ export class EmailQueueService {
   }): Promise<string> {
     return this.addJob(
       EmailJob.PAYMENT_FAILURE,
+      data.recipientEmail,
+      data.recipientName,
+      data
+    );
+  }
+
+  /**
+   * Queue payment deadline reminder email
+   */
+  async queuePaymentDeadlineReminderEmail(data: {
+    recipientEmail: string;
+    recipientName: string;
+    auctionCode: string;
+    auctionName: string;
+    paymentType: 'deposit' | 'winning_payment';
+    amountDue: string;
+    deadline: Date;
+    daysRemaining: number;
+    paymentUrl: string;
+  }): Promise<string> {
+    return this.addJob(
+      EmailJob.PAYMENT_DEADLINE_REMINDER,
       data.recipientEmail,
       data.recipientName,
       data
@@ -288,6 +331,26 @@ export class EmailQueueService {
       EmailJob.ADMIN_REFUND_REQUESTED,
       data.recipientEmail,
       data.adminName,
+      data
+    );
+  }
+
+  /**
+   * Queue user refund requested confirmation email
+   */
+  async queueUserRefundRequestedEmail(data: {
+    recipientEmail: string;
+    recipientName: string;
+    auctionCode: string;
+    auctionName: string;
+    depositAmount: string;
+    requestedAt: Date;
+    reason?: string;
+  }): Promise<string> {
+    return this.addJob(
+      EmailJob.USER_REFUND_REQUESTED,
+      data.recipientEmail,
+      data.recipientName,
       data
     );
   }
@@ -325,6 +388,25 @@ export class EmailQueueService {
   }): Promise<string> {
     return this.addJob(
       EmailJob.REFUND_REJECTED,
+      data.recipientEmail,
+      data.recipientName,
+      data
+    );
+  }
+
+  /**
+   * Queue refund processed email
+   */
+  async queueRefundProcessedEmail(data: {
+    recipientEmail: string;
+    recipientName: string;
+    auctionCode: string;
+    auctionName: string;
+    refundAmount: string;
+    processedAt: Date;
+  }): Promise<string> {
+    return this.addJob(
+      EmailJob.REFUND_PROCESSED,
       data.recipientEmail,
       data.recipientName,
       data

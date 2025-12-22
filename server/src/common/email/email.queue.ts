@@ -14,6 +14,7 @@ export enum EmailJob {
   FINAL_APPROVAL = 'final-approval',
 
   // Deposit flow
+  DEPOSIT_PAYMENT_REQUEST = 'deposit-payment-request',
   DEPOSIT_CONFIRMED = 'deposit-confirmed',
   ADMIN_DEPOSIT_NOTIFICATION = 'admin-deposit-notification',
 
@@ -26,16 +27,16 @@ export enum EmailJob {
   // Auction results
   AUCTION_RESULT = 'auction-result',
 
-  // Payment failures
+  // Payment failures & reminders
   PAYMENT_FAILURE = 'payment-failure',
+  PAYMENT_DEADLINE_REMINDER = 'payment-deadline-reminder',
 
   // Refund flow
   ADMIN_REFUND_REQUESTED = 'admin-refund-requested',
+  USER_REFUND_REQUESTED = 'user-refund-requested',
   REFUND_APPROVED = 'refund-approved',
   REFUND_REJECTED = 'refund-rejected',
-
-  // Generic email
-  GENERIC = 'generic',
+  REFUND_PROCESSED = 'refund-processed',
 }
 
 /**

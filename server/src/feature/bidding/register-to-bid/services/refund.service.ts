@@ -11,7 +11,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
-import { EmailService } from '../../../../common/services/email.service';
+import { EmailQueueService } from '../../../../common/email/email-queue.service';
 import { PaymentProcessingService } from '../../../../payment/payment-processing.service';
 
 /**
@@ -81,7 +81,7 @@ export class RefundService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
+    private readonly emailQueueService: EmailQueueService,
     private readonly paymentService: PaymentProcessingService
   ) {}
 
@@ -623,7 +623,7 @@ export class RefundService {
     depositAmount: { toString: () => string } | null;
   }): Promise<void> {
     try {
-      await this.emailService.sendRefundProcessedEmail({
+      await this.emailQueueService.queueRefundProcessedEmail({
         recipientEmail: data.user.email,
         recipientName: data.user.fullName,
         auctionCode: data.auction.code,
@@ -632,7 +632,7 @@ export class RefundService {
         processedAt: new Date(),
       });
     } catch (error) {
-      this.logger.error('Failed to notify user of refund processing', error);
+      this.logger.error('Failed to queue refund processed notification', error);
     }
   }
 
@@ -651,8 +651,9 @@ export class RefundService {
         select: { email: true, fullName: true },
       });
 
-      for (const admin of admins) {
-        await this.emailService.sendAdminRefundRequestedEmail({
+      // Queue emails for all admins (bulk email handling via queue)
+      const queuePromises = admins.map((admin) =>
+        this.emailQueueService.queueAdminRefundRequestedEmail({
           recipientEmail: admin.email,
           adminName: admin.fullName,
           userName: participant.user.fullName,
@@ -662,10 +663,15 @@ export class RefundService {
           depositAmount: participant.depositAmount?.toString() || '0',
           requestedAt: new Date(),
           reason: reason,
-        });
-      }
+        })
+      );
+
+      await Promise.all(queuePromises);
+      this.logger.log(
+        `Queued ${admins.length} admin refund request notifications`
+      );
     } catch (error) {
-      this.logger.error('Failed to notify admins of refund request', error);
+      this.logger.error('Failed to queue admin refund notifications', error);
     }
   }
 
@@ -678,7 +684,7 @@ export class RefundService {
     reason?: string
   ): Promise<void> {
     try {
-      await this.emailService.sendUserRefundRequestedEmail({
+      await this.emailQueueService.queueUserRefundRequestedEmail({
         recipientEmail: participant.user.email,
         recipientName: participant.user.fullName,
         auctionCode: participant.auction.code,
@@ -688,7 +694,10 @@ export class RefundService {
         reason: reason,
       });
     } catch (error) {
-      this.logger.error('Failed to notify user of refund request', error);
+      this.logger.error(
+        'Failed to queue user refund request notification',
+        error
+      );
     }
   }
 
@@ -698,7 +707,7 @@ export class RefundService {
     depositAmount: { toString: () => string } | null;
   }): Promise<void> {
     try {
-      await this.emailService.sendRefundApprovedEmail({
+      await this.emailQueueService.queueRefundApprovedEmail({
         recipientEmail: participant.user.email,
         recipientName: participant.user.fullName,
         auctionCode: participant.auction.code,
@@ -707,7 +716,7 @@ export class RefundService {
         approvedAt: new Date(),
       });
     } catch (error) {
-      this.logger.error('Failed to notify user of refund approval', error);
+      this.logger.error('Failed to queue refund approval notification', error);
     }
   }
 
@@ -720,7 +729,7 @@ export class RefundService {
     reason: string
   ): Promise<void> {
     try {
-      await this.emailService.sendRefundRejectedEmail({
+      await this.emailQueueService.queueRefundRejectedEmail({
         recipientEmail: participant.user.email,
         recipientName: participant.user.fullName,
         auctionCode: participant.auction.code,
@@ -730,7 +739,7 @@ export class RefundService {
         rejectionReason: reason,
       });
     } catch (error) {
-      this.logger.error('Failed to notify user of refund rejection', error);
+      this.logger.error('Failed to queue refund rejection notification', error);
     }
   }
 }

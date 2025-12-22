@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EmailService } from '../../../common/services/email.service';
+import { EmailQueueService } from '../../../common/email/email-queue.service';
 import { BiddingGateway } from '../../bidding/bidding.gateway';
 import { PolicyCalculationService } from '../../auction-policy/policy-calculation.service';
 import { AuctionEvaluationService } from './auction-evaluation.service';
@@ -31,7 +31,7 @@ export class AuctionOwnerService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
+    private readonly emailQueueService: EmailQueueService,
     private readonly biddingGateway: BiddingGateway,
     private readonly policyCalc: PolicyCalculationService,
     private readonly evaluationService: AuctionEvaluationService,
@@ -312,10 +312,10 @@ export class AuctionOwnerService {
       };
     });
 
-    // Send emails to all participants
-    const emailPromises = auction.participants.map((participant) => {
+    // Queue emails to all participants (bulk email handling via queue)
+    const emailQueuePromises = auction.participants.map((participant) => {
       const isWinner = winningBid?.participant.userId === participant.userId;
-      return this.emailService.sendAuctionResultEmail({
+      return this.emailQueueService.queueAuctionResultEmail({
         recipientEmail: participant.user.email,
         recipientName: participant.user.fullName,
         auctionCode: auction.code,
@@ -324,17 +324,14 @@ export class AuctionOwnerService {
         winningAmount: winningBid?.amount.toString(),
         winnerName: winningBid?.participant.user.fullName,
         totalBids: auction.bids.length,
-        // Include deposit amount for non-winners to show refund info
-        depositAmount: !isWinner
-          ? participant.depositAmount?.toString()
-          : undefined,
       });
     });
 
-    // Send emails asynchronously
-    Promise.allSettled(emailPromises).catch((err) => {
-      this.logger.error('Error sending auction result emails:', err);
-    });
+    // Queue emails to background
+    await Promise.all(emailQueuePromises);
+    this.logger.log(
+      `Queued ${auction.participants.length} auction result emails`
+    );
 
     // Emit WebSocket event for auction finalization
     this.biddingGateway.emitAuctionUpdate(auction.id, {
@@ -539,9 +536,9 @@ export class AuctionOwnerService {
       dto.newStatus === AuctionStatus.success ||
       dto.newStatus === AuctionStatus.failed
     ) {
-      const emailPromises = auction.participants.map((participant) => {
+      const emailQueuePromises = auction.participants.map((participant) => {
         const isWinner = winningBid?.participant.userId === participant.userId;
-        return this.emailService.sendAuctionResultEmail({
+        return this.emailQueueService.queueAuctionResultEmail({
           recipientEmail: participant.user.email,
           recipientName: participant.user.fullName,
           auctionCode: auction.code,
@@ -553,8 +550,8 @@ export class AuctionOwnerService {
         });
       });
 
-      Promise.allSettled(emailPromises).catch((err) => {
-        this.logger.error('Error sending auction result emails:', err);
+      Promise.all(emailQueuePromises).catch((err) => {
+        this.logger.error('Error queuing auction result emails:', err);
       });
     }
 

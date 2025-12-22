@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EmailService } from '../../../common/services/email.service';
+import { EmailQueueService } from '../../../common/email/email-queue.service';
 import { PaymentService } from '../../../payment/payment.service';
 import {
   PaymentType,
@@ -28,7 +28,7 @@ export class WinnerPaymentService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
+    private readonly emailQueueService: EmailQueueService,
     private readonly paymentService: PaymentService
   ) {}
 
@@ -100,8 +100,8 @@ export class WinnerPaymentService {
         `Winner payment requirements: Total due ${totalDue} for auction ${auctionId}`
       );
 
-      // Send email notification to winner with payment requirements
-      await this.emailService.sendWinnerPaymentRequestEmail({
+      // Send email notification to winner with payment requirements (via queue)
+      await this.emailQueueService.queueWinnerPaymentRequestEmail({
         recipientEmail: winningBid.participant.user.email,
         recipientName: winningBid.participant.user.fullName,
         auctionCode: auction.code,
@@ -114,7 +114,7 @@ export class WinnerPaymentService {
       });
 
       this.logger.log(
-        `Winner payment request email sent to ${winningBid.participant.user.email} for auction ${auctionId}`
+        `Winner payment request email queued for ${winningBid.participant.user.email} (auction ${auctionId})`
       );
 
       return {
@@ -674,9 +674,9 @@ export class WinnerPaymentService {
         data: { isWinningBid: true },
       });
 
-      // Send notification to new winner
+      // Send notification to new winner (via queue)
       const requirements = await this.getWinnerPaymentRequirements(auction.id);
-      await this.emailService.sendWinnerPaymentRequestEmail({
+      await this.emailQueueService.queueWinnerPaymentRequestEmail({
         recipientEmail: secondHighestBid.participant.user.email,
         recipientName: secondHighestBid.participant.user.fullName,
         auctionCode: auction.code,
@@ -720,7 +720,7 @@ export class WinnerPaymentService {
   ) {
     const totalDue = await this.getWinnerPaymentRequirements(auction.id);
 
-    await this.emailService.sendPaymentFailureEmail({
+    await this.emailQueueService.queuePaymentFailureEmail({
       recipientEmail: winningBid.participant.user.email,
       recipientName: winningBid.participant.user.fullName,
       auctionCode: auction.code,
@@ -740,7 +740,7 @@ export class WinnerPaymentService {
   }
 
   /**
-   * Send payment confirmation emails to all parties
+   * Send payment confirmation emails to all parties (via queue)
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async sendPaymentConfirmationEmails(contract: any, amount: number) {
@@ -749,8 +749,8 @@ export class WinnerPaymentService {
       contract.auction.propertyOwner
     );
 
-    // Send email notification to winner
-    await this.emailService.sendWinnerPaymentConfirmedEmail({
+    // Queue email notification to winner
+    await this.emailQueueService.queueWinnerPaymentConfirmedEmail({
       recipientEmail: contract.buyer.email,
       recipientName: contract.buyer.fullName,
       auctionCode: contract.auction.code,
@@ -759,9 +759,9 @@ export class WinnerPaymentService {
       contractReady: true,
     });
 
-    // Send notification to seller if we have their info
+    // Queue notification to seller if we have their info
     if (propertyOwnerSnapshot) {
-      await this.emailService.sendSellerPaymentNotificationEmail({
+      await this.emailQueueService.queueSellerPaymentNotificationEmail({
         recipientEmail: propertyOwnerSnapshot.email,
         sellerName: propertyOwnerSnapshot.fullName,
         buyerName: contract.buyer.fullName,
@@ -772,7 +772,7 @@ export class WinnerPaymentService {
       });
     }
 
-    // Send notification to admin(s)/auctioneer(s)
+    // Queue notifications to admin(s)/auctioneer(s)
     const adminUsers = await this.prisma.user.findMany({
       where: {
         role: { in: ['admin', 'auctioneer'] },
@@ -781,8 +781,9 @@ export class WinnerPaymentService {
       },
     });
 
-    const adminNotificationPromises = adminUsers.map((admin) =>
-      this.emailService.sendAdminWinnerPaymentNotificationEmail({
+    // Bulk queue admin notifications
+    const adminQueuePromises = adminUsers.map((admin) =>
+      this.emailQueueService.queueAdminWinnerPaymentNotificationEmail({
         recipientEmail: admin.email,
         adminName: admin.fullName,
         buyerName: contract.buyer.fullName,
@@ -796,15 +797,10 @@ export class WinnerPaymentService {
       })
     );
 
-    await Promise.allSettled(adminNotificationPromises).catch((err) => {
-      this.logger.error(
-        'Error sending admin winner payment notifications:',
-        err
-      );
-    });
+    await Promise.all(adminQueuePromises);
 
     this.logger.log(
-      `Email notifications sent: winner, seller, and ${adminUsers.length} admin(s) notified`
+      `Email notifications queued: winner, seller, and ${adminUsers.length} admin(s) notified`
     );
   }
 
