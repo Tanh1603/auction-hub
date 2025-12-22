@@ -5,7 +5,6 @@ import {
   ConflictException,
   Logger,
   NotFoundException,
-  ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
 import { ApproveRegistrationDto } from '../dto/approve-registration.dto';
@@ -317,15 +316,23 @@ export class AdminApprovalService {
       });
 
       // After document verification, queue email to user (background)
+      const depositVal = parseFloat(
+        result.participant.auction.depositAmountRequired.toString()
+      );
+      const appFeeVal = result.participant.auction.dossierFee
+        ? parseFloat(result.participant.auction.dossierFee.toString())
+        : 0;
+      const totalVal = depositVal + appFeeVal;
+
       await this.emailQueueService.queueDocumentsVerifiedEmail({
         recipientEmail: result.participant.user.email,
         recipientName: result.participant.user.fullName,
         auctionCode: result.participant.auction.code,
         auctionName: result.participant.auction.name,
         nextStep: 'pay_deposit',
-        depositAmount: parseFloat(
-          result.participant.auction.depositAmountRequired.toString()
-        ).toString(), // Don't format here - let email template handle it
+        depositAmount: depositVal.toString(),
+        applicationFee: appFeeVal > 0 ? appFeeVal.toString() : undefined,
+        totalAmount: appFeeVal > 0 ? totalVal.toString() : undefined,
         paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
       });
 

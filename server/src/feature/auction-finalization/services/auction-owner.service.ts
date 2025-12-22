@@ -10,6 +10,7 @@ import { EmailQueueService } from '../../../common/email/email-queue.service';
 import { BiddingGateway } from '../../bidding/bidding.gateway';
 import { PolicyCalculationService } from '../../auction-policy/policy-calculation.service';
 import { AuctionEvaluationService } from './auction-evaluation.service';
+import { WinnerPaymentService } from './winner-payment.service';
 import { PaymentService } from '../../../payment/payment.service';
 import { FinalizeAuctionDto } from '../dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from '../dto/override-auction-status.dto';
@@ -35,7 +36,8 @@ export class AuctionOwnerService {
     private readonly biddingGateway: BiddingGateway,
     private readonly policyCalc: PolicyCalculationService,
     private readonly evaluationService: AuctionEvaluationService,
-    private readonly paymentService: PaymentService
+    private readonly paymentService: PaymentService,
+    private readonly winnerPaymentService: WinnerPaymentService
   ) {}
 
   /**
@@ -312,19 +314,30 @@ export class AuctionOwnerService {
       };
     });
 
-    // Queue emails to all participants (bulk email handling via queue)
-    const emailQueuePromises = auction.participants.map((participant) => {
+    const emailQueuePromises = [];
+    auction.participants.forEach((participant) => {
       const isWinner = winningBid?.participant.userId === participant.userId;
-      return this.emailQueueService.queueAuctionResultEmail({
-        recipientEmail: participant.user.email,
-        recipientName: participant.user.fullName,
-        auctionCode: auction.code,
-        auctionName: auction.name,
-        isWinner,
-        winningAmount: winningBid?.amount.toString(),
-        winnerName: winningBid?.participant.user.fullName,
-        totalBids: auction.bids.length,
-      });
+
+      // 1. All participants get the result email (Winner/Non-winner)
+      emailQueuePromises.push(
+        this.emailQueueService.queueAuctionResultEmail({
+          recipientEmail: participant.user.email,
+          recipientName: participant.user.fullName,
+          auctionCode: auction.code,
+          auctionName: auction.name,
+          isWinner,
+          winningAmount: winningBid?.amount.toString(),
+          winnerName: winningBid?.participant.user.fullName,
+          totalBids: auction.bids.length,
+        })
+      );
+
+      // 2. Winner also gets the detailed payment request email
+      if (isWinner) {
+        emailQueuePromises.push(
+          this.winnerPaymentService.sendWinnerPaymentRequestEmail(auction.id)
+        );
+      }
     });
 
     // Queue emails to background
@@ -536,18 +549,30 @@ export class AuctionOwnerService {
       dto.newStatus === AuctionStatus.success ||
       dto.newStatus === AuctionStatus.failed
     ) {
-      const emailQueuePromises = auction.participants.map((participant) => {
+      const emailQueuePromises = [];
+      auction.participants.forEach((participant) => {
         const isWinner = winningBid?.participant.userId === participant.userId;
-        return this.emailQueueService.queueAuctionResultEmail({
-          recipientEmail: participant.user.email,
-          recipientName: participant.user.fullName,
-          auctionCode: auction.code,
-          auctionName: auction.name,
-          isWinner,
-          winningAmount: winningBid?.amount.toString(),
-          winnerName: winningBid?.participant.user.fullName,
-          totalBids: auction.bids.length,
-        });
+
+        // 1. All participants get the result email
+        emailQueuePromises.push(
+          this.emailQueueService.queueAuctionResultEmail({
+            recipientEmail: participant.user.email,
+            recipientName: participant.user.fullName,
+            auctionCode: auction.code,
+            auctionName: auction.name,
+            isWinner,
+            winningAmount: winningBid?.amount.toString(),
+            winnerName: winningBid?.participant.user.fullName,
+            totalBids: auction.bids.length,
+          })
+        );
+
+        // 2. Winner also gets the detailed payment request email
+        if (isWinner) {
+          emailQueuePromises.push(
+            this.winnerPaymentService.sendWinnerPaymentRequestEmail(auction.id)
+          );
+        }
       });
 
       Promise.all(emailQueuePromises).catch((err) => {

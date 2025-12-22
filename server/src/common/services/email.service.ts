@@ -47,6 +47,8 @@ export interface DocumentsVerifiedEmailData {
   auctionName: string;
   nextStep: 'pay_deposit' | 'awaiting_approval';
   depositAmount?: string;
+  applicationFee?: string;
+  totalAmount?: string;
   paymentDeadline?: Date;
 }
 

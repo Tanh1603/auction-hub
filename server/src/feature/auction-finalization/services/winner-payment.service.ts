@@ -100,23 +100,6 @@ export class WinnerPaymentService {
         `Winner payment requirements: Total due ${totalDue} for auction ${auctionId}`
       );
 
-      // Send email notification to winner with payment requirements (via queue)
-      await this.emailQueueService.queueWinnerPaymentRequestEmail({
-        recipientEmail: winningBid.participant.user.email,
-        recipientName: winningBid.participant.user.fullName,
-        auctionCode: auction.code,
-        auctionName: auction.name,
-        winningAmount: winningAmount.toString(),
-        depositAlreadyPaid: depositPaid.toString(),
-        dossierFee: dossierFeeDue.toString(),
-        totalDue: totalDue.toString(),
-        paymentDeadline: paymentDeadline,
-      });
-
-      this.logger.log(
-        `Winner payment request email queued for ${winningBid.participant.user.email} (auction ${auctionId})`
-      );
-
       return {
         auctionId,
         winner: {
@@ -205,6 +188,50 @@ export class WinnerPaymentService {
         error
       );
       throw error;
+    }
+  }
+
+  /**
+   * Calculate and send detailed winner payment request email
+   * Used during auction finalization or status override
+   */
+  async sendWinnerPaymentRequestEmail(auctionId: string) {
+    try {
+      this.logger.log(
+        `Sending detailed winner payment email for auction ${auctionId}`
+      );
+
+      const requirements = await this.getWinnerPaymentRequirements(auctionId);
+
+      const auction = await this.prisma.auction.findUnique({
+        where: { id: auctionId },
+        select: { code: true, name: true },
+      });
+
+      await this.emailQueueService.queueWinnerPaymentRequestEmail({
+        recipientEmail: requirements.winner.email,
+        recipientName: requirements.winner.fullName,
+        auctionCode: auction.code,
+        auctionName: auction.name,
+        winningAmount: requirements.paymentBreakdown.winningAmount.toString(),
+        depositAlreadyPaid:
+          requirements.paymentBreakdown.depositAlreadyPaid.toString(),
+        dossierFee: requirements.paymentBreakdown.dossierFee.toString(),
+        totalDue: requirements.paymentBreakdown.totalDue.toString(),
+        paymentDeadline: new Date(
+          requirements.paymentBreakdown.paymentDeadline
+        ),
+      });
+
+      this.logger.log(
+        `Detailed winner payment email queued for ${requirements.winner.email}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send detailed winner payment email for auction ${auctionId}`,
+        error
+      );
+      // Don't rethrow to avoid breaking the caller (e.g. finalization)
     }
   }
 
@@ -675,19 +702,7 @@ export class WinnerPaymentService {
       });
 
       // Send notification to new winner (via queue)
-      const requirements = await this.getWinnerPaymentRequirements(auction.id);
-      await this.emailQueueService.queueWinnerPaymentRequestEmail({
-        recipientEmail: secondHighestBid.participant.user.email,
-        recipientName: secondHighestBid.participant.user.fullName,
-        auctionCode: auction.code,
-        auctionName: auction.name,
-        winningAmount: requirements.paymentBreakdown.winningAmount.toString(),
-        depositAlreadyPaid:
-          requirements.paymentBreakdown.depositAlreadyPaid.toString(),
-        dossierFee: requirements.paymentBreakdown.dossierFee.toString(),
-        totalDue: requirements.paymentBreakdown.totalDue.toString(),
-        paymentDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+      await this.sendWinnerPaymentRequestEmail(auction.id);
 
       this.logger.log(
         `Auction ${auction.id} offered to 2nd highest bidder ${secondHighestBid.participant.user.email}`

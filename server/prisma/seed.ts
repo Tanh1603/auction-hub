@@ -26,8 +26,8 @@ const prisma = new PrismaClient();
 // Helper function to create dates relative to now using offset config
 const createDate = (
   daysOffset: number,
-  hoursOffset: number = 0,
-  minutesOffset: number = 0
+  hoursOffset = 0,
+  minutesOffset = 0
 ): Date => {
   const date = new Date();
   date.setDate(date.getDate() + daysOffset);
@@ -176,11 +176,8 @@ async function clearDatabase() {
   console.log('🧹 All tables cleared');
 }
 
-
-
 async function main() {
   await prisma.$connect();
-  await clearDatabase();
   console.log('📦 Connected to database');
 
   // Check if data already exists
@@ -197,6 +194,7 @@ async function main() {
   }
 
   console.log('🧹 Database is empty, proceeding with seed...');
+  await clearDatabase();
 
   // Store references for relations
   const users: Record<string, any> = {};
@@ -544,8 +542,8 @@ async function seedAuctions(
     if (allRelations.length) {
       // De-duplicate relations
       const uniqueRelations = Array.from(
-        new Set(allRelations.map(JSON.stringify))
-      ).map(JSON.parse);
+        new Set(allRelations.map((r) => JSON.stringify(r)))
+      ).map((s) => JSON.parse(s as string));
 
       await prisma.auctionRelation.createMany({
         data: uniqueRelations,
@@ -570,11 +568,12 @@ async function seedAuctions(
           ...fields,
           assetType: mapAssetType(fields.assetType),
           status: mapAuctionStatus(fields.status),
-          saleStartAt: parseDateOffset(dateOffsets.saleStartAt)!,
-          saleEndAt: parseDateOffset(dateOffsets.saleEndAt)!,
+          saleStartAt: parseDateOffset(dateOffsets.saleStartAt) ?? new Date(),
+          saleEndAt: parseDateOffset(dateOffsets.saleEndAt) ?? new Date(),
           depositEndAt: parseDateOffset(dateOffsets.depositEndAt),
-          auctionStartAt: parseDateOffset(dateOffsets.auctionStartAt)!,
-          auctionEndAt: parseDateOffset(dateOffsets.auctionEndAt)!,
+          auctionStartAt:
+            parseDateOffset(dateOffsets.auctionStartAt) ?? new Date(),
+          auctionEndAt: parseDateOffset(dateOffsets.auctionEndAt) ?? new Date(),
           saleFee: new Prisma.Decimal(fields.saleFee),
           depositAmountRequired: new Prisma.Decimal(
             fields.depositAmountRequired
@@ -582,9 +581,9 @@ async function seedAuctions(
           startingPrice: new Prisma.Decimal(fields.startingPrice),
           bidIncrement: new Prisma.Decimal(fields.bidIncrement),
           propertyOwner: {
-            name: users.auctioneer?.fullName || 'Property Owner',
-            email: users.auctioneer?.email || 'owner@example.com',
-            phone: users.auctioneer?.phoneNumber || '0123456789',
+            name: (users.auctioneer as any)?.fullName || 'Property Owner',
+            email: (users.auctioneer as any)?.email || 'owner@example.com',
+            phone: (users.auctioneer as any)?.phoneNumber || '0123456789',
             organization: 'UIT',
           },
           images: images?.map((img: any) => ({ ...img, publicId: null })) || [],
@@ -635,13 +634,8 @@ async function seedTestScenarios(
       const user = users[participantConfig.userRoleKey];
       if (!user) continue;
 
-      const {
-        dateOffsets,
-        documents,
-        createDepositPayment,
-        status,
-        userRoleKey,
-      } = participantConfig;
+      const { dateOffsets, documents, createDepositPayment } =
+        participantConfig;
 
       // Create deposit payment if needed
       let depositPaymentId: string | undefined;

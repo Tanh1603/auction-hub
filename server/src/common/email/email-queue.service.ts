@@ -62,6 +62,8 @@ export class EmailQueueService {
     auctionName: string;
     nextStep: 'pay_deposit' | 'awaiting_approval';
     depositAmount?: string;
+    applicationFee?: string;
+    totalAmount?: string;
     paymentDeadline?: Date;
   }): Promise<string> {
     return this.addJob(

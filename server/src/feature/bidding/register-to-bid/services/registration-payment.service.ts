@@ -111,6 +111,7 @@ export class RegistrationPaymentService {
         where: { id: registrationId },
         include: {
           auction: true,
+          user: true,
         },
       });
 
@@ -229,6 +230,48 @@ export class RegistrationPaymentService {
 
       this.logger.log(
         `Deposit payment verified for registration ${registrationId}. Session ID: ${sessionId}`
+      );
+
+      // ✅ ADDED: Queue email notifications after successful verification
+      // 1. Send email to user (Confirmation)
+      await this.emailQueueService.queueDepositConfirmedEmail({
+        recipientEmail: participant.user.email,
+        recipientName: participant.user.fullName,
+        auctionCode: participant.auction.code,
+        auctionName: participant.auction.name,
+        depositAmount: verification.amount.toString(),
+        paidAt: new Date(),
+        awaitingApproval: true,
+      });
+
+      // 2. Send notification to admin(s) for Tier 2 approval
+      const adminUsers = await this.prisma.user.findMany({
+        where: {
+          role: { in: ['admin', 'auctioneer'] },
+          isBanned: false,
+          deletedAt: null,
+        },
+      });
+
+      const adminQueuePromises = adminUsers.map((admin) =>
+        this.emailQueueService.queueAdminDepositNotificationEmail({
+          recipientEmail: admin.email,
+          adminName: admin.fullName,
+          userName: participant.user.fullName,
+          userEmail: participant.user.email,
+          auctionCode: participant.auction.code,
+          auctionName: participant.auction.name,
+          depositAmount: verification.amount.toString(),
+          paidAt: new Date(),
+          registrationId: registrationId,
+        })
+      );
+
+      await Promise.all(adminQueuePromises);
+
+      this.logger.log(
+        `[EMAIL QUEUED] Deposit verification notifications sent for ${registrationId}: ` +
+          `User (${participant.user.email}) notified, ${adminUsers.length} admin(s) notified.`
       );
 
       return {
