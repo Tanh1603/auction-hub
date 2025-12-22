@@ -25,6 +25,16 @@ interface AnalyticsRawResult {
 }
 
 /**
+ * Raw result for time series points.
+ */
+interface TimeSeriesRawResult {
+  period: Date;
+  gmv: Prisma.Decimal | null;
+  revenue: Prisma.Decimal | null;
+  auction_count: bigint;
+}
+
+/**
  * Service for handling admin dashboard analytics.
  *
  * This service queries the mv_auction_analytics materialized view
@@ -121,7 +131,30 @@ export class DashboardService {
         successfulAuctions: successCountNum,
       };
 
-      return { summary };
+      // 4. Fetch Time Series Data (Grouped by Day/Week/Month)
+      const groupInterval = filters.groupBy || 'day';
+      const timeSeriesResult = await this.prisma.$queryRaw<
+        TimeSeriesRawResult[]
+      >`
+        SELECT
+          date_trunc(${groupInterval}, auction_end_at) as period,
+          SUM(gmv) as gmv,
+          SUM(total_revenue) as revenue,
+          COUNT(*) as auction_count
+        FROM mv_auction_analytics
+        ${whereClause}
+        GROUP BY period
+        ORDER BY period ASC
+      `;
+
+      const timeSeries = timeSeriesResult.map((point) => ({
+        date: point.period.toISOString(),
+        gmv: point.gmv ? Number(point.gmv) : 0,
+        revenue: point.revenue ? Number(point.revenue) : 0,
+        auctionCount: Number(point.auction_count),
+      }));
+
+      return { summary, timeSeries };
     } catch (error) {
       // Handle missing materialized view error with helpful message
       if (
