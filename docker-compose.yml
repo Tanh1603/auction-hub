@@ -39,8 +39,15 @@ services:
       # Node
       NODE_ENV: production
       PORT: 3000
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - auction-hub-network
@@ -50,6 +57,21 @@ services:
         (cd server/prisma && npx tsx seed.ts || true) &&
         cd /app && node dist/server/main.js
       "
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:alpine
+    container_name: auction-hub-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auction-hub-network
 
 volumes:
   postgres_data:
