@@ -216,103 +216,108 @@ export class AuctionOwnerService {
     }
 
     // Use transaction to finalize auction
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Update auction status
-      const updatedAuction = await tx.auction.update({
-        where: { id: auction.id },
-        data: {
-          status: newStatus,
-          updatedAt: new Date(),
-        },
-      });
-
-      let contract = null;
-
-      if (winningBid) {
-        // Mark the winning bid
-        await tx.auctionBid.update({
-          where: { id: winningBid.id },
-          data: { isWinningBid: true },
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        // Update auction status
+        const updatedAuction = await tx.auction.update({
+          where: { id: auction.id },
+          data: {
+            status: newStatus,
+            updatedAt: new Date(),
+          },
         });
 
-        // Create contract for the winning bid
-        // Note: propertyOwner is now a JSON field, extract ID using helper
-        contract = await tx.contract.create({
+        let contract = null;
+
+        if (winningBid) {
+          // Mark the winning bid
+          await tx.auctionBid.update({
+            where: { id: winningBid.id },
+            data: { isWinningBid: true },
+          });
+
+          // Create contract for the winning bid
+          // Note: propertyOwner is now a JSON field, extract ID using helper
+          contract = await tx.contract.create({
+            data: {
+              auctionId: auction.id,
+              winningBidId: winningBid.id,
+              propertyOwnerUserId: propertyOwnerId,
+              buyerUserId: winningBid.participant.userId,
+              createdBy: userId,
+              price: winningBid.amount,
+              status: ContractStatus.draft,
+            },
+          });
+
+          this.logger.log(
+            `Contract ${contract.id} created for auction ${auction.id}`
+          );
+
+          // Calculate comprehensive financial summary after successful auction
+          try {
+            const financialSummary =
+              await this.policyCalc.calculateAuctionFinancialSummary(
+                auction.id,
+                parseFloat(winningBid.amount.toString())
+              );
+            this.logger.log(
+              `Financial summary calculated for auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to calculate financial summary for auction ${auction.id}`,
+              error
+            );
+            // Don't fail the entire transaction if financial summary fails
+            // Admin can recalculate it later
+          }
+        }
+
+        // Create audit log entry for finalization
+        await tx.auctionAuditLog.create({
           data: {
             auctionId: auction.id,
-            winningBidId: winningBid.id,
-            propertyOwnerUserId: propertyOwnerId,
-            buyerUserId: winningBid.participant.userId,
-            createdBy: userId,
-            price: winningBid.amount,
-            status: ContractStatus.draft,
+            performedBy: userId,
+            action: 'AUCTION_FINALIZED',
+            previousStatus: auction.status,
+            newStatus: newStatus,
+            reason: 'Auction finalized by auctioneer',
+            notes: dto.notes,
+            metadata: {
+              winningBidId: winningBid?.id,
+              contractId: contract?.id,
+              totalBids: auction.bids.length,
+              totalParticipants: auction.participants.length,
+              evaluation: evaluation
+                ? {
+                    recommendedStatus: evaluation.recommendedStatus,
+                    meetsReservePrice: evaluation.meetsReservePrice,
+                    hasMinimumParticipants: evaluation.hasMinimumParticipants,
+                    hasValidBids: evaluation.hasValidBids,
+                    bidIncrementCompliance: evaluation.bidIncrementCompliance,
+                  }
+                : null,
+              timestamp: new Date().toISOString(),
+            },
           },
         });
 
+        // Log the finalization
         this.logger.log(
-          `Contract ${contract.id} created for auction ${auction.id}`
+          `Auction ${auction.id} finalized with status ${newStatus}`
         );
 
-        // Calculate comprehensive financial summary after successful auction
-        try {
-          const financialSummary =
-            await this.policyCalc.calculateAuctionFinancialSummary(
-              auction.id,
-              parseFloat(winningBid.amount.toString())
-            );
-          this.logger.log(
-            `Financial summary calculated for auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
-          );
-        } catch (error) {
-          this.logger.error(
-            `Failed to calculate financial summary for auction ${auction.id}`,
-            error
-          );
-          // Don't fail the entire transaction if financial summary fails
-          // Admin can recalculate it later
-        }
+        return {
+          auction: updatedAuction,
+          winningBid,
+          contract,
+        };
+      },
+      {
+        timeout: 20000,
       }
-
-      // Create audit log entry for finalization
-      await tx.auctionAuditLog.create({
-        data: {
-          auctionId: auction.id,
-          performedBy: userId,
-          action: 'AUCTION_FINALIZED',
-          previousStatus: auction.status,
-          newStatus: newStatus,
-          reason: 'Auction finalized by auctioneer',
-          notes: dto.notes,
-          metadata: {
-            winningBidId: winningBid?.id,
-            contractId: contract?.id,
-            totalBids: auction.bids.length,
-            totalParticipants: auction.participants.length,
-            evaluation: evaluation
-              ? {
-                  recommendedStatus: evaluation.recommendedStatus,
-                  meetsReservePrice: evaluation.meetsReservePrice,
-                  hasMinimumParticipants: evaluation.hasMinimumParticipants,
-                  hasValidBids: evaluation.hasValidBids,
-                  bidIncrementCompliance: evaluation.bidIncrementCompliance,
-                }
-              : null,
-            timestamp: new Date().toISOString(),
-          },
-        },
-      });
-
-      // Log the finalization
-      this.logger.log(
-        `Auction ${auction.id} finalized with status ${newStatus}`
-      );
-
-      return {
-        auction: updatedAuction,
-        winningBid,
-        contract,
-      };
-    });
+    );
 
     const emailQueuePromises = [];
     auction.participants.forEach((participant) => {
@@ -451,97 +456,102 @@ export class AuctionOwnerService {
     }
 
     // Use transaction for status override
-    await this.prisma.$transaction(async (tx) => {
-      // Update auction status
-      const updatedAuction = await tx.auction.update({
-        where: { id: auction.id },
-        data: {
-          status: dto.newStatus,
-          updatedAt: new Date(),
-        },
-      });
-
-      // Handle winning bid if status is success
-      if (dto.newStatus === AuctionStatus.success) {
-        if (winningBid) {
-          // Mark as winning bid
-          await tx.auctionBid.update({
-            where: { id: winningBid.id },
-            data: { isWinningBid: true },
-          });
-
-          // Check if contract already exists
-          const existingContract = await tx.contract.findFirst({
-            where: { auctionId: auction.id },
-          });
-
-          if (!existingContract) {
-            // Create new contract
-            // Note: propertyOwner is now a JSON field, extract ID using helper
-            contract = await tx.contract.create({
-              data: {
-                auctionId: auction.id,
-                winningBidId: winningBid.id,
-                propertyOwnerUserId: propertyOwnerId,
-                buyerUserId: winningBid.participant.userId,
-                createdBy: adminId,
-                price: winningBid.amount,
-                status: ContractStatus.draft,
-              },
-            });
-
-            // Calculate comprehensive financial summary after successful auction
-            try {
-              const financialSummary =
-                await this.policyCalc.calculateAuctionFinancialSummary(
-                  auction.id,
-                  parseFloat(winningBid.amount.toString())
-                );
-              this.logger.log(
-                `Financial summary calculated for overridden auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
-              );
-            } catch (error) {
-              this.logger.error(
-                `Failed to calculate financial summary for overridden auction ${auction.id}`,
-                error
-              );
-              // Don't fail the entire transaction if financial summary fails
-            }
-          } else {
-            contract = existingContract;
-          }
-        }
-      } else if (dto.newStatus === AuctionStatus.failed) {
-        // If failing/cancelling, mark any existing contracts as cancelled
-        // Note: cancelled status has been replaced with 'failed' in AuctionStatus enum
-        await tx.contract.updateMany({
-          where: { auctionId: auction.id },
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Update auction status
+        const updatedAuction = await tx.auction.update({
+          where: { id: auction.id },
           data: {
-            status: ContractStatus.cancelled,
-            cancelledAt: new Date(),
+            status: dto.newStatus,
+            updatedAt: new Date(),
           },
         });
-      }
 
-      // Create audit log entry
-      await tx.auctionAuditLog.create({
-        data: {
-          auctionId: auction.id,
-          performedBy: adminId,
-          action: 'STATUS_OVERRIDE',
-          previousStatus: auction.status,
-          newStatus: dto.newStatus,
-          reason: dto.reason,
-          notes: dto.notes,
-          metadata: {
-            winningBidId: dto.winningBidId,
-            timestamp: new Date().toISOString(),
+        // Handle winning bid if status is success
+        if (dto.newStatus === AuctionStatus.success) {
+          if (winningBid) {
+            // Mark as winning bid
+            await tx.auctionBid.update({
+              where: { id: winningBid.id },
+              data: { isWinningBid: true },
+            });
+
+            // Check if contract already exists
+            const existingContract = await tx.contract.findFirst({
+              where: { auctionId: auction.id },
+            });
+
+            if (!existingContract) {
+              // Create new contract
+              // Note: propertyOwner is now a JSON field, extract ID using helper
+              contract = await tx.contract.create({
+                data: {
+                  auctionId: auction.id,
+                  winningBidId: winningBid.id,
+                  propertyOwnerUserId: propertyOwnerId,
+                  buyerUserId: winningBid.participant.userId,
+                  createdBy: adminId,
+                  price: winningBid.amount,
+                  status: ContractStatus.draft,
+                },
+              });
+
+              // Calculate comprehensive financial summary after successful auction
+              try {
+                const financialSummary =
+                  await this.policyCalc.calculateAuctionFinancialSummary(
+                    auction.id,
+                    parseFloat(winningBid.amount.toString())
+                  );
+                this.logger.log(
+                  `Financial summary calculated for overridden auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
+                );
+              } catch (error) {
+                this.logger.error(
+                  `Failed to calculate financial summary for overridden auction ${auction.id}`,
+                  error
+                );
+                // Don't fail the entire transaction if financial summary fails
+              }
+            } else {
+              contract = existingContract;
+            }
+          }
+        } else if (dto.newStatus === AuctionStatus.failed) {
+          // If failing/cancelling, mark any existing contracts as cancelled
+          // Note: cancelled status has been replaced with 'failed' in AuctionStatus enum
+          await tx.contract.updateMany({
+            where: { auctionId: auction.id },
+            data: {
+              status: ContractStatus.cancelled,
+              cancelledAt: new Date(),
+            },
+          });
+        }
+
+        // Create audit log entry
+        await tx.auctionAuditLog.create({
+          data: {
+            auctionId: auction.id,
+            performedBy: adminId,
+            action: 'STATUS_OVERRIDE',
+            previousStatus: auction.status,
+            newStatus: dto.newStatus,
+            reason: dto.reason,
+            notes: dto.notes,
+            metadata: {
+              winningBidId: dto.winningBidId,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-      });
+        });
 
-      return { auction: updatedAuction, winningBid, contract };
-    });
+        return { auction: updatedAuction, winningBid, contract };
+      },
+      {
+        timeout: 20000,
+      }
+    );
 
     // Send notification emails if finalizing
     // Note: no_bid has been replaced with 'failed' in the new schema

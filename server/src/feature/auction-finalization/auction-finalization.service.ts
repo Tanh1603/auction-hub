@@ -56,15 +56,16 @@ export class AuctionFinalizationService {
   }
 
   /**
-   * Get auction results - available to participants and owner
-   * Context: Participants/Viewers
+   * Get auction results - PUBLIC with tiered access control
+   * Context: Public/Participants/Viewers/Admin
    * Delegates to: AuctionResultsService
    */
   async getAuctionResults(
     auctionId: string,
-    userId: string
+    userId: string | null,
+    userRole: string | null
   ): Promise<AuctionResultDto> {
-    return this.resultsService.getAuctionResults(auctionId, userId);
+    return this.resultsService.getAuctionResults(auctionId, userId, userRole);
   }
 
   /**

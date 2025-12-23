@@ -46,6 +46,9 @@ export class AuthGuard implements CanActivate {
     ]);
 
     if (isPublic) {
+      // For public routes, still try to extract user data if token is present
+      // This enables tiered access control based on authentication status
+      await this.tryExtractUserFromToken(context);
       return true;
     }
 
@@ -173,5 +176,81 @@ export class AuthGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  /**
+   * Try to extract user data from token for public endpoints.
+   * Does not throw errors - silently fails if no valid token present.
+   * This enables tiered access control on public endpoints.
+   */
+  private async tryExtractUserFromToken(
+    context: ExecutionContext
+  ): Promise<void> {
+    const request = context.switchToHttp().getRequest<Request>();
+    const authMode = this.configService.get<string>('AUTH_MODE', 'jwt');
+
+    // Handle test mode for public routes
+    if (authMode === 'test') {
+      const testUserIdFromHeader = request.headers['x-test-user-id'] as string;
+      const testUserIdFromEnv = this.configService.get<string>('TEST_USER_ID');
+      const testUserId = testUserIdFromHeader || testUserIdFromEnv;
+
+      if (testUserId) {
+        const localUser = await this.prisma.user.findUnique({
+          where: { id: testUserId },
+          select: { role: true, email: true, fullName: true },
+        });
+
+        if (localUser) {
+          request['user'] = {
+            sub: testUserId,
+            email: localUser.email || 'test@example.com',
+            full_name: localUser.fullName || 'Test User',
+            avatar_url: '',
+            role: localUser.role,
+          };
+        }
+        return;
+      }
+    }
+
+    // Try to extract from JWT token
+    const authHeader = request.headers.authorization;
+    if (!authHeader) return;
+
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') return;
+
+    const token = parts[1];
+    if (!token) return;
+
+    try {
+      const jwtSecret =
+        this.configService.get<string>('SUPABASE_JWT_SECRET') ||
+        this.configService.get<string>('JWT_SECRET');
+
+      if (!jwtSecret) return;
+
+      const payload = jwt.verify(token, jwtSecret, {
+        algorithms: ['HS256'],
+      }) as JwtPayload;
+
+      const localUser = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { role: true, email: true, fullName: true },
+      });
+
+      if (localUser) {
+        request['user'] = {
+          ...payload,
+          role: localUser.role,
+          email: localUser.email,
+          full_name: localUser.fullName,
+        };
+      }
+    } catch {
+      // Silently fail - user will be null for public endpoints
+      this.logger.debug('Failed to extract user from token for public route');
+    }
   }
 }

@@ -10,6 +10,9 @@ export class AuctionResultDto {
   auctionEndAt: Date;
   finalizedAt?: Date;
 
+  // Access level indicator for frontend
+  accessLevel?: string;
+
   // Winning bid information
   winningBid?: {
     bidId: string;
