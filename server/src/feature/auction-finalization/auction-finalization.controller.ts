@@ -8,8 +8,10 @@ import {
   CurrentUser,
   CurrentUserData,
 } from '../../common/decorators/current-user.decorator';
+import { OptionalCurrentUser } from '../../common/decorators/optional-current-user.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '../../common/enums/roles.enum';
 
 @Controller('auction-finalization')
@@ -65,17 +67,24 @@ export class AuctionFinalizationController {
   }
 
   /**
-   * Get auction results
+   * Get auction results - PUBLIC endpoint with tiered access:
+   * - Admin/Super Admin: Full access to all data
+   * - Auctioneer (owner): Full access to their auctions
+   * - Authenticated Participant: All data but winner name hidden
+   * - Public (unauthenticated): Limited data for finalized auctions only
+   *
    * GET /auction-finalization/results/:auctionId
    */
   @Get('results/:auctionId')
+  @Public()
   async getAuctionResults(
     @Param('auctionId') auctionId: string,
-    @CurrentUser() user: CurrentUserData
+    @OptionalCurrentUser() user: CurrentUserData | null
   ) {
     return this.auctionFinalizationService.getAuctionResults(
       auctionId,
-      user.id
+      user?.id || null,
+      user?.role || null
     );
   }
 

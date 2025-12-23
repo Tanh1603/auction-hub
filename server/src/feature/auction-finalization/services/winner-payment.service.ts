@@ -349,117 +349,122 @@ export class WinnerPaymentService {
 
       // Step 3: ATOMIC TRANSACTION - Update payment and contract together
       // This ensures consistency: if either update fails, both are rolled back
-      const result = await this.prisma.$transaction(async (tx) => {
-        // Update payment record
-        const updatedPayment = await tx.payment.update({
-          where: { id: payment.id },
-          data: {
-            status: 'completed',
-            paidAt: new Date(),
-          },
-        });
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          // Update payment record
+          const updatedPayment = await tx.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: 'completed',
+              paidAt: new Date(),
+            },
+          });
 
-        // Find or create contract
-        let contract = await tx.contract.findFirst({
-          where: { auctionId },
-          include: {
-            auction: true,
-            propertyOwner: true,
-            buyer: true,
-            winningBid: {
+          // Find or create contract
+          let contract = await tx.contract.findFirst({
+            where: { auctionId },
+            include: {
+              auction: true,
+              propertyOwner: true,
+              buyer: true,
+              winningBid: {
+                include: {
+                  participant: {
+                    include: { user: true },
+                  },
+                },
+              },
+            },
+          });
+
+          // Handle missing contract (edge case - should not happen in normal flow)
+          if (!contract) {
+            this.logger.warn(
+              `Contract not found for auction ${auctionId}. Creating one now.`
+            );
+
+            // Find the winning bid to create the contract
+            const winningBid = await tx.auctionBid.findFirst({
+              where: {
+                auctionId,
+                isWinningBid: true,
+              },
               include: {
                 participant: {
                   include: { user: true },
                 },
               },
-            },
-          },
-        });
+            });
 
-        // Handle missing contract (edge case - should not happen in normal flow)
-        if (!contract) {
-          this.logger.warn(
-            `Contract not found for auction ${auctionId}. Creating one now.`
-          );
+            if (!winningBid) {
+              throw new NotFoundException(
+                'Cannot create contract: No winning bid found for this auction'
+              );
+            }
 
-          // Find the winning bid to create the contract
-          const winningBid = await tx.auctionBid.findFirst({
-            where: {
-              auctionId,
-              isWinningBid: true,
-            },
-            include: {
-              participant: {
-                include: { user: true },
+            const auction = await tx.auction.findUnique({
+              where: { id: auctionId },
+            });
+
+            if (!auction) {
+              throw new NotFoundException('Auction not found');
+            }
+
+            contract = await tx.contract.create({
+              data: {
+                auctionId: auctionId,
+                winningBidId: winningBid.id,
+                propertyOwnerUserId: getPropertyOwnerId(auction.propertyOwner),
+                buyerUserId: winningBid.participant.userId,
+                createdBy: winningBid.participant.userId, // Created by system during payment
+                price: winningBid.amount,
+                status: ContractStatus.signed, // Already paid, so signed
               },
-            },
-          });
+              include: {
+                auction: true,
+                propertyOwner: true,
+                buyer: true,
+                winningBid: {
+                  include: {
+                    participant: {
+                      include: { user: true },
+                    },
+                  },
+                },
+              },
+            });
 
-          if (!winningBid) {
-            throw new NotFoundException(
-              'Cannot create contract: No winning bid found for this auction'
+            this.logger.log(
+              `Contract ${contract.id} created during payment verification for auction ${auctionId}`
             );
-          }
-
-          const auction = await tx.auction.findUnique({
-            where: { id: auctionId },
-          });
-
-          if (!auction) {
-            throw new NotFoundException('Auction not found');
-          }
-
-          contract = await tx.contract.create({
-            data: {
-              auctionId: auctionId,
-              winningBidId: winningBid.id,
-              propertyOwnerUserId: getPropertyOwnerId(auction.propertyOwner),
-              buyerUserId: winningBid.participant.userId,
-              createdBy: winningBid.participant.userId, // Created by system during payment
-              price: winningBid.amount,
-              status: ContractStatus.signed, // Already paid, so signed
-            },
-            include: {
-              auction: true,
-              propertyOwner: true,
-              buyer: true,
-              winningBid: {
-                include: {
-                  participant: {
-                    include: { user: true },
+          } else {
+            // Update existing contract status to 'signed'
+            contract = await tx.contract.update({
+              where: { id: contract.id },
+              data: {
+                status: ContractStatus.signed,
+              },
+              include: {
+                auction: true,
+                propertyOwner: true,
+                buyer: true,
+                winningBid: {
+                  include: {
+                    participant: {
+                      include: { user: true },
+                    },
                   },
                 },
               },
-            },
-          });
+            });
+          }
 
-          this.logger.log(
-            `Contract ${contract.id} created during payment verification for auction ${auctionId}`
-          );
-        } else {
-          // Update existing contract status to 'signed'
-          contract = await tx.contract.update({
-            where: { id: contract.id },
-            data: {
-              status: ContractStatus.signed,
-            },
-            include: {
-              auction: true,
-              propertyOwner: true,
-              buyer: true,
-              winningBid: {
-                include: {
-                  participant: {
-                    include: { user: true },
-                  },
-                },
-              },
-            },
-          });
+          return { payment: updatedPayment, contract };
+        },
+        {
+          timeout: 20000,
         }
-
-        return { payment: updatedPayment, contract };
-      });
+      );
 
       const { contract } = result;
 
