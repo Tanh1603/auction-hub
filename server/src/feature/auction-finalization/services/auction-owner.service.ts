@@ -253,25 +253,6 @@ export class AuctionOwnerService {
           this.logger.log(
             `Contract ${contract.id} created for auction ${auction.id}`
           );
-
-          // Calculate comprehensive financial summary after successful auction
-          try {
-            const financialSummary =
-              await this.policyCalc.calculateAuctionFinancialSummary(
-                auction.id,
-                parseFloat(winningBid.amount.toString())
-              );
-            this.logger.log(
-              `Financial summary calculated for auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
-            );
-          } catch (error) {
-            this.logger.error(
-              `Failed to calculate financial summary for auction ${auction.id}`,
-              error
-            );
-            // Don't fail the entire transaction if financial summary fails
-            // Admin can recalculate it later
-          }
         }
 
         // Create audit log entry for finalization
@@ -315,9 +296,37 @@ export class AuctionOwnerService {
         };
       },
       {
-        timeout: 20000,
+        timeout: 60000, // Reduced timeout since heavy calculation is now outside
       }
     );
+
+    // Calculate comprehensive financial summary OUTSIDE the transaction
+    // This operation makes multiple DB calls and can take several seconds on
+    // deployed servers with network latency, causing transaction timeouts
+    let financialCalculationSuccess = true;
+    let financialCalculationError: string | null = null;
+
+    if (winningBid) {
+      try {
+        const financialSummary =
+          await this.policyCalc.calculateAuctionFinancialSummary(
+            auction.id,
+            parseFloat(winningBid.amount.toString())
+          );
+        this.logger.log(
+          `Financial summary calculated for auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
+        );
+      } catch (error) {
+        financialCalculationSuccess = false;
+        financialCalculationError = error.message || 'Unknown error';
+        this.logger.error(
+          `Failed to calculate financial summary for auction ${auction.id}`,
+          error
+        );
+        // Don't fail the entire operation if financial summary fails
+        // Admin can recalculate it later via separate endpoint
+      }
+    }
 
     const emailQueuePromises = [];
     auction.participants.forEach((participant) => {
@@ -367,6 +376,15 @@ export class AuctionOwnerService {
       contractId: result.contract?.id,
     });
 
+    // Build response with warnings if any post-transaction operations failed
+    const warnings: string[] = [];
+    if (!financialCalculationSuccess) {
+      warnings.push(
+        `Financial summary calculation failed: ${financialCalculationError}. ` +
+          `Admin can recalculate via the management dashboard.`
+      );
+    }
+
     return {
       auctionId: auction.id,
       status: newStatus,
@@ -376,6 +394,8 @@ export class AuctionOwnerService {
       totalBids: auction.bids.length,
       totalParticipants: auction.participants.length,
       evaluation,
+      financialSummaryCalculated: financialCalculationSuccess,
+      ...(warnings.length > 0 && { warnings }),
     };
   }
 
@@ -495,24 +515,7 @@ export class AuctionOwnerService {
                   status: ContractStatus.draft,
                 },
               });
-
-              // Calculate comprehensive financial summary after successful auction
-              try {
-                const financialSummary =
-                  await this.policyCalc.calculateAuctionFinancialSummary(
-                    auction.id,
-                    parseFloat(winningBid.amount.toString())
-                  );
-                this.logger.log(
-                  `Financial summary calculated for overridden auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
-                );
-              } catch (error) {
-                this.logger.error(
-                  `Failed to calculate financial summary for overridden auction ${auction.id}`,
-                  error
-                );
-                // Don't fail the entire transaction if financial summary fails
-              }
+              // NOTE: Financial summary calculation moved outside transaction
             } else {
               contract = existingContract;
             }
@@ -549,9 +552,37 @@ export class AuctionOwnerService {
         return { auction: updatedAuction, winningBid, contract };
       },
       {
-        timeout: 20000,
+        timeout: 15000, // Reduced timeout since heavy calculation is now outside
       }
     );
+
+    // Calculate comprehensive financial summary OUTSIDE the transaction
+    // This operation makes multiple DB calls and can take several seconds on
+    // deployed servers with network latency, causing transaction timeouts
+    let financialCalculationSuccess = true;
+    let financialCalculationError: string | null = null;
+
+    if (dto.newStatus === AuctionStatus.success && winningBid) {
+      try {
+        const financialSummary =
+          await this.policyCalc.calculateAuctionFinancialSummary(
+            auction.id,
+            parseFloat(winningBid.amount.toString())
+          );
+        this.logger.log(
+          `Financial summary calculated for overridden auction ${auction.id}. Net to seller: ${financialSummary.netAmountToSeller}`
+        );
+      } catch (error) {
+        financialCalculationSuccess = false;
+        financialCalculationError = error.message || 'Unknown error';
+        this.logger.error(
+          `Failed to calculate financial summary for overridden auction ${auction.id}`,
+          error
+        );
+        // Don't fail the entire operation if financial summary fails
+        // Admin can recalculate it later via separate endpoint
+      }
+    }
 
     // Send notification emails if finalizing
     // Note: no_bid has been replaced with 'failed' in the new schema
@@ -612,6 +643,18 @@ export class AuctionOwnerService {
       `Auction ${auction.id} status overridden to ${dto.newStatus} by admin ${adminId}`
     );
 
+    // Build response with warnings if any post-transaction operations failed
+    const warnings: string[] = [];
+    if (
+      !financialCalculationSuccess &&
+      dto.newStatus === AuctionStatus.success
+    ) {
+      warnings.push(
+        `Financial summary calculation failed: ${financialCalculationError}. ` +
+          `Admin can recalculate via the management dashboard.`
+      );
+    }
+
     return {
       auctionId: auction.id,
       previousStatus: auction.status,
@@ -621,6 +664,8 @@ export class AuctionOwnerService {
       overriddenAt: new Date(),
       winningBidId: winningBid?.id,
       contractId: contract?.id,
+      financialSummaryCalculated: financialCalculationSuccess,
+      ...(warnings.length > 0 && { warnings }),
     };
   }
 
