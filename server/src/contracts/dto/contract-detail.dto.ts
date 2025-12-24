@@ -12,8 +12,6 @@ export class ContractDetailDto {
   buyerUserId: string;
   buyerName: string;
   buyerIdentityNumber?: string;
-  createdBy: string;
-  creatorName: string;
   price: number;
   status: ContractStatus;
   signedAt?: Date;

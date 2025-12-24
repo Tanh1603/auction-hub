@@ -96,7 +96,6 @@ export class ContractService {
         auction: { select: { name: true, code: true } },
         propertyOwner: { select: { fullName: true, identityNumber: true } },
         buyer: { select: { fullName: true, identityNumber: true } },
-        creator: { select: { fullName: true } },
         winningBid: true,
       },
     });
@@ -119,8 +118,6 @@ export class ContractService {
       buyerUserId: contract.buyerUserId,
       buyerName: contract.buyer.fullName,
       buyerIdentityNumber: contract.buyer.identityNumber,
-      createdBy: contract.createdBy,
-      creatorName: contract.creator.fullName,
       price: Number(contract.price),
       status: contract.status,
       signedAt: contract.signedAt,
@@ -184,7 +181,6 @@ export class ContractService {
         auction: { select: { name: true, code: true } },
         propertyOwner: { select: { fullName: true } },
         buyer: { select: { fullName: true } },
-        creator: { select: { fullName: true } },
       },
     });
 
@@ -331,7 +327,6 @@ export class ContractService {
         auction: true,
         propertyOwner: true,
         buyer: true,
-        creator: true,
         winningBid: true,
       },
     });
@@ -357,7 +352,6 @@ export class ContractService {
         auction: true,
         propertyOwner: true,
         buyer: true,
-        creator: true,
         winningBid: true,
       },
     });

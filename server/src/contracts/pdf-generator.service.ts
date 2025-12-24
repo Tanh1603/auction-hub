@@ -27,7 +27,6 @@ interface ContractWithRelations {
   auction: Auction;
   propertyOwner: User | null;
   buyer: User;
-  creator: User;
   winningBid: AuctionBid;
 }
 
