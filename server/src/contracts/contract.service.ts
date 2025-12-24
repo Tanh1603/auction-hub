@@ -96,7 +96,7 @@ export class ContractService {
         auction: { select: { name: true, code: true } },
         propertyOwner: { select: { fullName: true, identityNumber: true } },
         buyer: { select: { fullName: true, identityNumber: true } },
-        creator: { select: { fullName: true, identityNumber: true } },
+        creator: { select: { fullName: true } },
         winningBid: true,
       },
     });
@@ -121,7 +121,6 @@ export class ContractService {
       buyerIdentityNumber: contract.buyer.identityNumber,
       createdBy: contract.createdBy,
       creatorName: contract.creator.fullName,
-      creatorIdentityNumber: contract.creator.identityNumber,
       price: Number(contract.price),
       status: contract.status,
       signedAt: contract.signedAt,
