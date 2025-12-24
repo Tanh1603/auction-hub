@@ -8,10 +8,13 @@ export class ContractDetailDto {
   winningBidId: string;
   sellerUserId: string;
   sellerName: string;
+  sellerIdentityNumber?: string;
   buyerUserId: string;
   buyerName: string;
+  buyerIdentityNumber?: string;
   createdBy: string;
   creatorName: string;
+  creatorIdentityNumber?: string;
   price: number;
   status: ContractStatus;
   signedAt?: Date;
@@ -32,4 +35,3 @@ export class ContractListItemDto {
   signedAt?: Date;
   createdAt: Date;
 }
-
