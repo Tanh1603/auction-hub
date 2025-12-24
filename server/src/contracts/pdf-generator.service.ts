@@ -103,7 +103,12 @@ export class PdfGeneratorService {
       .font(normalFont)
       .text(`Họ tên: ${sellerName}`, leftX, doc.y)
       .text(`Email: ${sellerEmail}`, leftX, doc.y)
-      .text(`SĐT: ${sellerPhone}`, leftX, doc.y);
+      .text(`SĐT: ${sellerPhone}`, leftX, doc.y)
+      .text(
+        `CCCD/CMND: ${contract.propertyOwner?.identityNumber || 'N/A'}`,
+        leftX,
+        doc.y
+      );
 
     doc
       .fontSize(12)
@@ -114,7 +119,28 @@ export class PdfGeneratorService {
       .font(normalFont)
       .text(`Họ tên: ${contract.buyer.fullName}`, rightX, doc.y)
       .text(`Email: ${contract.buyer.email}`, rightX, doc.y)
-      .text(`SĐT: ${contract.buyer.phoneNumber || 'Không có'}`, rightX, doc.y);
+      .text(`SĐT: ${contract.buyer.phoneNumber || 'Không có'}`, rightX, doc.y)
+      .text(
+        `CCCD/CMND: ${contract.buyer.identityNumber || 'N/A'}`,
+        rightX,
+        doc.y
+      );
+
+    doc.moveDown(1);
+    doc
+      .fontSize(12)
+      .font(semiBoldFont)
+      .text('BÊN ĐẤU GIÁ (NGƯỜI TẠO):', leftX, doc.y);
+    doc
+      .fontSize(11)
+      .font(normalFont)
+      .text(`Họ tên: ${contract.creator.fullName}`, leftX, doc.y)
+      .text(`Email: ${contract.creator.email}`, leftX, doc.y)
+      .text(
+        `CCCD/CMND: ${contract.creator.identityNumber || 'N/A'}`,
+        leftX,
+        doc.y
+      );
 
     doc.moveDown(1.5);
 
@@ -298,7 +324,12 @@ export class PdfGeneratorService {
       .font(normalFont)
       .text(`Name: ${sellerName}`, leftX, doc.y)
       .text(`Email: ${sellerEmail}`, leftX, doc.y)
-      .text(`Phone: ${sellerPhone}`, leftX, doc.y);
+      .text(`Phone: ${sellerPhone}`, leftX, doc.y)
+      .text(
+        `ID Number: ${contract.propertyOwner?.identityNumber || 'N/A'}`,
+        leftX,
+        doc.y
+      );
 
     doc
       .fontSize(12)
@@ -309,7 +340,28 @@ export class PdfGeneratorService {
       .font(normalFont)
       .text(`Name: ${contract.buyer.fullName}`, rightX, doc.y)
       .text(`Email: ${contract.buyer.email}`, rightX, doc.y)
-      .text(`Phone: ${contract.buyer.phoneNumber || 'N/A'}`, rightX, doc.y);
+      .text(`Phone: ${contract.buyer.phoneNumber || 'N/A'}`, rightX, doc.y)
+      .text(
+        `ID Number: ${contract.buyer.identityNumber || 'N/A'}`,
+        rightX,
+        doc.y
+      );
+
+    doc.moveDown(1);
+    doc
+      .fontSize(12)
+      .font(semiBoldFont)
+      .text('AUCTIONEER (CREATOR):', leftX, doc.y);
+    doc
+      .fontSize(11)
+      .font(normalFont)
+      .text(`Name: ${contract.creator.fullName}`, leftX, doc.y)
+      .text(`Email: ${contract.creator.email}`, leftX, doc.y)
+      .text(
+        `ID Number: ${contract.creator.identityNumber || 'N/A'}`,
+        leftX,
+        doc.y
+      );
 
     doc.moveDown(1.5);
 
