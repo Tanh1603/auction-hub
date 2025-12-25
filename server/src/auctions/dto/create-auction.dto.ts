@@ -18,26 +18,58 @@ import { Decimal } from '../../../generated/runtime/library';
 import { CloudinaryResponse } from '../../cloudinary/cloudinary-response';
 
 export class PropertyOwnerDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    description: 'User ID if property owner is a registered user',
+  })
+  id?: string;
+
   @IsNotEmpty()
   @IsString()
-  @ApiProperty()
-  name: string;
+  @ApiProperty({ description: 'Full name of the property owner' })
+  fullName: string;
 
   @IsNotEmpty()
   @IsEmail()
-  @ApiProperty()
+  @ApiProperty({ description: 'Email of the property owner' })
   email: string;
 
   @Matches(/^[0-9]{9,15}$/, {
     message: 'Phone must be a valid number with 9-15 digits',
   })
-  @ApiProperty()
-  phone: string;
+  @ApiProperty({ description: 'Phone number of the property owner' })
+  phoneNumber: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Identity number (CCCD/CMND/Business registration) - Required for contract generation',
+  })
+  identityNumber: string;
 
   @IsOptional()
   @IsString()
-  @ApiProperty()
+  @ApiProperty({
+    required: false,
+    description: 'Organization/company name if applicable',
+  })
   organization?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    description: 'User type: individual or business',
+  })
+  userType?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ required: false, description: 'Tax ID if applicable' })
+  taxId?: string;
 }
 export class CreateAuctionDto {
   @ApiProperty({ description: 'Auction code' })
