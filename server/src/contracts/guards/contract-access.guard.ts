@@ -40,6 +40,13 @@ export class ContractAccessGuard implements CanActivate {
     }
 
     const userId = user.sub;
+    const userRole = user.role;
+
+    // Allow admins and super_admins to bypass ownership checks
+    if (userRole === 'admin' || userRole === 'super_admin') {
+      return true;
+    }
+
     const hasAccess =
       contract.propertyOwnerUserId === userId ||
       contract.buyerUserId === userId ||

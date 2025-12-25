@@ -29,16 +29,20 @@ export class ContractService {
     private readonly pdfGenerator: PdfGeneratorService
   ) {}
 
-  async findAll(query: ContractQueryDto, userId: string) {
+  async findAll(query: ContractQueryDto, userId: string, userRole?: string) {
     const pagination = getPaginationOptions(query);
 
-    const where: Prisma.ContractWhereInput = {
-      OR: [
-        { propertyOwnerUserId: userId },
-        { buyerUserId: userId },
-        { createdBy: userId },
-      ],
-    };
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
+    const where: Prisma.ContractWhereInput = isAdmin
+      ? {}
+      : {
+          OR: [
+            { propertyOwnerUserId: userId },
+            { buyerUserId: userId },
+            { createdBy: userId },
+          ],
+        };
 
     if (query.status) {
       where.status = query.status;
@@ -92,7 +96,11 @@ export class ContractService {
     };
   }
 
-  async findOne(id: string, userId: string): Promise<ContractDetailDto> {
+  async findOne(
+    id: string,
+    userId: string,
+    userRole?: string
+  ): Promise<ContractDetailDto> {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -107,15 +115,34 @@ export class ContractService {
       throw new NotFoundException('Contract not found');
     }
 
-    this.checkAccess(contract, userId);
+    this.checkAccess(contract, userId, userRole);
+
+    // Debug: Log the raw data to trace property owner retrieval
+    console.log(
+      'DEBUG contract.propertyOwnerUserId:',
+      contract.propertyOwnerUserId
+    );
+    console.log(
+      'DEBUG contract.propertyOwner (User relation):',
+      contract.propertyOwner
+    );
+    console.log(
+      'DEBUG contract.auction.propertyOwner (JSON):',
+      contract.auction.propertyOwner
+    );
 
     const ownerSnapshot = getPropertyOwnerSnapshot(
       contract.auction.propertyOwner
     );
+    console.log('DEBUG ownerSnapshot (parsed):', ownerSnapshot);
+
     const sellerName =
       contract.propertyOwner?.fullName ?? ownerSnapshot?.fullName ?? 'Unknown';
     const sellerIdentityNumber =
       contract.propertyOwner?.identityNumber ?? ownerSnapshot?.identityNumber;
+
+    console.log('DEBUG sellerName:', sellerName);
+    console.log('DEBUG sellerIdentityNumber:', sellerIdentityNumber);
 
     return {
       id: contract.id,
@@ -216,7 +243,12 @@ export class ContractService {
     };
   }
 
-  async update(id: string, dto: UpdateContractDto, userId: string) {
+  async update(
+    id: string,
+    dto: UpdateContractDto,
+    userId: string,
+    userRole?: string
+  ) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
     });
@@ -225,7 +257,7 @@ export class ContractService {
       throw new NotFoundException('Contract not found');
     }
 
-    this.checkAccess(contract, userId);
+    this.checkAccess(contract, userId, userRole);
 
     if (
       dto.status &&
@@ -258,7 +290,12 @@ export class ContractService {
     };
   }
 
-  async sign(id: string, dto: SignContractDto, userId: string) {
+  async sign(
+    id: string,
+    dto: SignContractDto,
+    userId: string,
+    userRole?: string
+  ) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
     });
@@ -267,7 +304,7 @@ export class ContractService {
       throw new NotFoundException('Contract not found');
     }
 
-    this.checkAccess(contract, userId);
+    this.checkAccess(contract, userId, userRole);
 
     if (contract.status !== 'draft') {
       throw new BadRequestException('Only draft contracts can be signed');
@@ -296,7 +333,12 @@ export class ContractService {
     };
   }
 
-  async cancel(id: string, dto: CancelContractDto, userId: string) {
+  async cancel(
+    id: string,
+    dto: CancelContractDto,
+    userId: string,
+    userRole?: string
+  ) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
     });
@@ -305,7 +347,7 @@ export class ContractService {
       throw new NotFoundException('Contract not found');
     }
 
-    this.checkAccess(contract, userId);
+    this.checkAccess(contract, userId, userRole);
 
     if (contract.status === 'completed') {
       throw new BadRequestException('Cannot cancel a completed contract');
@@ -338,7 +380,7 @@ export class ContractService {
     };
   }
 
-  async exportToPdf(id: string, userId: string) {
+  async exportToPdf(id: string, userId: string, userRole?: string) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -353,7 +395,7 @@ export class ContractService {
       throw new NotFoundException('Contract not found');
     }
 
-    this.checkAccess(contract, userId);
+    this.checkAccess(contract, userId, userRole);
 
     const contractForPdf = {
       ...contract,
@@ -363,7 +405,7 @@ export class ContractService {
     return this.pdfGenerator.generateContractPdf(contractForPdf);
   }
 
-  async exportToPdfEnglish(id: string, userId: string) {
+  async exportToPdfEnglish(id: string, userId: string, userRole?: string) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -378,7 +420,7 @@ export class ContractService {
       throw new NotFoundException('Contract not found');
     }
 
-    this.checkAccess(contract, userId);
+    this.checkAccess(contract, userId, userRole);
 
     const contractForPdf = {
       ...contract,
@@ -394,8 +436,14 @@ export class ContractService {
       buyerUserId: string;
       createdBy: string;
     },
-    userId: string
+    userId: string,
+    userRole?: string
   ): void {
+    // Allow admins and super_admins to bypass ownership checks
+    if (userRole === 'admin' || userRole === 'super_admin') {
+      return;
+    }
+
     const hasAccess =
       contract.propertyOwnerUserId === userId ||
       contract.buyerUserId === userId ||

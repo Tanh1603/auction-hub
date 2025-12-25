@@ -20,7 +20,10 @@ import { SignContractDto } from './dto/sign-contract.dto';
 import { CancelContractDto } from './dto/cancel-contract.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { ContractAccessGuard } from './guards/contract-access.guard';
-import { CurrentUser, CurrentUserData } from '../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../common/decorators/current-user.decorator';
 
 @Controller('contracts')
 @UseGuards(AuthGuard)
@@ -33,7 +36,11 @@ export class ContractController {
     @Query() query: ContractQueryDto,
     @CurrentUser() user: CurrentUserData
   ) {
-    const result = await this.contractService.findAll(query, user.id);
+    const result = await this.contractService.findAll(
+      query,
+      user.id,
+      user.role
+    );
     return {
       message: 'Contracts retrieved successfully',
       ...result,
@@ -44,7 +51,7 @@ export class ContractController {
   @UseGuards(ContractAccessGuard)
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string, @CurrentUser() user: CurrentUserData) {
-    const contract = await this.contractService.findOne(id, user.id);
+    const contract = await this.contractService.findOne(id, user.id, user.role);
     return {
       message: 'Contract retrieved successfully',
       data: contract,
@@ -68,7 +75,12 @@ export class ContractController {
     @Body() updateContractDto: UpdateContractDto,
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.contractService.update(id, updateContractDto, user.id);
+    return this.contractService.update(
+      id,
+      updateContractDto,
+      user.id,
+      user.role
+    );
   }
 
   @Post(':id/sign')
@@ -79,7 +91,7 @@ export class ContractController {
     @Body() signContractDto: SignContractDto,
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.contractService.sign(id, signContractDto, user.id);
+    return this.contractService.sign(id, signContractDto, user.id, user.role);
   }
 
   @Post(':id/cancel')
@@ -90,7 +102,12 @@ export class ContractController {
     @Body() cancelContractDto: CancelContractDto,
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.contractService.cancel(id, cancelContractDto, user.id);
+    return this.contractService.cancel(
+      id,
+      cancelContractDto,
+      user.id,
+      user.role
+    );
   }
 
   @Get(':id/pdf/vi')
@@ -101,7 +118,11 @@ export class ContractController {
     @CurrentUser() user: CurrentUserData,
     @Res() res: Response
   ) {
-    const pdfDoc = await this.contractService.exportToPdf(id, user.id);
+    const pdfDoc = await this.contractService.exportToPdf(
+      id,
+      user.id,
+      user.role
+    );
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -121,7 +142,11 @@ export class ContractController {
     @CurrentUser() user: CurrentUserData,
     @Res() res: Response
   ) {
-    const pdfDoc = await this.contractService.exportToPdfEnglish(id, user.id);
+    const pdfDoc = await this.contractService.exportToPdfEnglish(
+      id,
+      user.id,
+      user.role
+    );
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -133,4 +158,3 @@ export class ContractController {
     pdfDoc.end();
   }
 }
-
