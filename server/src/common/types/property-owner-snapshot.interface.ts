@@ -62,9 +62,11 @@ export function getPropertyOwnerSnapshot(
 /**
  * Helper function to get the owner ID from the propertyOwner JSON field
  * @param propertyOwner - The JSON value from the Auction.propertyOwner field
- * @returns The owner ID string or null if invalid
+ * @returns The owner ID string or null if invalid/missing
  */
 export function getPropertyOwnerId(propertyOwner: unknown): string | null {
   const snapshot = getPropertyOwnerSnapshot(propertyOwner);
-  return snapshot?.id ?? null;
+  // Return null if id is missing or empty (legacy data without user ID)
+  const id = snapshot?.id;
+  return id && id.length > 0 ? id : null;
 }
