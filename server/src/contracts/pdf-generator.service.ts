@@ -9,6 +9,7 @@ import type {
   AuctionBid,
   ContractStatus,
 } from '../../generated';
+import { getPropertyOwnerSnapshot } from '../common/types/property-owner-snapshot.interface';
 
 interface ContractWithRelations {
   id: string;
@@ -93,19 +94,29 @@ export class PdfGeneratorService {
       .fontSize(12)
       .font(semiBoldFont)
       .text('BÊN BÁN (CHỦ SỞ HỮU):', leftX, startY);
-    const sellerName = contract.propertyOwner?.fullName || 'Không xác định';
-    const sellerEmail = contract.propertyOwner?.email || 'N/A';
-    const sellerPhone = contract.propertyOwner?.phoneNumber || 'Không có';
+    const ownerSnapshot = getPropertyOwnerSnapshot(
+      contract.auction.propertyOwner
+    );
+    const sellerName =
+      contract.propertyOwner?.fullName ||
+      ownerSnapshot?.fullName ||
+      'Không xác định';
+    const sellerEmail =
+      contract.propertyOwner?.email || ownerSnapshot?.email || 'N/A';
+    const sellerPhone =
+      contract.propertyOwner?.phoneNumber ||
+      ownerSnapshot?.phoneNumber ||
+      'Không có';
+    const sellerIdentity =
+      contract.propertyOwner?.identityNumber ||
+      ownerSnapshot?.identityNumber ||
+      'N/A';
 
     doc
       .fontSize(11)
       .font(normalFont)
       .text(`Họ tên: ${sellerName}`, leftX, doc.y)
-      .text(
-        `CMND/CCCD/ĐKKD: ${contract.propertyOwner?.identityNumber || 'N/A'}`,
-        leftX,
-        doc.y
-      )
+      .text(`CMND/CCCD/ĐKKD: ${sellerIdentity}`, leftX, doc.y)
       .text(`Email: ${sellerEmail}`, leftX, doc.y)
       .text(`SĐT: ${sellerPhone}`, leftX, doc.y);
 
@@ -298,19 +309,27 @@ export class PdfGeneratorService {
       .fontSize(12)
       .font(semiBoldFont)
       .text('SELLER (PROPERTY OWNER):', leftX, startY);
-    const sellerName = contract.propertyOwner?.fullName || 'Unknown';
-    const sellerEmail = contract.propertyOwner?.email || 'N/A';
-    const sellerPhone = contract.propertyOwner?.phoneNumber || 'N/A';
+    const ownerSnapshot = getPropertyOwnerSnapshot(
+      contract.auction.propertyOwner
+    );
+    const sellerName =
+      contract.propertyOwner?.fullName || ownerSnapshot?.fullName || 'Unknown';
+    const sellerEmail =
+      contract.propertyOwner?.email || ownerSnapshot?.email || 'N/A';
+    const sellerPhone =
+      contract.propertyOwner?.phoneNumber ||
+      ownerSnapshot?.phoneNumber ||
+      'N/A';
+    const sellerIdentity =
+      contract.propertyOwner?.identityNumber ||
+      ownerSnapshot?.identityNumber ||
+      'N/A';
 
     doc
       .fontSize(11)
       .font(normalFont)
       .text(`Name: ${sellerName}`, leftX, doc.y)
-      .text(
-        `Identity Number: ${contract.propertyOwner?.identityNumber || 'N/A'}`,
-        leftX,
-        doc.y
-      )
+      .text(`Identity Number: ${sellerIdentity}`, leftX, doc.y)
       .text(`Email: ${sellerEmail}`, leftX, doc.y)
       .text(`Phone: ${sellerPhone}`, leftX, doc.y);
 
