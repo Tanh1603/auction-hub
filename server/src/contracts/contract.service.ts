@@ -17,7 +17,10 @@ import {
 } from './dto/contract-detail.dto';
 import { Prisma } from '../../generated';
 import { getPaginationOptions } from '../common/utils/pagination.util';
-import { getPropertyOwnerId } from '../common/types/property-owner-snapshot.interface';
+import {
+  getPropertyOwnerId,
+  getPropertyOwnerSnapshot,
+} from '../common/types/property-owner-snapshot.interface';
 
 @Injectable()
 export class ContractService {
@@ -93,7 +96,7 @@ export class ContractService {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
-        auction: { select: { name: true, code: true } },
+        auction: { select: { name: true, code: true, propertyOwner: true } },
         propertyOwner: { select: { fullName: true, identityNumber: true } },
         buyer: { select: { fullName: true, identityNumber: true } },
         winningBid: true,
@@ -106,6 +109,14 @@ export class ContractService {
 
     this.checkAccess(contract, userId);
 
+    const ownerSnapshot = getPropertyOwnerSnapshot(
+      contract.auction.propertyOwner
+    );
+    const sellerName =
+      contract.propertyOwner?.fullName ?? ownerSnapshot?.fullName ?? 'Unknown';
+    const sellerIdentityNumber =
+      contract.propertyOwner?.identityNumber ?? ownerSnapshot?.identityNumber;
+
     return {
       id: contract.id,
       auctionId: contract.auctionId,
@@ -113,8 +124,8 @@ export class ContractService {
       auctionCode: contract.auction.code,
       winningBidId: contract.winningBidId,
       sellerUserId: contract.propertyOwnerUserId,
-      sellerName: contract.propertyOwner?.fullName ?? 'Unknown',
-      sellerIdentityNumber: contract.propertyOwner?.identityNumber,
+      sellerName,
+      sellerIdentityNumber,
       buyerUserId: contract.buyerUserId,
       buyerName: contract.buyer.fullName,
       buyerIdentityNumber: contract.buyer.identityNumber,
@@ -178,11 +189,15 @@ export class ContractService {
         docUrl: dto.docUrl,
       },
       include: {
-        auction: { select: { name: true, code: true } },
+        auction: { select: { name: true, code: true, propertyOwner: true } },
         propertyOwner: { select: { fullName: true } },
         buyer: { select: { fullName: true } },
       },
     });
+
+    const ownerSnapshot = getPropertyOwnerSnapshot(
+      contract.auction.propertyOwner
+    );
 
     return {
       message: 'Contract created successfully',
@@ -190,7 +205,10 @@ export class ContractService {
         id: contract.id,
         auctionName: contract.auction.name,
         auctionCode: contract.auction.code,
-        sellerName: contract.propertyOwner?.fullName ?? 'Unknown',
+        sellerName:
+          contract.propertyOwner?.fullName ??
+          ownerSnapshot?.fullName ??
+          'Unknown',
         buyerName: contract.buyer.fullName,
         price: Number(contract.price),
         status: contract.status,
