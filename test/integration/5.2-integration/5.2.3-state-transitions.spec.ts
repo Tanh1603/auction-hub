@@ -208,7 +208,7 @@ describe('5.2.3 Auction State Transitions', () => {
 
       // Admin updates status to live
       const response = await request(app.getHttpServer())
-        .patch(`/api/auctions/${shouldBeLiveAuction.id}`)
+        .put(`/api/auctions/${shouldBeLiveAuction.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'live' });
 
@@ -306,10 +306,33 @@ describe('5.2.3 Auction State Transitions', () => {
         },
       });
 
-      // Create participant with bid
+      // Create first participant with bid (the winner)
       const participant = await prisma.auctionParticipant.create({
         data: {
           userId: bidder.id,
+          auctionId: awaitingAuction.id,
+          registeredAt: createDate(-18),
+          confirmedAt: createDate(-16),
+          checkedInAt: createDate(-10),
+          depositPaidAt: createDate(-16),
+          depositAmount: new Decimal(1000000),
+        },
+      });
+
+      // Create second participant to meet minimum participants requirement (2)
+      // The evaluation service requires at least 2 confirmed participants
+      const bidder2 = await prisma.user.create({
+        data: {
+          id: require('crypto').randomUUID(),
+          email: `${TEST_PREFIX.toLowerCase()}_bidder2@test.com`,
+          fullName: 'Test Bidder 2',
+          userType: 'individual',
+          role: UserRole.bidder,
+        },
+      });
+      await prisma.auctionParticipant.create({
+        data: {
+          userId: bidder2.id,
           auctionId: awaitingAuction.id,
           registeredAt: createDate(-18),
           confirmedAt: createDate(-16),
@@ -417,7 +440,7 @@ describe('5.2.3 Auction State Transitions', () => {
 
       // Try to update status back to live
       const response = await request(app.getHttpServer())
-        .patch(`/api/auctions/${successAuction.id}`)
+        .put(`/api/auctions/${successAuction.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'live' });
 
@@ -455,7 +478,7 @@ describe('5.2.3 Auction State Transitions', () => {
 
       // Try to update status
       const response = await request(app.getHttpServer())
-        .patch(`/api/auctions/${cancelledAuction.id}`)
+        .put(`/api/auctions/${cancelledAuction.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'scheduled' });
 

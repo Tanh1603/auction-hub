@@ -100,13 +100,14 @@ describe('2.4.14-15 Refund Processing', () => {
       },
     });
 
-    // Create eligible participant (paid deposit, withdrew before deadline)
+    // Create eligible participant (paid deposit, checked in, withdrew before deadline)
     participant = await prisma.auctionParticipant.create({
       data: {
         userId: bidder.id,
         auctionId: auction.id,
         registeredAt: createDate(-18),
         confirmedAt: createDate(-16),
+        checkedInAt: createDate(-10), // Must check in to be eligible for refund
         depositPaidAt: createDate(-16),
         depositAmount: new Decimal(1000000),
         withdrawnAt: createDate(-12), // Withdrew before auction ended

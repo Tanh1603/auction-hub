@@ -189,10 +189,9 @@ class CustomBugReporter {
       rows.push(row.join(','));
     });
 
+    // rootDir is now the project root, so output files go directly there
     const csvPath = path.resolve(
       this._globalConfig.rootDir,
-      '..',
-      '..',
       'TEST_RESULTS_OUTPUT.csv'
     );
 
@@ -253,10 +252,9 @@ class CustomBugReporter {
       rows.push(row.join(','));
     });
 
+    // rootDir is now the project root, so output files go directly there
     const csvPath = path.resolve(
       this._globalConfig.rootDir,
-      '..',
-      '..',
       'DEFECT_REGISTRY.csv'
     );
 
@@ -335,10 +333,9 @@ class CustomBugReporter {
       report += '--------------------------------------------------\n\n';
     });
 
+    // rootDir is now the project root, so output files go directly there
     const outputPath = path.resolve(
       this._globalConfig.rootDir,
-      '..',
-      '..',
       'BUG_REPORT_GENERATED.txt'
     );
 
@@ -577,10 +574,9 @@ class CustomBugReporter {
    */
   _getProjectName() {
     try {
+      // rootDir is now the project root
       const packageJsonPath = path.resolve(
         this._globalConfig.rootDir,
-        '..',
-        '..',
         'package.json'
       );
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
@@ -597,7 +593,8 @@ class CustomBugReporter {
    */
   _getRelativePath(absolutePath) {
     try {
-      const rootDir = path.resolve(this._globalConfig.rootDir, '..', '..');
+      // rootDir is now the project root
+      const rootDir = this._globalConfig.rootDir;
       return path.relative(rootDir, absolutePath).replace(/\\/g, '/');
     } catch {
       return absolutePath;

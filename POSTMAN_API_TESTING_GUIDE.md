@@ -1516,13 +1516,21 @@ The auction finalization process involves automatic contract creation in a **dra
 }
 ```
 
-### 23. Get Auction Results
+### 23. Get Auction Results - PUBLIC with Tiered Access
 
-**Anyone can view the final results of a completed auction. Confirmed participants and owners can also access this during live auctions to view current bid history.**
+**This endpoint is PUBLIC but provides different levels of detail based on authentication and role.**
+
+**Access Levels:**
+
+| Level           | Who                                  | What They See                                    |
+| --------------- | ------------------------------------ | ------------------------------------------------ |
+| **FULL**        | Admin, Super Admin, Property Owner   | Full winner details, emails, financial breakdown |
+| **PARTICIPANT** | Authenticated bidders in the auction | All data but **winner's identity is `[HIDDEN]`** |
+| **PUBLIC**      | Unauthenticated users                | Basic info only (for finalized auctions)         |
 
 **Method**: `GET`  
 **URL**: `http://localhost:3000/api/auction-finalization/results/{auctionId}`  
-**Headers**:
+**Headers** (Optional - omit for public access):
 
 ```json
 {
@@ -1530,7 +1538,9 @@ The auction finalization process involves automatic contract creation in a **dra
 }
 ```
 
-**Expected Response**:
+**Response includes `accessLevel` field** indicating which tier was applied.
+
+**Expected Response (FULL Access - Admin/Owner)**:
 
 ```json
 {
@@ -1541,7 +1551,9 @@ The auction finalization process involves automatic contract creation in a **dra
     "auctionCode": "AUC001",
     "auctionName": "Test Auction",
     "status": "success",
+    "accessLevel": "full",
     "totalBids": 2,
+    "totalParticipants": 5,
     "winningBid": {
       "bidId": "winning-bid-uuid",
       "amount": "1200000000",
@@ -1572,31 +1584,118 @@ The auction finalization process involves automatic contract creation in a **dra
       }
     ],
     "userBids": [],
+    "financialSummary": {
+      "finalSalePrice": 1200000000,
+      "commissionFee": 12000000,
+      "netAmountToSeller": 1188000000
+    },
     "contract": {
       "contractId": "contract-uuid",
       "status": "draft",
       "createdAt": "2025-11-14T15:00:00.000Z"
     }
-  },
-  "meta": {},
-  "timestamp": "2025-11-14T15:00:00.000Z",
-  "path": "/api/auction-finalization/results/{auctionId}"
+  }
 }
 ```
+
+**Expected Response (PARTICIPANT Access - Authenticated Bidder)**:
+
+```json
+{
+  "data": {
+    "auctionId": "auction-uuid",
+    "status": "success",
+    "accessLevel": "participant",
+    "totalBids": 2,
+    "winningBid": {
+      "bidId": "winning-bid-uuid",
+      "amount": "1200000000",
+      "winner": {
+        "userId": "[HIDDEN]",
+        "fullName": "[HIDDEN]",
+        "email": "[HIDDEN]"
+      }
+    },
+    "allBids": [
+      {
+        "bidId": "winning-bid-uuid",
+        "amount": "1200000000",
+        "isWinningBid": true,
+        "bidderName": "[WINNER - HIDDEN]"
+      },
+      {
+        "bidId": "other-bid-uuid",
+        "amount": "1100000000",
+        "isWinningBid": false,
+        "bidderName": "Participant Name"
+      }
+    ],
+    "userBids": [
+      /* User's own bids with full details */
+    ]
+  }
+}
+```
+
+**Expected Response (PUBLIC Access - No Auth)**:
+
+```json
+{
+  "data": {
+    "auctionId": "auction-uuid",
+    "status": "success",
+    "accessLevel": "public",
+    "totalBids": 2,
+    "totalParticipants": 5,
+    "winningBid": {
+      "bidId": "winning-bid-uuid",
+      "amount": "1200000000",
+      "winner": {
+        "userId": "[HIDDEN]",
+        "fullName": "[HIDDEN]",
+        "email": "[HIDDEN]"
+      }
+    },
+    "financialSummary": {
+      "finalSalePrice": 1200000000,
+      "commissionFee": 0,
+      "netAmountToSeller": 0
+    }
+  }
+}
+```
+
+**Error Response (Public access to non-finalized auction)**:
+
+```json
+{
+  "statusCode": 403,
+  "message": "Auction results are not yet available for public viewing"
+}
+```
+
+**Notes**:
+
+- Public users can only view results for auctions with `success` or `failed` status
+- Winner's identity is hidden from participants to protect privacy
+- Admin/Owner sees full details including winner email and complete financial breakdown
+
+````
+
 
 ### 24. Get Audit Logs (Admin/Auctioneer)
 
 **View complete audit trail for an auction.**
 
-**Method**: `GET`  
-**URL**: `http://localhost:3000/api/auction-finalization/audit-logs/{auctionId}`  
+**Method**: `GET`
+**URL**: `http://localhost:3000/api/auction-finalization/audit-logs/{auctionId}`
 **Headers**:
 
 ```json
 {
   "Authorization": "Bearer ADMIN_JWT_TOKEN_HERE"
 }
-```
+````
 
 **Expected Response**:
 
@@ -1748,9 +1847,10 @@ Contracts are automatically generated during auction finalization in `draft` sta
     "auctionId": "auction-uuid",
     "auctionName": "Test Auction",
     "auctionCode": "AUC001",
-    "sellerFullName": "Seller Name",
-    "buyerFullName": "Buyer Name",
-    "creatorFullName": "Admin Name",
+    "sellerName": "Seller Name",
+    "sellerIdentityNumber": "001234567890",
+    "buyerName": "Buyer Name",
+    "buyerIdentityNumber": "001987654321",
     "price": 1200000000,
     "status": "signed",
     "docUrl": "https://example.com/contract.pdf",
@@ -1773,7 +1873,7 @@ Contracts are automatically generated during auction finalization in `draft` sta
 }
 ```
 
-**Result**: Downloads a PDF file for the Vietnamese contract.
+**Result**: Downloads a PDF file for the Vietnamese contract. The PDF now includes identity numbers for both buyer and seller.
 
 ### 29. Export Contract PDF (English)
 
@@ -1787,7 +1887,7 @@ Contracts are automatically generated during auction finalization in `draft` sta
 }
 ```
 
-**Result**: Downloads a PDF file for the English contract.
+**Result**: Downloads a PDF file for the English contract. The PDF now includes identity numbers for both buyer and seller.
 
 ### 30. Sign Contract
 

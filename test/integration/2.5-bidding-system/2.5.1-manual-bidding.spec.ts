@@ -261,7 +261,7 @@ describe('2.5.1 Manual Bidding', () => {
         .expect(400);
     });
 
-    it('TC-2.2.3-05: Fail with bid below starting price', async () => {
+    it('TC-2.5.1-05: Fail with bid below starting price', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/manual-bid')
         .set('Authorization', `Bearer ${bidder1Token}`)

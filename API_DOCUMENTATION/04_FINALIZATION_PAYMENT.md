@@ -211,24 +211,51 @@
 
 ---
 
-#### 4. Get Results (Auction Summary)
+#### 4. Get Results (Auction Summary) - PUBLIC with Tiered Access
 
 **Endpoint**: `GET /auction-finalization/results/:auctionId`
-**Access**: Authenticated (Restricted to Participants and Owner)
+**Access**: PUBLIC with tiered access control
 
-**Returns**: Auction results and bid history from user perspective
-**Shows**: isWinner, winner details, user's bids, financial summary (if finalized)
+This endpoint supports **tiered access control** based on user authentication and role:
 
-**Note**: This endpoint can be called while the auction is live to view the current bid history, but final results (contract, winner, financial summary) will be partial/null until finalization.
+| Access Level    | Who                                  | What They See                                           |
+| --------------- | ------------------------------------ | ------------------------------------------------------- |
+| **FULL**        | Admin, Super Admin, Property Owner   | Everything - winner name, email, full financial details |
+| **PARTICIPANT** | Authenticated bidders in the auction | All data but **winner's identity is `[HIDDEN]`**        |
+| **PUBLIC**      | Unauthenticated users                | Basic info only (for `success`/`failed` auctions only)  |
 
-**Response** (200):
+**Headers** (Optional - for authenticated access):
+
+```json
+{
+  "Authorization": "Bearer YOUR_JWT_TOKEN_HERE"
+}
+```
+
+**Response includes `accessLevel` field** indicating which tier the response was generated for.
+
+**Response (200) - FULL Access (Admin/Owner)**:
 
 ```json
 {
   "auctionId": "uuid",
+  "auctionCode": "VNA-2024-001",
+  "auctionName": "Auction Name",
   "status": "success",
+  "accessLevel": "full",
   "totalBids": 15,
-  "winningBid": { ... },
+  "totalParticipants": 5,
+  "winningBid": {
+    "bidId": "bid-uuid",
+    "amount": "1500000000",
+    "bidAt": "2024-12-01T11:55:00Z",
+    "bidType": "manual",
+    "winner": {
+      "userId": "user-uuid",
+      "fullName": "Nguyen Van A",
+      "email": "nguyenvana@example.com"
+    }
+  },
   "allBids": [
     {
       "bidId": "bid-uuid-1",
@@ -238,18 +265,87 @@
       "isWinningBid": true
     }
   ],
-  "userBids": [
-    {
-      "bidId": "bid-uuid-1",
-      "amount": "1500000000",
-      "bidAt": "2024-12-01T11:55:00Z",
-      "bidderName": "Nguyen Van A",
-      "isWinningBid": true
-    }
-  ],
+  "userBids": [],
+  "financialSummary": {
+    "finalSalePrice": 1500000000,
+    "commissionFee": 15000000,
+    "netAmountToSeller": 1485000000
+  },
   "contract": { ... }
 }
 ```
+
+**Response (200) - PARTICIPANT Access (Authenticated Bidder)**:
+
+```json
+{
+  "auctionId": "uuid",
+  "auctionCode": "VNA-2024-001",
+  "status": "success",
+  "accessLevel": "participant",
+  "totalBids": 15,
+  "winningBid": {
+    "bidId": "bid-uuid",
+    "amount": "1500000000",
+    "winner": {
+      "userId": "[HIDDEN]",
+      "fullName": "[HIDDEN]",
+      "email": "[HIDDEN]"
+    }
+  },
+  "allBids": [
+    {
+      "bidId": "bid-uuid-1",
+      "amount": "1500000000",
+      "bidderName": "[WINNER - HIDDEN]",
+      "isWinningBid": true
+    },
+    {
+      "bidId": "bid-uuid-2",
+      "amount": "1400000000",
+      "bidderName": "Tran Thi B",
+      "isWinningBid": false
+    }
+  ],
+  "userBids": [
+    /* User's own bids */
+  ]
+}
+```
+
+**Response (200) - PUBLIC Access (Unauthenticated)**:
+
+```json
+{
+  "auctionId": "uuid",
+  "auctionCode": "VNA-2024-001",
+  "status": "success",
+  "accessLevel": "public",
+  "totalBids": 15,
+  "totalParticipants": 5,
+  "winningBid": {
+    "bidId": "bid-uuid",
+    "amount": "1500000000",
+    "winner": {
+      "userId": "[HIDDEN]",
+      "fullName": "[HIDDEN]",
+      "email": "[HIDDEN]"
+    }
+  },
+  "financialSummary": {
+    "finalSalePrice": 1500000000,
+    "commissionFee": 0,
+    "netAmountToSeller": 0
+  }
+}
+```
+
+**Error Responses**:
+
+- 403: Auction not finalized (for public/unauthenticated access)
+- 404: Auction not found
+
+**Note**: Public users can only view results for auctions with `success` or `failed` status. Live auctions are not visible to unauthenticated users.
 
 ---
 

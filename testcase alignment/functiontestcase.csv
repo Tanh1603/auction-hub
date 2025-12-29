@@ -1,0 +1,1292 @@
+﻿Function Test Cases,,,,,,,,,,,,,,,
+,,,,,,Passed,0,,,,,,,,
+,,,,,,Failed,0,,,,,,,,
+,,,,,,Not Run,0,,,,,,,,
+,,,,,,Not Completed,0,,,,,,,,
+,,,,,,Number of test cases,466,trạng thái của pha kiểm thử,trạng thái của cả ca,,,,,,
+,Category,Test Case ID,Test Case Description,PreRequisites,Steps,Test Procedures,,Test Case Expected Result,Actual Result,Status,Note,Implementation Status,,,
+,,,,,,Steps to Perform,Step Expected Result,,,,,,,
+,2.1 User Management,TC-2.1.1-01,Verify successful registration of Individual User,No existing User record with email 'newuser@test.com' in prisma.user,,"1. Send POST /api/auth/register
+2. Body: {email: 'newuser@test.com'; password: 'SecurePass123!'; full_name: 'Test User'; user_type: 'individual'; phone_number: '0901234567'}",Returns 201 Created with {user_id; email; verification_required: true},User created in prisma.user with role: UserRole.bidder. Verify: prisma.user.findUnique({where: {email}}) returns record with isVerified: false,,,Implemented,Implemented,DTO: RegisterRequestDto,,
+,,TC-2.1.1-02,Verify successful individual user registration,No existing User record with email 'business@test.com' in prisma.user,,"1. Send POST /api/auth/register
+2. Body: {email: 'business@test.com'; password: 'SecurePass123!'; full_name: 'Business Corp'; user_type: 'business'; business_registration_number: 'BRN0123456789'; company_name: 'Business Corp Ltd'; phone_number: '0901234567'}",Returns 201 Created with {user_id; email; verification_required: true},User created in prisma.user with userType: UserType.business and taxId stored,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.1-03,Fail to register with existing email,User with email 'existing@test.com' exists in prisma.user,,"1. Send POST /api/auth/register
+2. Body: {email: 'existing@test.com'; password: 'SecurePass123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 409 Conflict,Error 'Email already exists'. No duplicate record created,,,Implemented,Implemented,,,
+,,TC-2.1.1-04,Fail to register with invalid email format,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'not-an-email'; password: 'SecurePass123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error 'Invalid email format' from @IsEmail(),,,Not Started,Not Implemented,,,
+,,TC-2.1.1-05,Fail to register with password less than 8 characters,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Short1!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error 'Password must be at least 8 characters',,,Not Started,Not Implemented,@MinLength(8),,
+,,TC-2.1.1-06,Fail with weak password (no uppercase),No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'nouppercase123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error about password requirements (uppercase; lowercase; number),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@Matches regex,,
+,,TC-2.1.1-07,Fail to register with password missing lowercase,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'NOLOWERCASE123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error about password requirements,,,Not Started,Not Implemented,,,
+,,TC-2.1.1-08,Fail with wrong password,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'NoNumbers!!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error about password requirements,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.1-09,Fail with invalid phone format,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; phone_number: '123'; full_name: 'Test'; user_type: 'individual'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error 'Phone must be valid Vietnamese phone number',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@Matches Vietnamese phone regex,,
+,,TC-2.1.1-10,Fail with invalid identity number format,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; identity_number: 'ABC123'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'}",Returns 400 Bad Request,Validation error 'Invalid Vietnamese CCCD',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@Matches CCCD regex,,
+,,TC-2.1.1-11,Verify registration with valid Vietnamese phone 0901234567,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; phone_number: '0901234567'; full_name: 'Test'; user_type: 'individual'; identity_number: '001234567890'}",Returns 201 Created,User created with phoneNumber field populated,,,Implemented,Implemented,,,
+,,TC-2.1.1-12,Verify registration with valid CCCD 12 digits,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; identity_number: '001234567890'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'}",Returns 201 Created,User created with identityNumber field populated,,,Implemented,Implemented,,,
+,,TC-2.1.1-13,Fail with duplicate phone,User with phone '0901234567' exists,,"1. Send POST /api/auth/register
+2. Body: {email: 'new@test.com'; password: 'Valid123!'; phone_number: '0901234567'; full_name: 'Test'; user_type: 'individual'; identity_number: '001234567890'}",Returns 409 Conflict,Error indicating phone number already exists. @unique constraint,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.1-14,Fail with duplicate identity number,User with identity_number exists,,"1. Send POST /api/auth/register
+2. Body: {email: 'new@test.com'; password: 'Valid123!'; identity_number: '001234567890'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'}",Returns 409 Conflict,Error indicating identity number already exists. @unique constraint,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.1-15,Fail with invalid user_type enum,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; user_type: 'corporation'; full_name: 'Test'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 400 Bad Request,Validation error 'User type must be either individual or business',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsEnum(UserType),,
+,,TC-2.1.1-16,Verify registration with minimal required fields,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'minimal@test.com'; password: 'SecurePass123!'; full_name: 'Minimal User'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,User created with optional fields as null,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Optional fields: phone_number; full_name; identity_number; user_type; tax_id,,
+,,TC-2.1.1-17,Verify registration with all optional fields,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'full@test.com'; password: 'Valid123!'; full_name: 'Full User'; phone_number: '0901234567'; identity_number: '001234567890'; user_type: 'individual'}",Returns 201 Created,All fields populated in prisma.user,,,Implemented,Implemented,,,
+,,TC-2.1.1-18,Fail Business user without tax_id,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'biz@test.com'; password: 'Valid123!'; user_type: 'business'; full_name: 'Biz User'}",Returns 400 Bad Request,Error indicating tax_id required for business users,,,Not Started,Not Implemented,Business logic validation,,
+,,TC-2.1.1-19,Verify default role is BIDDER,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,prisma.user record has role: UserRole.bidder (default),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@default(bidder) in schema,,
+,,TC-2.1.1-20,Verify updates isVerified in database,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,prisma.user record has isVerified: false,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@default(false) in schema,,
+,,TC-2.1.1-21,Verify registration sets isBanned false,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,prisma.user record has isBanned: false,,,Not Started,Not Implemented,@default(false) in schema,,
+,,TC-2.1.1-22,Verify registration sets default ratingScore 5.00,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,prisma.user record has ratingScore: 5.00,,,Not Started,Not Implemented,@default(5.00) in schema,,
+,,TC-2.1.1-23,Fail registration with empty email,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: ''; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'}",Returns 400 Bad Request,Validation error for email field,,,Not Started,Not Implemented,,,
+,,TC-2.1.1-24,Fail registration with empty password,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: ''; full_name: 'Test'; user_type: 'individual'}",Returns 400 Bad Request,Validation error for password field,,,Not Started,Not Implemented,,,
+,,TC-2.1.1-25,Fail registration with null email,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: null; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'}",Returns 400 Bad Request,Validation error for email field,,,Not Started,Not Implemented,,,
+,,TC-2.1.1-26,Verify case-insensitive email uniqueness,User with email 'Test@Email.com' exists,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@email.com'; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234568'; identity_number: '001234567891'}",Returns 409 Conflict,Email uniqueness is case-insensitive,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.1-27,Verify registration trims whitespace from email,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: '  test@test.com  '; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,Email stored without leading/trailing whitespace,,,Not Started,Not Implemented,,,
+,,TC-2.1.1-28,Fail registration with SQL injection in email,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com; DROP TABLE users;--'; password: 'Valid123!'; full_name: 'Test'; user_type: 'individual'}",Returns 400 Bad Request,Invalid email format. No SQL executed,,,Not Started,Not Implemented,Security test,,
+,,TC-2.1.1-29,Fail registration with XSS in full_name,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; full_name: '<script>alert(1)</script>'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created or sanitized,Name stored safely without XSS execution risk,,,Not Started,Not Implemented,Security test,,
+,,TC-2.1.1-30,Verify registration with Unicode characters in name,No preconditions,,"1. Send POST /api/auth/register
+2. Body: {email: 'test@test.com'; password: 'Valid123!'; full_name: 'Nguyễn Văn A'; user_type: 'individual'; phone_number: '0901234567'; identity_number: '001234567890'}",Returns 201 Created,Vietnamese name with diacritics stored correctly,,,Implemented,Implemented,Unicode support,,
+,,TC-2.1.2-01,Verify get current user info successfully,User exists with valid JWT,,"1. Send GET /api/auth/me
+2. Authorization: Bearer <valid_token>",Returns 200 OK with User object,User profile returned from prisma.user,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.2-02,Fail to get user info without authentication,No token provided,,"1. Send GET /api/auth/me
+2. No Authorization header",Returns 401 Unauthorized,Error 'Authorization header is missing',,,Not Started,Not Implemented,,,
+,,TC-2.1.2-03,Fail with invalid token,Invalid JWT provided,,"1. Send GET /api/auth/me
+2. Authorization: Bearer invalid_token",Returns 401 Unauthorized,Error 'Invalid token',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.2-04,Fail to get user info with expired token,Expired JWT provided,,"1. Send GET /api/auth/me
+2. Authorization: Bearer expired_token",Returns 401 Unauthorized,Error 'Token has expired',,,Not Started,Not Implemented,,,
+,,TC-2.1.2-05,Verify auction state includes all required fields,User with all fields populated,,1. Send GET /api/auth/me with valid token,Returns 200 OK,Response contains: id; email; fullName; phoneNumber; role; userType; isVerified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.2-06,Verify password NOT included in response,User exists,,1. Send GET /api/auth/me with valid token,Returns 200 OK,Response does NOT contain password field,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Security,,
+,,TC-2.1.2-07,Fail with malformed Authorization header,Missing 'Bearer' prefix,,"1. Send GET /api/auth/me
+2. Authorization: invalid_token (no Bearer)",Returns 401 Unauthorized,Error 'Invalid authorization header format',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.2-08,Fail with Bearer but no token,Only 'Bearer' without token,,"1. Send GET /api/auth/me
+2. Authorization: Bearer",Returns 401 Unauthorized,Error 'No token provided',,,Implemented,Implemented,,,
+,,TC-2.1.3-01,Verify Super Admin promotes to Admin,Super Admin authenticated; Target User exists,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <super_admin_token>
+3. Body: {role: 'admin'}",Returns 200 OK,Target user role updated to UserRole.admin in prisma.user,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-02,Verify Super Admin can promote user to Auctioneer,Super Admin authenticated; Target User exists,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <super_admin_token>
+3. Body: {role: 'auctioneer'}",Returns 200 OK,Target user role updated to UserRole.auctioneer,,,Not Started,Not Implemented,,,
+,,TC-2.1.3-03,Verify Admin promotes Bidder to Auctioneer,Admin authenticated; Target User is Bidder,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <admin_token>
+3. Body: {role: 'auctioneer'}",Returns 200 OK,Bidder promoted to Auctioneer,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-04,Fail Admin promotes to Admin,Admin authenticated,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <admin_token>
+3. Body: {role: 'admin'}",Returns 403 Forbidden,Admin cannot promote to admin level,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-05,Fail Admin promotes to Super Admin,Admin authenticated,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <admin_token>
+3. Body: {role: 'super_admin'}",Returns 403 Forbidden,Admin cannot promote to super_admin,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-06,Fail promote self,Bidder authenticated,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <bidder_token>
+3. Body: {role: 'auctioneer'}",Returns 403 Forbidden,RolesGuard blocks access,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-07,Fail Auctioneer promotes users,Auctioneer authenticated,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <auctioneer_token>
+3. Body: {role: 'bidder'}",Returns 403 Forbidden,RolesGuard blocks access,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-08,Fail bid from non-registered user,Admin authenticated; User ID doesn't exist,,"1. Send PUT /api/auth/admin/users/550e8400-e29b-41d4-a716-446655440000/promote
+2. Authorization: Bearer <admin_token>
+3. Body: {role: 'auctioneer'}",Returns 404 Not Found,Error indicating user not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-09,Fail with invalid role enum,Admin authenticated,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <admin_token>
+3. Body: {role: 'invalid_role'}",Returns 400 Bad Request,Validation error from @IsEnum(UserRole),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-10,Verify promote includes optional reason,Super Admin authenticated,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Authorization: Bearer <super_admin_token>
+3. Body: {role: 'admin'; reason: 'Promoted for performance'}",Returns 200 OK,Promotion recorded. Reason stored if audit log exists,,,Not Started,Not Implemented,,,
+,,TC-2.1.3-11,Fail promotion without authentication,No token,,"1. Send PUT /api/auth/admin/users/:userId/promote
+2. Body: {role: 'admin'}",Returns 401 Unauthorized,AuthGuard blocks unauthenticated request,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.1.3-12,Verify cannot demote super_admin,Super Admin authenticated; Target is super_admin,,"1. Send PUT /api/auth/admin/users/:superAdminId/promote
+2. Authorization: Bearer <super_admin_token>
+3. Body: {role: 'bidder'}",Returns 400 Bad Request or 403,Cannot demote super_admin,,,Implemented,Implemented,Business logic protection,,
+,2.2 Authentication,TC-2.2.1-01,Verify successful login with valid credentials,User exists with verified email,,"1. Send POST /api/auth/login
+2. Body: {email: 'user@test.com'; password: 'ValidPass123!'}",Returns 200 OK with tokens,Response: {access_token; refresh_token; expires_in; user},Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-02,Fail with short password (<8 chars),User exists,,"1. Send POST /api/auth/login
+2. Body: {email: 'user@test.com'; password: 'WrongPass123!'}",Returns 401 Unauthorized,Error from Supabase Auth,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-03,Fail with non-existent email,No user with email,,"1. Send POST /api/auth/login
+2. Body: {email: 'nonexistent@test.com'; password: 'AnyPass123!'}",Returns 401 Unauthorized,Error indicating invalid credentials,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-04,Warn login for unverified user,User exists with emailVerifiedAt: null,,"1. Send POST /api/auth/login
+2. Body: {email: 'unverified@test.com'; password: 'ValidPass123!'}",Returns 403 Forbidden,Error indicating email not verified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-05,Fail login for banned user,User exists with isBanned: true,,"1. Send POST /api/auth/login
+2. Body: {email: 'banned@test.com'; password: 'ValidPass123!'}",Returns 403 Forbidden,Error indicating user is banned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-06,Fail with invalid email format,No preconditions,,"1. Send POST /api/auth/login
+2. Body: {email: 'invalid-email'; password: 'ValidPass123!'}",Returns 400 Bad Request,Validation error from @IsEmail(),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-07,Fail with empty body,No preconditions,,"1. Send POST /api/auth/login
+2. Body: {email: 'user@test.com'; password: ''}",Returns 400 Bad Request,Validation error 'Password is required',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsNotEmpty(),,
+,,TC-2.2.1-08,Fail login with null email,No preconditions,,"1. Send POST /api/auth/login
+2. Body: {email: null; password: 'ValidPass123!'}",Returns 400 Bad Request,Validation error for email,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-09,Accept valid JWT token,User exists and verified,,"1. Send POST /api/auth/login
+2. Decode returned access_token",Returns 200 OK,Token contains: sub (userId); email; exp; iat,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.1-10,Verify login returns JWT token,User exists,,1. Send POST /api/auth/login with valid credentials,Returns 200 OK,user object includes: id; email; fullName; role; isVerified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.2-01,Verify forgot password sends reset email,User exists,,"1. Send POST /api/auth/forgot-password
+2. Body: {email: 'user@test.com'}",Returns 200 OK with success message,Message: 'Password reset code has been sent to your email',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.2-02,Return success even for non-existent email (security),No user with email,,"1. Send POST /api/auth/forgot-password
+2. Body: {email: 'nonexistent@test.com'}",Returns 200 OK (same response),Same response for security - don't reveal email existence,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Security best practice,,
+,,TC-2.2.2-03,Fail forgot password with invalid email format,No preconditions,,"1. Send POST /api/auth/forgot-password
+2. Body: {email: 'invalid'}",Returns 400 Bad Request,Validation error 'Invalid email format',,,Implemented,Implemented,,,
+,,TC-2.2.2-04,Fail forgot password with empty email,No preconditions,,"1. Send POST /api/auth/forgot-password
+2. Body: {email: ''}",Returns 400 Bad Request,Validation error for email field,,,Implemented,Implemented,,,
+,,TC-2.2.3-01,Verify resend verification email,User with emailVerifiedAt: null,,"1. Send POST /api/auth/resend-verification-email
+2. Body: {email: 'unverified@test.com'}",Returns 200 OK,Message: 'Verification email sent successfully',,,Implemented,Implemented,,,
+,,TC-2.2.3-02,Skip resend for already verified user,User with emailVerifiedAt: set,,"1. Send POST /api/auth/resend-verification-email
+2. Body: {email: 'verified@test.com'}",Returns 400 Bad Request,Error indicating email already verified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.3-03,Fail resend with missing email,No user with email,,"1. Send POST /api/auth/resend-verification-email
+2. Body: {email: 'nonexistent@test.com'}",Returns 404 Not Found or 200 OK (security),Email not found. Response may be generic for security,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.4-01,Verify with valid token,User has valid verification token,,"1. Send POST /api/auth/verify-email
+2. Body: {token: 'valid_token'; email: 'user@test.com'}",Returns 200 OK,prisma.user.update sets emailVerifiedAt to now(),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.4-02,Fail bid with invalid token,Token doesn't match,,"1. Send POST /api/auth/verify-email
+2. Body: {token: 'wrong_token'; email: 'user@test.com'}",Returns 400 Bad Request,Error indicating invalid token,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.4-03,Fail with expired token,Token has expired,,"1. Send POST /api/auth/verify-email
+2. Body: {token: 'expired_token'; email: 'user@test.com'}",Returns 400 Bad Request,Error indicating token expired,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.4-04,Fail verify email with wrong email,Token valid but email mismatch,,"1. Send POST /api/auth/verify-email
+2. Body: {token: 'valid_token'; email: 'other@test.com'}",Returns 400 Bad Request,Error indicating token/email mismatch,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.4-05,Fail GET with missing token,No token provided,,"1. Send POST /api/auth/verify-email
+2. Body: {email: 'user@test.com'}",Returns 400 Bad Request,Validation error 'Token is required',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsNotEmpty(),,
+,,TC-2.2.4-06,Fail with missing required fields,No email provided,,"1. Send POST /api/auth/verify-email
+2. Body: {token: 'valid_token'}",Returns 400 Bad Request,Validation error for email field,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.5-01,Verify email via link (GET),User has valid verification link,,1. Send GET /api/auth/verify?token=valid_token&email=user@test.com,Returns 302 Redirect,Redirects to ${FRONTEND_URL}/auth/verify-result?success=true,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.5-02,Verify via GET link with token,Invalid token in query,,1. Send GET /api/auth/verify?token=invalid&email=user@test.com,Returns 302 Redirect,Redirects to error page with success=false&error=...,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.2.5-03,Fail verify via link without token param,Missing token,,1. Send GET /api/auth/verify?email=user@test.com,Returns 302 Redirect,Redirects with error 'Missing token or email',"Expected value: 200 | Received array: [400, 409]",Fail,Implemented,Implemented,,,
+,,TC-2.2.5-04,Fail verify via link without email param,Missing email,,1. Send GET /api/auth/verify?token=valid_token,Returns 302 Redirect,Redirects with error 'Missing token or email',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.3 Auction Management,TC-2.3.1-01,Verify public list auctions (no auth),Multiple auctions exist,,1. Send GET /api/auctions,Returns 200 OK with auction array,List from prisma.auction.findMany. No auth required (@Public),,,Implemented,Implemented,,,
+,,TC-2.3.1-02,Verify list auctions with status filter,Auctions with various statuses,,1. Send GET /api/auctions?status=live,Returns 200 OK,Only AuctionStatus.live auctions returned,,,Not Started,Not Implemented,,,
+,,TC-2.3.1-03,Verify list auctions with assetType filter,Auctions with various assetTypes,,1. Send GET /api/auctions?assetType=land_use_rights,Returns 200 OK,Only matching assetType returned,,,Not Started,Not Implemented,,,
+,,TC-2.3.1-04,Verify list auctions with pagination,More than 10 auctions exist,,1. Send GET /api/auctions?page=1&limit=10,Returns 200 OK with 10 items,Pagination metadata included,,,Not Started,Not Implemented,,,
+,,TC-2.3.1-05,Verify list auctions with page 2,More than 10 auctions exist,,1. Send GET /api/auctions?page=2&limit=10,Returns 200 OK,Second page of results returned,,,Not Started,Not Implemented,,,
+,,TC-2.3.1-06,Verify list auctions with search query,Auctions with matching names,,1. Send GET /api/auctions?search=apartment,Returns 200 OK,Auctions with 'apartment' in name returned,,,Not Started,Not Implemented,,,
+,,TC-2.3.1-07,Verify empty list when no auctions match filter,No auctions with status=cancelled,,1. Send GET /api/auctions?status=cancelled,Returns 200 OK with empty array,Empty array returned; no error,,,Not Started,Not Implemented,,,
+,,TC-2.3.1-08,Verify bid history sorted by amount (highest first),Multiple auctions exist,,1. Send GET /api/auctions?sortBy=auctionStartAt&order=asc,Returns 200 OK,Auctions sorted by start date ascending,,,Implemented,Implemented,,,
+,,TC-2.3.1-09,Verify find auction by code via search,Auctions in different provinces,,1. Send GET /api/auctions?provinceId=uuid,Returns 200 OK,Only auctions in specified province returned,,,Implemented,Implemented,,,
+,,TC-2.3.1-10,Verify list auctions with combined filters,Auctions with various attributes,,1. Send GET /api/auctions?status=scheduled&assetType=secured_asset&page=1,Returns 200 OK,Filters applied together correctly,,,Implemented,Implemented,,,
+,,TC-2.3.2-01,Verify disable auto-bid,Auction exists,,1. Send GET /api/auctions/:id,Returns 200 OK,Full auction details with images; attachments; propertyOwner (JsonB),,,Implemented,Implemented,,,
+,,TC-2.3.2-02,Return 400 for invalid ID format,No preconditions,,1. Send GET /api/auctions/not-a-uuid,Returns 400 Bad Request,Error indicating invalid UUID format,,,Implemented,Implemented,,,
+,,TC-2.3.2-03,Fail get auction with non-existent ID,UUID format valid but not exists,,1. Send GET /api/auctions/550e8400-e29b-41d4-a716-446655440000,Returns 404 Not Found,Error 'Auction not found',,,Not Started,Not Implemented,,,
+,,TC-2.3.2-04,Verify auction detail includes location,Auction with assetWardId set,,1. Send GET /api/auctions/:id,Returns 200 OK,Location data (province; district; ward) included via relations,,,Not Started,Not Implemented,,,
+,,TC-2.3.2-05,Verify Auctioneer creates auction,Auction with AuctionRelation records,,1. Send GET /api/auctions/:id,Returns 200 OK,Related auctions array included,,,Implemented,Implemented,,,
+,,TC-2.3.2-06,Verify auction detail includes participant count,Auction with participants,,1. Send GET /api/auctions/:id,Returns 200 OK,Participant count or _count included,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-01,Verify create auction with required fields,Auctioneer authenticated; Location exists,,"1. Send POST /api/auctions
+2. Body: {name; code; assetType; startingPrice; bidIncrement; auctionStartAt; auctionEndAt; ...}",Returns 201 Created,Auction created with status: AuctionStatus.scheduled,,,Implemented,Implemented,[SECURITY GAP] Missing RolesGuard,,
+,,TC-2.3.3-02,Verify create auction with all fields,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body with all optional fields",Returns 201 Created,All fields populated in prisma.auction,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-03,Fail create auction without name,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body missing name field",Returns 400 Bad Request,Validation error for name field,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-04,Fail create auction without startingPrice,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body missing startingPrice",Returns 400 Bad Request,Validation error for startingPrice,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-05,Fail with bid below starting price,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body: {startingPrice: -1000000}",Returns 400 Bad Request,Validation error - price must be positive,,,Implemented,Implemented,@Min(0) or @IsPositive(),,
+,,TC-2.3.3-06,Fail with auction end before start,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body with endAt < startAt",Returns 400 Bad Request,Business logic error - end must be after start,,,Implemented,Implemented,,,
+,,TC-2.3.3-07,Fail create auction with invalid assetType enum,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body: {assetType: 'invalid_type'}",Returns 400 Bad Request,Validation error for assetType enum,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-08,Verify create sets isActive to true by default,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body without isActive",Returns 201 Created,Auction created with isActive: true,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-09,Fail create auction with past auctionStartAt,Auctioneer authenticated,,"1. Send POST /api/auctions
+2. Body with auctionStartAt in past",Returns 400 Bad Request,Error indicating start date must be in future,,,Not Started,Not Implemented,,,
+,,TC-2.3.3-10,Fail duplicate check-in,Auction with same code exists,,"1. Send POST /api/auctions
+2. Body: {code: 'EXISTING_CODE'}",Returns 409 Conflict,Error indicating code already exists. @unique constraint,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.3.4-01,Verify set auto-bid max amount,Auction with status: scheduled exists,,"1. Send PUT /api/auctions/:id
+2. Body: {name: 'New Name'}",Returns 200 OK,prisma.auction.update modifies name,,,Implemented,Implemented,,,
+,,TC-2.3.4-02,Verify update auction startingPrice,Scheduled auction exists,,"1. Send PUT /api/auctions/:id
+2. Body: {startingPrice: 2000000000}",Returns 200 OK,startingPrice updated,,,Implemented,Implemented,,,
+,,TC-2.3.4-03,Concurrent status transitions,Scheduled auction exists,,"1. Send PUT /api/auctions/:id
+2. Body: {auctionStartAt: newDate; auctionEndAt: newDate}",Returns 200 OK,Dates updated in prisma.auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.3.4-04,Fail update live auction critical fields,Auction with status: live,,"1. Send PUT /api/auctions/:id
+2. Body: {startingPrice: 3000000000}",Returns 400 Bad Request,Cannot modify live auction,,,Implemented,Implemented,Business rule,,
+,,TC-2.3.4-05,Fail update completed auction,Auction with status: success or failed,,"1. Send PUT /api/auctions/:id
+2. Body: {name: 'Updated'}",Returns 400 Bad Request,Cannot modify completed auction,,,Implemented,Implemented,,,
+,,TC-2.3.4-06,Fail update non-existent auction,UUID doesn't exist,,"1. Send PUT /api/auctions/non-existent-uuid
+2. Body: {...}",Returns 404 Not Found,Auction not found error,,,Implemented,Implemented,,,
+,,TC-2.3.5-01,Verify delete scheduled auction,Scheduled auction with no bids,,1. Send DELETE /api/auctions/:id,Returns 200 OK or 204 No Content,Auction removed from prisma.auction,,,Implemented,Implemented,,,
+,,TC-2.3.5-02,Fail delete auction with bids,Auction has AuctionBid records,,1. Send DELETE /api/auctions/:id,Returns 400 Bad Request,Cannot delete auction with bids. Referential integrity,,,Implemented,Implemented,,,
+,,TC-2.3.5-03,Fail delete auction with participants,Auction has AuctionParticipant records,,1. Send DELETE /api/auctions/:id,Returns 400 Bad Request,Cannot delete auction with registered participants,,,Implemented,Implemented,,,
+,,TC-2.3.5-04,Paginate large auction list,Auction with status: live,,1. Send DELETE /api/auctions/:id,Returns 400 Bad Request,Cannot delete active auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.3.5-05,Fail delete non-existent auction,UUID doesn't exist,,1. Send DELETE /api/auctions/non-existent-uuid,Returns 404 Not Found,Auction not found error,,,Implemented,Implemented,,,
+,,TC-2.3.6-01,Verify update auction dates,Auction and related auctions exist,,"1. Send PATCH /api/auctions/:id/relations
+2. Body: {relatedIds: ['uuid1'; 'uuid2']}",Returns 200 OK,AuctionRelation records created,,,Implemented,Implemented,,,
+,,TC-2.3.6-02,Verify replace auction relations,Auction has existing relations,,"1. Send PATCH /api/auctions/:id/relations
+2. Body: {relatedIds: ['newUuid']}",Returns 200 OK,Old relations removed; new ones created,,,Implemented,Implemented,,,
+,,TC-2.3.6-03,Verify clear all relations,Auction has relations,,"1. Send PATCH /api/auctions/:id/relations
+2. Body: {relatedIds: []}",Returns 200 OK,All AuctionRelation records removed,,,Implemented,Implemented,,,
+,,TC-2.3.6-04,Fail relation with self,Auction exists,,"1. Send PATCH /api/auctions/:id/relations
+2. Body: {relatedIds: [':id']}",Returns 400 Bad Request,Cannot relate auction to itself,,,Implemented,Implemented,,,
+,,TC-2.3.6-05,Fail relation with non-existent auction,Related UUID doesn't exist,,"1. Send PATCH /api/auctions/:id/relations
+2. Body: {relatedIds: ['nonexistent']}",Returns 400 or 404,Related auction not found,,,Implemented,Implemented,,,
+,2.4 Registration to Bid,TC-2.4.1-01,Verify get current winning bid via WebSocket,Bidder authenticated; Auction exists with depositEndAt > now(),,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'uuid'}",Returns 201 Created,AuctionParticipant created with registeredAt and submittedAt,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.1-02,Verify registration with document upload,Bidder authenticated,,"1. Send POST /api/register-to-bid (multipart)
+2. auctionId + documents[] files",Returns 201 Created,Documents stored (Cloudinary) and linked to participant,,,Not Started,Not Implemented,FileFieldsInterceptor,,
+,,TC-2.4.1-03,Verify registration with media upload,Bidder authenticated,,"1. Send POST /api/register-to-bid (multipart)
+2. auctionId + media[] files",Returns 201 Created,Media files stored and linked,,,Not Started,Not Implemented,,,
+,,TC-2.4.1-04,Fail registration after deposit deadline,Auction.depositEndAt < now(),,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'expired-uuid'}",Returns 400 Bad Request,Error 'Registration period closed',,,Not Started,Not Implemented,,,
+,,TC-2.4.1-05,Duplicate finalization returns error,AuctionParticipant exists for same user+auction,,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'already-registered'}",Returns 409 Conflict,Error 'Already registered'. Unique constraint,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.1-06,Fail registration for non-existent auction,Auction UUID doesn't exist,,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'nonexistent'}",Returns 404 Not Found,Auction not found error,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.1-07,Fail registration without auth,No token,,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'uuid'}",Returns 401 Unauthorized,AuthGuard blocks,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.1-08,Fail registration with banned user,User.isBanned: true,,1. Send POST /api/register-to-bid with banned user token,Returns 403 Forbidden,Banned users cannot register,,,Not Started,Not Implemented,,,
+,,TC-2.4.1-09,Fail registration with unverified user,User.isVerified: false,,1. Send POST /api/register-to-bid with unverified user,Returns 403 Forbidden,Only verified users can register,,,Not Started,Not Implemented,,,
+,,TC-2.4.1-10,Fail registration for closed auction,Auction.isActive: false,,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'inactive-uuid'}",Returns 400 Bad Request,Cannot register for inactive auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.1-11,Verify registration with invalid auctionId format,No preconditions,,"1. Send POST /api/register-to-bid
+2. Body: {auctionId: 'not-uuid'}",Returns 400 Bad Request,Validation error from @IsUUID(),,,Not Started,Not Implemented,,,
+,,TC-2.4.1-12,Verify registration with missing auctionId,No preconditions,,"1. Send POST /api/register-to-bid
+2. Body: {}",Returns 400 Bad Request,Validation error - auctionId required,,,Not Started,Not Implemented,@IsNotEmpty(),,
+,,TC-2.4.1-13,Fail file upload exceeds 10MB limit,Bidder authenticated,,"1. Send POST /api/register-to-bid
+2. Upload 15MB file",Returns 413 Payload Too Large,File size limit enforced (10MB per file),,,Not Started,Not Implemented,FileFieldsInterceptor limits,,
+,,TC-2.4.1-14,Fail upload more than 10 documents,Bidder authenticated,,"1. Send POST /api/register-to-bid
+2. Upload 11 document files",Returns 400 Bad Request,Max 10 documents allowed,,,Not Started,Not Implemented,maxCount: 10,,
+,,TC-2.4.1-15,Verify resubmission after rejection,Previous registration rejected (rejectedAt set),,"1. Send POST /api/register-to-bid
+2. Same auctionId",Returns 201 Created,New registration allowed after rejection,,,Not Started,Not Implemented,,,
+,,TC-2.4.1-16,Verify reapply after withdrawal,Previous registration withdrawn (withdrawnAt set),,"1. Send POST /api/register-to-bid
+2. Same auctionId",Returns 201 Created,Reapplication allowed after withdrawal,,,Implemented,Implemented,,,
+,,TC-2.4.2-01,Verify bidder registers for auction,AuctionParticipant exists; auctionStartAt > now(); checkedInAt null,,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'uuid'; withdrawalReason: 'Changed mind'}",Returns 200 OK,withdrawnAt set; withdrawalReason stored,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.2-02,Verify withdraw without reason (optional),AuctionParticipant exists,,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'uuid'}",Returns 200 OK,withdrawnAt set; withdrawalReason null,,,Not Started,Not Implemented,@IsOptional(),,
+,,TC-2.4.2-03,Fail withdraw after check-in,checkedInAt is set,,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,Cannot withdraw after check-in,,,Not Started,Not Implemented,,,
+,,TC-2.4.2-04,Fail withdraw during live auction,auctionStartAt < now(),,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'live-uuid'}",Returns 403 Forbidden,Cannot withdraw during live auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.2-05,Fail withdraw already withdrawn,withdrawnAt already set,,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'withdrawn-uuid'}",Returns 409 Conflict,Already withdrawn,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.2-06,Fail withdraw non-existent registration,No AuctionParticipant for user+auction,,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'uuid'}",Returns 404 Not Found,Registration not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.2-07,Verify withdraw reason max length 500,AuctionParticipant exists,,"1. Send POST /api/register-to-bid/withdraw
+2. Body: {auctionId: 'uuid'; withdrawalReason: 501 chars}",Returns 400 Bad Request,Validation error from @MaxLength(500),,,Implemented,Implemented,,,
+,,TC-2.4.3-01,Verify check-in within valid window,confirmedAt set; time within check-in window,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 200 OK,checkedInAt set to now(),,,Implemented,Implemented,,,
+,,TC-2.4.3-02,Fail check-in before window opens,Time before auctionStartAt - validCheckInBeforeStartMinutes,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,Check-in window not yet open,,,Not Started,Not Implemented,,,
+,,TC-2.4.3-03,Fail check-in after window closes,Time after auctionStartAt + validCheckInAfterStartMinutes,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,Check-in window closed,,,Not Started,Not Implemented,,,
+,,TC-2.4.3-04,Fail check-in for non-confirmed participant,confirmedAt is null,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,Registration not confirmed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.3-05,Duplicate check-in returns conflict,checkedInAt already set,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 409 Conflict,Already checked in,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.3-06,Fail check-in for withdrawn registration,withdrawnAt is set,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,Cannot check-in withdrawn registration,,,Not Started,Not Implemented,,,
+,,TC-2.4.3-07,Fail check-in for rejected registration,rejectedAt is set,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,Cannot check-in rejected registration,,,Not Started,Not Implemented,,,
+,,TC-2.4.3-08,Fail check-in for non-registered user,No AuctionParticipant,,"1. Send POST /api/register-to-bid/check-in
+2. Body: {auctionId: 'uuid'}",Returns 404 Not Found,Registration not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.4-01,Verify submit deposit after document verification,documentsVerifiedAt set,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {registrationId; auctionId; amount: 50000000}",Returns 200 OK,Stripe session created; Payment record in prisma.payment,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.4-02,Fail submit deposit without document verification,documentsVerifiedAt null,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {...}",Returns 400 Bad Request,Documents not verified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.4-03,Fail submit deposit with wrong amount,Amount doesn't match auction.depositAmountRequired,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {amount: 1000}",Returns 400 Bad Request,Incorrect deposit amount,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.4-04,Fail submit deposit for already paid,depositPaidAt already set,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {...}",Returns 409 Conflict,Deposit already paid,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.4-05,Fail submit deposit with negative amount,No preconditions,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {amount: -50000000}",Returns 400 Bad Request,Validation error - amount must be positive,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsPositive(),,
+,,TC-2.4.4-06,Fail submit deposit with zero amount,No preconditions,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {amount: 0}",Returns 400 Bad Request,Validation error - amount must be positive,,,Not Started,Not Implemented,,,
+,,TC-2.4.4-07,Fail submit deposit with non-numeric amount,No preconditions,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {amount: 'fifty million'}",Returns 400 Bad Request,Validation error - amount must be number,,,Not Started,Not Implemented,@IsNumber(),,
+,,TC-2.4.4-08,Fail submit deposit with mismatched auctionId,registrationId for different auction,,"1. Send POST /api/register-to-bid/submit-deposit
+2. Body: {registrationId: 'a'; auctionId: 'b'}",Returns 400 Bad Request,Registration doesn't match auction,,,Not Started,Not Implemented,,,
+,,TC-2.4.5-01,Verify deposit payment verification,Stripe session completed,,"1. Send POST /api/register-to-bid/verify-deposit-payment
+2. Body: {sessionId; registrationId}",Returns 200 OK,depositPaidAt and depositAmount set in prisma.auctionParticipant,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.5-02,Fail verify incomplete payment,Stripe session not completed,,"1. Send POST /api/register-to-bid/verify-deposit-payment
+2. Body: {...}",Returns 400 Bad Request,Payment not completed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.5-03,Fail verify with invalid sessionId,Session doesn't exist,,"1. Send POST /api/register-to-bid/verify-deposit-payment
+2. Body: {sessionId: 'invalid'}",Returns 404 Not Found,Session not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.5-04,Fail verify with mismatched registrationId,sessionId for different registration,,"1. Send POST /api/register-to-bid/verify-deposit-payment
+2. Body: {...}",Returns 400 Bad Request,Session doesn't match registration,,,Implemented,Implemented,,,
+,,TC-2.4.6-01,Verify bidder views own registrations,User has AuctionParticipant records,,1. Send GET /api/register-to-bid/users/:userId/registrations,Returns 200 OK,List of own registrations,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.6-02,Fail view other users registrations as bidder,Bidder tries to access otherUserId,,1. Send GET /api/register-to-bid/users/:otherUserId/registrations,Returns 403 Forbidden,'You can only view your own registrations',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.6-03,Verify Admin can view any users registrations,Admin authenticated,,1. Send GET /api/register-to-bid/users/:anyUserId/registrations,Returns 200 OK,Admin bypass access control,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Role check in controller,,
+,,TC-2.4.6-04,Verify Auctioneer can view any user's registrations,Auctioneer authenticated,,1. Send GET /api/register-to-bid/users/:anyUserId/registrations,Returns 200 OK,Auctioneer bypass access control,,,Not Started,Not Implemented,,,
+,,TC-2.4.6-05,Verify empty list for user with no registrations,User exists but no AuctionParticipant,,1. Send GET /api/register-to-bid/users/:userId/registrations,Returns 200 OK with empty array,Empty array returned; no error,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.7-01,Verify get registration for specific auction,AuctionParticipant exists for user+auction,,1. Send GET /api/register-to-bid/auctions/:auctionId/registration,Returns 200 OK with registration details,Single AuctionParticipantResponseDto,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.7-02,Return 404 for non-registered auction,No AuctionParticipant for user+auction,,1. Send GET /api/register-to-bid/auctions/:auctionId/registration,Returns 404 Not Found,Registration not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.7-03,Fail bid without authentication,No token,,1. Send GET /api/register-to-bid/auctions/:auctionId/registration,Returns 401 Unauthorized,Auth required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.8-01,Verify Admin lists all registrations,Admin authenticated; Multiple registrations exist,,1. Send GET /api/register-to-bid/admin/registrations?page=1&limit=10,Returns 200 OK,PaginatedRegistrationsResponseDto,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.8-02,Verify registration creates pending status,Admin authenticated,,1. Send GET /api/register-to-bid/admin/registrations?status=confirmed,Returns 200 OK,Only confirmed registrations,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,ListRegistrationsQueryDto,,
+,,TC-2.4.8-03,Verify list registrations filtered by auctionId,Admin authenticated,,1. Send GET /api/register-to-bid/admin/registrations?auctionId=uuid,Returns 200 OK,Only registrations for specified auction,,,Not Started,Not Implemented,,,
+,,TC-2.4.8-04,Fail Bidder accessing admin registrations,Bidder authenticated,,1. Send GET /api/register-to-bid/admin/registrations,Returns 403 Forbidden,RolesGuard blocks,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.8-05,Verify Auctioneer can list registrations,Auctioneer authenticated,,1. Send GET /api/register-to-bid/admin/registrations,Returns 200 OK,Auctioneer has access,,,Implemented,Implemented,@Roles includes AUCTIONEER,,
+,,TC-2.4.9-01,Verify Admin approves registration,Admin authenticated; AuctionParticipant pending,,"1. Send POST /api/register-to-bid/admin/approve
+2. Body: {registrationId: 'uuid'}",Returns 200 OK,confirmedAt set in prisma.auctionParticipant,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.9-02,Fail approve already approved,confirmedAt already set,,"1. Send POST /api/register-to-bid/admin/approve
+2. Body: {...}",Returns 409 Conflict,Already approved,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.9-03,Fail approve withdrawn registration,withdrawnAt is set,,"1. Send POST /api/register-to-bid/admin/approve
+2. Body: {...}",Returns 400 Bad Request,Cannot approve withdrawn registration,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.9-04,Fail duplicate registration,rejectedAt is set,,"1. Send POST /api/register-to-bid/admin/approve
+2. Body: {...}",Returns 400 Bad Request,Cannot approve rejected registration,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.9-05,Fail approve non-existent registration,UUID doesn't exist,,"1. Send POST /api/register-to-bid/admin/approve
+2. Body: {registrationId: 'nonexistent'}",Returns 404 Not Found,Registration not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.10-01,Verify Admin user gets admin role in response,Admin authenticated; AuctionParticipant pending,,"1. Send POST /api/register-to-bid/admin/reject
+2. Body: {registrationId; rejectionReason: 'Invalid documents'}",Returns 200 OK,rejectedAt and rejectedReason set,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.10-02,Verify reject without reason (optional),Admin authenticated,,"1. Send POST /api/register-to-bid/admin/reject
+2. Body: {registrationId: 'uuid'}",Returns 200 OK,rejectedAt set; rejectionReason null,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsOptional(),,
+,,TC-2.4.10-03,Fail reject already confirmed registration,confirmedAt is set,,"1. Send POST /api/register-to-bid/admin/reject
+2. Body: {...}",Returns 409 Conflict,Cannot reject confirmed registration,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.10-04,Fail reject non-existent registration,UUID doesn't exist,,"1. Send POST /api/register-to-bid/admin/reject
+2. Body: {...}",Returns 404 Not Found,Registration not found,,,Not Started,Not Implemented,,,
+,,TC-2.4.11-01,Verify Admin verifies documents,Admin authenticated; documents submitted,,"1. Send POST /api/register-to-bid/admin/verify-documents
+2. Body: {registrationId: 'uuid'}",Returns 200 OK,documentsVerifiedAt and documentsVerifiedBy set,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.11-02,Fail verify documents without submission,documents is null/empty,,"1. Send POST /api/register-to-bid/admin/verify-documents
+2. Body: {...}",Returns 400 Bad Request,No documents to verify,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.11-03,Fail verify already verified,documentsVerifiedAt already set,,"1. Send POST /api/register-to-bid/admin/verify-documents
+2. Body: {...}",Returns 409 Conflict,Documents already verified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.12-01,Verify Admin rejects documents with reason,Admin authenticated; documents submitted,,"1. Send POST /api/register-to-bid/admin/reject-documents
+2. Body: {registrationId; reason: 'Unclear'}",Returns 200 OK,documentsRejectedAt and documentsRejectedReason set,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.12-02,Fail reject documents without reason,Admin authenticated,,"1. Send POST /api/register-to-bid/admin/reject-documents
+2. Body: {registrationId: 'uuid'}",Returns 400 Bad Request,reason is @IsNotEmpty(),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.12-03,Fail reject documents that don't exist,documents is null,,"1. Send POST /api/register-to-bid/admin/reject-documents
+2. Body: {...}",Returns 400 Bad Request,No documents to reject,,,Not Started,Not Implemented,,,
+,,TC-2.4.13-01,Verify Admin final approval,documentsVerifiedAt and depositPaidAt set,,"1. Send POST /api/register-to-bid/admin/final-approval
+2. Body: {registrationId: 'uuid'}",Returns 200 OK,confirmedAt and confirmedBy set,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.13-02,Fail final approval without deposit payment,documentsVerifiedAt null,,"1. Send POST /api/register-to-bid/admin/final-approval
+2. Body: {...}",Returns 400 Bad Request,Documents not verified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.13-03,Prevent double deposit payment,depositPaidAt null,,"1. Send POST /api/register-to-bid/admin/final-approval
+2. Body: {...}",Returns 400 Bad Request,Deposit not paid,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.13-04,Fail final approval already confirmed,confirmedAt already set,,"1. Send POST /api/register-to-bid/admin/final-approval
+2. Body: {...}",Returns 409 Conflict,Already confirmed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.14-01,Verify eligible bidder requests refund after withdrawal,User has withdrawnAt before saleEndAt; depositPaidAt set,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId; reason: 'Changed mind'}",Returns 200 OK,refundStatus: 'pending'; refundRequestedAt set,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,RefundService.requestRefund [High Priority Test],,
+,,TC-2.4.14-02,Fail request refund for disqualified participant,isDisqualified: true,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 400 Bad Request,Error: Not eligible for refund - disqualified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Deposit forfeited [High Priority Test],,
+,,TC-2.4.14-03,Fail request refund for auction winner,User has AuctionBid with isWinningBid: true,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 400 Bad Request,Winner must complete purchase - deposit applied to winning amount,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.14-04,Fail request refund after withdrawal deadline,withdrawnAt > auction.saleEndAt,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 400 Bad Request,Withdrew after deadline - deposit forfeited,,,Not Started,Not Implemented,,,
+,,TC-2.4.14-05,Fail request refund without deposit paid,depositPaidAt: null,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 400 Bad Request,Not eligible - no deposit paid,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.14-06,Fail request refund already requested,refundStatus: 'pending',,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 409 Conflict,Refund already requested,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.14-07,Fail request refund already processed,refundStatus: 'processed',,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 409 Conflict,Refund already processed,,,Not Started,Not Implemented,,,
+,,TC-2.4.14-08,Fail request refund for check-in failure,confirmedAt set; checkedInAt null; auctionEndAt passed,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId}",Returns 400 Bad Request,Check-in failure - deposit forfeited,,,Not Started,Not Implemented,,,
+,,TC-2.4.14-09,Fail request refund without authentication,No token,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {...}",Returns 401 Unauthorized,Auth required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.14-10,Fail request refund for non-existent registration,No AuctionParticipant,,"1. Send POST /api/register-to-bid/request-refund
+2. Body: {auctionId: 'uuid'}",Returns 404 Not Found,Registration not found,,,Not Started,Not Implemented,,,
+,,TC-2.4.15-01,Verify Admin lists refund requests with pagination,Admin authenticated; Multiple refund requests,,1. Send GET /api/register-to-bid/admin/refunds?page=1&limit=10,Returns 200 OK,Paginated RefundDetailDto list,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,RefundController [High Priority Test],,
+,,TC-2.4.15-02,Verify filter by status,Admin authenticated,,1. Send GET /api/register-to-bid/admin/refunds?status=pending,Returns 200 OK,Only pending refunds,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.15-03,Verify filter by auctionId,Admin authenticated,,1. Send GET /api/register-to-bid/admin/refunds?auctionId=uuid,Returns 200 OK,Only refunds for specified auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.15-04,Verify Admin gets refund detail,Admin authenticated; Refund exists,,1. Send GET /api/register-to-bid/admin/refunds/:participantId,Returns 200 OK,RefundDetailDto with eligibility info,,,Not Started,Not Implemented,,,
+,,TC-2.4.15-05,Verify Admin approves pending refund,Admin authenticated; refundStatus: 'pending',,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'approve'}",Returns 200 OK,refundStatus: 'approved',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,User notified via email [High Priority Test],,
+,,TC-2.4.15-06,Fail approve non-pending refund,refundStatus: 'approved',,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'approve'}",Returns 400 Bad Request,Can only approve pending refund requests,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.15-07,Verify Admin rejects pending refund with reason,Admin authenticated; refundStatus: 'pending',,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'reject'; reason: 'Violated terms'}",Returns 200 OK,refundStatus: 'rejected',,,Not Started,Not Implemented,User notified,,
+,,TC-2.4.15-08,Fail reject refund without reason,Admin authenticated,,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'reject'}",Returns 400 Bad Request,Reason is required for rejection,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.15-09,Verify Admin processes approved refund,Admin authenticated; refundStatus: 'approved',,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'process'}",Returns 200 OK,refundStatus: 'processed'; refundProcessedAt set,,,Not Started,Not Implemented,PaymentProcessingService.refundDeposit,,
+,,TC-2.4.15-10,Fail process non-approved refund,refundStatus: 'pending',,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'process'}",Returns 400 Bad Request,Can only process approved refunds,,,Not Started,Not Implemented,,,
+,,TC-2.4.15-11,Fail process refund for disqualified participant,isDisqualified: true; refundStatus: 'approved',,"1. Send PATCH /register-to-bid/admin/refunds/:participantId
+2. Body: {action: 'process'}",Returns 403 Forbidden,Cannot process refund for disqualified participant,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.15-12,Verify Admin batch processes refunds for auction,Admin authenticated; Auction ended,,1. Send POST /api/register-to-bid/admin/refunds/batch/:auctionId,Returns 200 OK,{processed: N; skipped: M; failed: F},,,Not Started,Not Implemented,Winners and disqualified skipped,,
+,,TC-2.4.15-13,Verify batch skips winners and disqualified,Admin authenticated; Mixed participants,,1. Send POST /api/register-to-bid/admin/refunds/batch/:auctionId,Returns 200 OK,Winners and isDisqualified: true in skipped count,,,Not Started,Not Implemented,,,
+,,TC-2.4.15-14,Fail Bidder accessing admin refunds,Bidder authenticated,,1. Send GET /api/register-to-bid/admin/refunds,Returns 403 Forbidden,RolesGuard blocks,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,,TC-2.4.15-15,Banned user can still access public endpoints,Auctioneer authenticated,,1. Send GET /api/register-to-bid/admin/refunds,Returns 200 OK,Auctioneer has access,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.4.15-16,Verify disqualify participant sets forfeited status,Admin authenticated,,1. Call disqualifyParticipant(id; 'PAYMENT_DEFAULT'; adminId),Participant updated,isDisqualified: true; refundStatus: 'forfeited',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,RefundService.disqualifyParticipant [High Priority Test],,
+,,TC-2.4.15-17,Fail disqualify already disqualified,isDisqualified: true,,1. Call disqualifyParticipant(id; 'FALSE_INFORMATION'; adminId),Throws ConflictException,Participant already disqualified,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[High Priority Test],,
+,2.5 Bidding System,TC-2.5.1-01,Verify sort by startingPrice,Auction live; AuctionParticipant checkedInAt set; startingPrice: 1000000000,,"1. Send POST /api/manual-bid
+2. Body: {auctionId; amount: 1000000000}",Returns 201 Created,AuctionBid created with bidType: BidType.manual; isWinningBid: true,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-02,Verify bid at minimum increment,Existing winning bid: 1000000000; bidIncrement: 50000000,,"1. Send POST /api/manual-bid
+2. Body: {auctionId; amount: 1050000000}",Returns 201 Created,New winning bid; previous bid isWinningBid: false,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-03,Verify bid higher than minimum increment,Existing winning bid: 1000000000; bidIncrement: 50000000,,"1. Send POST /api/manual-bid
+2. Body: {auctionId; amount: 1200000000}",Returns 201 Created,Bid at 200M above current accepted,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-04,Fail with insufficient increment,Current bid: 1000000000; bidIncrement: 50000000,,"1. Send POST /api/manual-bid
+2. Body: {auctionId; amount: 1010000000}",Returns 400 Bad Request,Error: bid must be at least currentBid + bidIncrement,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-05,Fail bid exactly 1 VND below required,Current: 1000000000; increment: 50000000,,"1. Send POST /api/manual-bid
+2. Body: {amount: 1049999999}",Returns 400 Bad Request,Boundary test - exactly 1 VND short,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-06,Fail with bid below current highest,No bids; startingPrice: 1000000000,,"1. Send POST /api/manual-bid
+2. Body: {amount: 500000000}",Returns 400 Bad Request,Bid must be >= startingPrice,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-07,Fail auto-bid without check-in,checkedInAt null,,"1. Send POST /api/manual-bid
+2. Body: {auctionId; amount: 1000000000}",Returns 403 Forbidden,User not checked in,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-08,Fail bid on scheduled auction,Auction status: scheduled (not live),,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 400 Bad Request,Auction not live,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-09,Fail bid on completed auction,Auction status: success,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 400 Bad Request,Auction already ended,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-10,Fail bid on cancelled auction,Auction status: cancelled,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 400 Bad Request,Auction cancelled,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-11,Fail auto-bid on closed auction,Auction status: failed,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 400 Bad Request,Auction failed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-12,Bid after auction ends,now() > auctionEndAt,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 400 Bad Request,Auction time expired,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-13,Fail bid before auctionStartAt,now() < auctionStartAt,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 400 Bad Request,Auction not started,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-14,Fail denial without authentication,No token,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 401 Unauthorized,Auth required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-15,Bid transaction atomicity,Admin authenticated,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 403 Forbidden,@Roles(UserRole.BIDDER) only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-16,Fail bid with non-existent auctionId,UUID doesn't exist,,"1. Send POST /api/manual-bid
+2. Body: {auctionId: 'nonexistent'}",Returns 404 Not Found,Auction not found,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-17,Fail with invalid token format,Invalid UUID,,"1. Send POST /api/manual-bid
+2. Body: {auctionId: 'not-uuid'}",Returns 400 Bad Request,Validation error from @IsUUID(),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-18,Fail deny with missing reason,No amount field,,"1. Send POST /api/manual-bid
+2. Body: {auctionId: 'uuid'}",Returns 400 Bad Request,amount required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-19,Fail with negative amount,No preconditions,,"1. Send POST /api/manual-bid
+2. Body: {amount: -1000000}",Returns 400 Bad Request,@Min(0.01) validation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-20,Fail with zero amount,No preconditions,,"1. Send POST /api/manual-bid
+2. Body: {amount: 0}",Returns 400 Bad Request,@Min(0.01) validation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-21,Fail bid with non-numeric amount,No preconditions,,"1. Send POST /api/manual-bid
+2. Body: {amount: 'one million'}",Returns 400 Bad Request,@IsNumber() validation,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-22,Verify bid with decimal amount allowed,Live auction with bids,,"1. Send POST /api/manual-bid
+2. Body: {amount: 1050000000.50}",Returns 201 Created,maxDecimalPlaces: 2 in DTO,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-23,Fail bid with more than 2 decimal places,No preconditions,,"1. Send POST /api/manual-bid
+2. Body: {amount: 1050000000.123}",Returns 400 Bad Request,@IsNumber({maxDecimalPlaces: 2}),,,Not Started,Not Implemented,,,
+,,TC-2.5.1-24,Verify bid by same user outbidding self,User's previous bid is winning,,"1. Send POST /api/manual-bid
+2. Body: {amount: currentBid + increment}",Returns 201 Created,User can outbid themselves,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-25,Banned user cannot register for auction,No AuctionParticipant for user,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 403 Forbidden,User not registered for this auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-26,Fail bid from withdrawn participant,AuctionParticipant.withdrawnAt set,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 403 Forbidden,Registration withdrawn,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-27,Fail bid from non-checked-in participant,AuctionParticipant.rejectedAt set,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 403 Forbidden,Registration rejected,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-28,Fail bid from banned user,User.isBanned: true,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 403 Forbidden,User is banned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.1-29,Verify bid records bidAt timestamp,Live auction,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 201 Created,AuctionBid.bidAt set to server time,,,Not Started,Not Implemented,,,
+,,TC-2.5.1-30,Verify confirmed participant checks in,Live auction with valid participant,,"1. Send POST /api/manual-bid
+2. Body: {...}",Returns 201 Created,AuctionBid.participantId links to AuctionParticipant,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.2-01,Verify Auctioneer denies bid,Auctioneer authenticated; AuctionBid exists,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId; reason: 'Suspicious activity'}",Returns 200 OK,isDenied: true; denialReason; deniedBy; deniedAt set,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.2-02,Verify Admin denies bid with reason,Admin authenticated,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId; reason: 'Fraud detected'}",Returns 200 OK,Bid denied by admin,Expected: false | Received: true,Fail,Implemented,Implemented,,,
+,,TC-2.5.2-03,Verify Super Admin demotes Admin to Bidder,Super Admin authenticated,,"1. Send POST /api/manual-bid/deny
+2. Body: {...}",Returns 200 OK,Bid denied by super admin,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.2-04,Verify deny without reason (optional),Auctioneer authenticated,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId: 'uuid'}",Returns 200 OK,denialReason null; bid still marked denied,,,Not Started,Not Implemented,@IsOptional(),,
+,,TC-2.5.2-05,Fail Bidder attempting to deny bid,Bidder authenticated,,"1. Send POST /api/manual-bid/deny
+2. Body: {...}",Returns 403 Forbidden,Bidders cannot deny bids,,,Not Started,Not Implemented,,,
+,,TC-2.5.2-06,Fail deny non-existent bid,bidId doesn't exist,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId: 'nonexistent'}",Returns 404 Not Found,Bid not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.2-07,Fail deny already denied bid,isDenied: true,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId: 'already-denied'}",Returns 409 Conflict,Bid already denied,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.2-08,Verify deny winning bid promotes next bid,Denied bid was winning,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId: 'winning-bid'}",Returns 200 OK,Next highest valid bid becomes isWinningBid: true,Expected: true | Received: false,Fail,Implemented,Implemented,Business logic,,
+,,TC-2.5.2-09,Fail deny with invalid bidId format,Invalid UUID,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId: 'not-uuid'}",Returns 400 Bad Request,Validation error @IsUUID(),,,Not Started,Not Implemented,,,
+,,TC-2.5.2-10,Verify deny reason max length 255,Auctioneer authenticated,,"1. Send POST /api/manual-bid/deny
+2. Body: {bidId; reason: 256 chars}",Returns 400 Bad Request,@MaxLength(255) validation,,,Implemented,Implemented,,,
+,,TC-2.5.3-01,Verify WebSocket connection to bidding namespace,User connects to WebSocket,,1. Emit 'joinAuction' via WebSocket event with {auctionId: 'uuid'},Receives 'joined' event,User added to Socket.IO room,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,BiddingGateway,,
+,,TC-2.5.3-02,Verify auction state received on join,Auction exists with bids,,1. Join auction room,Receives 'auctionState' event,currentBid; winningBidder; participantCount; timeRemaining,,,Not Started,Not Implemented,,,
+,,TC-2.5.3-03,Fail join non-existent auction room,Auction doesn't exist,,1. Emit 'joinAuction' via WebSocket with invalid auctionId,Receives error or no state data,Handle gracefully,,,Not Started,Not Implemented,,,
+,,TC-2.5.3-04,Verify leave auction works correctly,User in auction room,,1. Emit 'leaveAuction' event,User removed from room,No more events received for this auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.4-01,Verify real-time bid notification,User in auction room,,"1. Another user places bid
+2. Listen for 'newBid' event",Receives 'newBid' event,emitNewBid broadcasts to room,,,Implemented,Implemented,,,
+,,TC-2.5.4-02,Verify bid denied notification,User in room; bid denied,,1. Listen for 'bidDenied' event,Receives 'bidDenied' event,emitBidDenied broadcasts,,,Not Started,Not Implemented,,,
+,,TC-2.5.4-03,Verify auction update notification,Status changes,,1. Listen for 'auctionUpdate' event,Receives status update,emitAuctionUpdate broadcasts,,,Not Started,Not Implemented,,,
+,,TC-2.5.5-01,Verify time update events are received,User in live auction room,,1. Listen for 'timeUpdate' event,Receives periodic updates,Every ~1 second during live auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.5.5-02,Verify time stops when auction ends,Auction ends,,1. Listen for 'timeUpdate',Stops receiving time updates,Timer cleared when auction completes,,,Not Started,Not Implemented,,,
+,,TC-2.5.6-01,Verify multiple users in same room,3 users join same auction,,1. All 3 Emit 'joinAuction' via WebSocket,All receive state updates,Room can hold multiple connections,,,Not Started,Not Implemented,,,
+,,TC-2.5.6-02,Verify user only receives events for joined rooms,User in room A only,,1. User B places bid in room B,User in A receives nothing,Room isolation works correctly,,,Not Started,Not Implemented,,,
+,2.6 Auction Finalization,TC-2.6.1-01,Verify Admin creates auction,Auction ended with bids,,1. Send GET /api/auction-finalization/evaluate/:auctionId,Returns 200 OK,currentStatus; recommendedStatus: success; hasWinner: true,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.1-02,Verify evaluation includes winner data,Auction ended; no AuctionBid,,1. Send GET /api/auction-finalization/evaluate/:auctionId,Returns 200 OK,hasWinner: false; recommendedStatus: failed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.1-03,Verify finalization without bids marks as failed,All bids isDenied: true,,1. Send GET /api/auction-finalization/evaluate/:auctionId,Returns 200 OK,hasWinner: false (no valid winner),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.1-04,Fail Bidder accessing evaluation,Bidder authenticated,,1. Send GET /api/auction-finalization/evaluate/:auctionId,Returns 403 Forbidden,Admin/Auctioneer only,,,Not Started,Not Implemented,,,
+,,TC-2.6.1-05,Verify Auctioneer can evaluate,Auctioneer authenticated,,1. Send GET /api/auction-finalization/evaluate/:auctionId,Returns 200 OK,Auctioneer has access,,,Not Started,Not Implemented,,,
+,,TC-2.6.1-06,Fail evaluate non-existent auction,UUID doesn't exist,,1. Send GET /api/auction-finalization/evaluate/:nonexistent,Returns 404 Not Found,Auction not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.1-07,Verify evaluate live auction returns current state,Auction status: live,,1. Send GET /api/auction-finalization/evaluate/:auctionId,Returns 200 OK,Shows current state during live auction,,,Implemented,Implemented,,,
+,,TC-2.6.2-01,Verify Admin finalizes auction with bids,Admin authenticated; Auction ended with winner,,"1. Send POST /api/auction-finalization/finalize
+2. Authorization: Bearer <admin_token>
+3. Body: {auctionId: 'uuid-of-auction'}",Returns 200 OK,status: success; Contract created,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.2-02,Verify finalization creates audit log,Finalization with winner,,1. Send POST /api/auction-finalization/finalize,Returns contract in response,Contract: buyerUserId; sellerUserId; price; status: draft,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.2-03,Verify finalize with no winner fails auction,No valid bids,,"1. Send POST /api/auction-finalization/finalize
+2. Body: {auctionId}",Returns 200 OK,status: failed; no Contract created,,,Implemented,Implemented,[Implemented with different TC ID],,
+,,TC-2.6.2-04,Verify finalize with specified winningBidId,Admin provides winningBidId override,,"1. Send POST /api/auction-finalization/finalize
+2. Body: {auctionId; winningBidId: 'specific-bid'}",Returns 201 Created,Specified bid becomes winner,,,Not Started,Not Implemented,Optional override,,
+,,TC-2.6.2-05,Verify finalize with notes,Admin includes notes,,"1. Send POST /api/auction-finalization/finalize
+2. Body: {auctionId; notes: 'Special instructions'}",Returns 201 Created,Notes stored in audit log,,,Not Started,Not Implemented,,,
+,,TC-2.6.2-06,Verify skipAutoEvaluation option,Admin skips auto,,"1. Send POST /api/auction-finalization/finalize
+2. Body: {auctionId; skipAutoEvaluation: true; winningBidId: 'x'}",Returns 201 Created,Manual override without evaluation,,,Not Started,Not Implemented,,,
+,,TC-2.6.2-07,Fail finalize already finalized,Auction status: success,,1. Send POST /api/auction-finalization/finalize,Returns 400 Bad Request,Already finalized,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.2-08,Fail finalize live auction,Auction status: cancelled,,1. Send POST /api/auction-finalization/finalize,Returns 400 Bad Request,Cannot finalize cancelled auction,"Error: expected 400 ""Bad Request"", got 200 ""OK"" |     at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.6-auction-finalization\2.6.2-finalize.spec.ts:230:10) | ----",Fail,Implemented,Implemented,,,
+,,TC-2.6.2-09,Fail Bidder evaluates auction,Bidder authenticated,,1. Send POST /api/auction-finalization/finalize,Returns 403 Forbidden,Bidders cannot finalize,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.2-10,Verify creates audit log on finalize,Finalization succeeds,,1. Send POST /api/auction-finalization/finalize,Returns 201 Created,AuctionAuditLog record created,,,Implemented,Implemented,,,
+,,TC-2.6.3-01,Verify Admin overrides status to cancelled,Admin authenticated,,"1. Send POST /api/auction-finalization/override
+2. Body: {auctionId; newStatus: 'cancelled'; reason: 'Fraud'}",Returns 200 OK,status: cancelled; AuditLog with OVERRIDE action,,,Implemented,Implemented,,,
+,,TC-2.6.3-02,Verify override to failed,Admin authenticated,,"1. Send POST /api/auction-finalization/override
+2. Body: {newStatus: 'failed'; reason: 'No valid bids'}",Returns 200 OK,status updated to failed,,,Not Started,Not Implemented,,,
+,,TC-2.6.3-03,Fail Auctioneer override,Auctioneer authenticated,,1. Send POST /api/auction-finalization/override,Returns 403 Forbidden,Admin/Super Admin only for override,,,Not Started,Not Implemented,,,
+,,TC-2.6.3-04,Fail override without reason,Admin authenticated,,"1. Send POST /api/auction-finalization/override
+2. Body: {auctionId; newStatus: 'cancelled'}",Returns 400 Bad Request,reason is required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.3-05,Fail override with invalid status enum,Admin authenticated,,"1. Send POST /api/auction-finalization/override
+2. Body: {newStatus: 'invalid'}",Returns 400 Bad Request,@IsEnum(AuctionStatus),,,Not Started,Not Implemented,,,
+,,TC-2.6.3-06,Verify override creates audit log,Override succeeds,,1. Check prisma.auctionAuditLog after override,Audit log created,action: AuditAction.OVERRIDE,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.4-01,Verify get auction results,Auction finalized,,1. Send GET /api/auction-finalization/results/:auctionId,Returns 200 OK,auction; winner; allBids; userBids; contract included,,,Not Started,Not Implemented,,,
+,,TC-2.6.4-02,Verify audit log includes action details,Winner exists,,1. Send GET /api/auction-finalization/results/:auctionId,Returns 200 OK,winner object with userId; fullName; winningAmount,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.4-03,Verify results show user's own bids,Requesting user placed bids,,1. Send GET /api/auction-finalization/results/:auctionId,Returns 200 OK,userBids filtered for current user,,,Not Started,Not Implemented,,,
+,,TC-2.6.4-04,Fail get results for live auction,UUID doesn't exist,,1. Send GET /api/auction-finalization/results/:nonexistent,Returns 404 Not Found,Auction not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.4-05,Winner can view their result,Auction completed with winner,,1. Winner sends GET /auction-finalization/results/:id,Returns 200 OK or 403,Winner can access their own winning result,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.5-01,Verify Admin views audit logs,Admin authenticated; Logs exist,,1. Send GET /api/auction-finalization/audit-logs/:auctionId,Returns 200 OK,List of AuctionAuditLog sorted by createdAt,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.5-02,Fail Bidder views audit logs,Bidder authenticated,,1. Send GET /api/auction-finalization/audit-logs/:auctionId,Returns 403 Forbidden,Admin/Auctioneer only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.6.5-03,Verify empty logs for new auction,No audit logs yet,,1. Send GET /api/auction-finalization/audit-logs/:auctionId,Returns 200 OK with empty array,Empty array; not error,,,Not Started,Not Implemented,,,
+,,TC-2.6.6-01,Verify get winner payment requirements,Winner exists; Auction finalized,,1. Send GET /api/auction-finalization/winner-payment-requirements/:auctionId,Returns 200 OK,amountDue; deadline; depositPaid,,,Not Started,Not Implemented,,,
+,,TC-2.6.6-02,Fail get requirements for non-winner,Non-winner requesting,,1. Send GET /api/auction-finalization/winner-payment-requirements/:auctionId,Returns 403 Forbidden,Only winner can view their requirements,,,Not Started,Not Implemented,May need verification,,
+,,TC-2.6.7-01,Verify initiate winner payment,Winner authenticated,,"1. Send POST /api/auction-finalization/submit-winner-payment
+2. Body: {auctionId}",Returns 200 OK,Stripe session created; Payment record,,,Not Started,Not Implemented,,,
+,,TC-2.6.7-02,Fail non-winner initiating payment,Non-winner authenticated,,1. Send POST /api/auction-finalization/submit-winner-payment,Returns 403 Forbidden,Only winner can pay,,,Not Started,Not Implemented,,,
+,,TC-2.6.7-03,Fail payment for non-finalized auction,Auction not yet finalized,,1. Send POST /api/auction-finalization/submit-winner-payment,Returns 400 Bad Request,Auction not finalized,,,Not Started,Not Implemented,,,
+,,TC-2.6.7-04,Fail payment already made,Winner already paid,,1. Send POST /api/auction-finalization/submit-winner-payment,Returns 409 Conflict,Payment already completed,,,Not Started,Not Implemented,,,
+,,TC-2.6.8-01,Verify winner payment verification,Stripe session completed,,"1. Send POST /api/auction-finalization/verify-winner-payment
+2. Body: {sessionId; auctionId}",Returns 200 OK,Payment confirmed; Contract status may update,,,Not Started,Not Implemented,,,
+,,TC-2.6.8-02,Fail verify incomplete payment,Stripe session pending,,1. Send POST /api/auction-finalization/verify-winner-payment,Returns 400 Bad Request,Payment not completed,,,Not Started,Not Implemented,,,
+,,TC-2.6.8-03,Fail verify with invalid sessionId,Session doesn't exist,,1. Send POST /api/auction-finalization/verify-winner-payment,Returns 404 Not Found,Session not found,,,Not Started,Not Implemented,,,
+,2.7 Payment,TC-2.7.1-01,Verify create payment for deposit type,User authenticated; Auction and participant exist,,"1. Send POST /api/payments
+2. Body: {auctionId; registrationId; paymentType: 'deposit'; amount: 50000000; paymentMethod: 'bank_transfer'}",Returns 201 Created,Payment record created; Stripe session URL returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-02,Verify create payment for participation_fee,User authenticated,,"1. Send POST /api/payments
+2. Body: {paymentType: 'participation_fee'; amount: 500000; ...}",Returns 201 Created,Payment for participation fee,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-03,Verify create payment for winning_payment,Winner authenticated,,"1. Send POST /api/payments
+2. Body: {paymentType: 'winning_payment'; amount: 1200000000; ...}",Returns 201 Created,Payment for winning bid amount,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-04,Fail payment with invalid paymentType enum,No preconditions,,"1. Send POST /api/payments
+2. Body: {paymentType: 'invalid_type'; ...}",Returns 400 Bad Request,@IsEnum(PaymentType) validation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,PaymentType: deposit; participation_fee; winning_payment; refund,,
+,,TC-2.7.1-05,Fail payment with invalid paymentMethod enum,No preconditions,,"1. Send POST /api/payments
+2. Body: {paymentMethod: 'crypto'; ...}",Returns 400 Bad Request,@IsEnum(PaymentMethod) validation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,PaymentMethod: bank_transfer; e_wallet; cash,,
+,,TC-2.7.1-06,Fail payment with missing auctionId,No preconditions,,"1. Send POST /api/payments
+2. Body without auctionId",Returns 400 Bad Request,'Auction ID is required',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-07,Fail payment with missing registrationId,No preconditions,,"1. Send POST /api/payments
+2. Body without registrationId",Returns 400 Bad Request,'Registration ID is required',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-08,Fail with missing amount,No preconditions,,"1. Send POST /api/payments
+2. Body without amount",Returns 400 Bad Request,'Amount is required',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-09,Fail payment with zero amount,No preconditions,,"1. Send POST /api/payments
+2. Body: {amount: 0; ...}",Returns 400 Bad Request,'Amount must be greater than 0',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsPositive(),,
+,,TC-2.7.1-10,Fail payment with negative amount,No preconditions,,"1. Send POST /api/payments
+2. Body: {amount: -50000000; ...}",Returns 400 Bad Request,Amount must be positive,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-11,Fail payment without authentication,No token,,"1. Send POST /api/payments
+2. Body: {...}",Returns 401 Unauthorized,Auth required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-12,Verify payment with bank_transfer method,User authenticated,,"1. Send POST /api/payments
+2. Body: {paymentMethod: 'bank_transfer'; ...}",Returns 201 Created,Stripe session for bank transfer,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-13,Verify payment with e_wallet method,User authenticated,,"1. Send POST /api/payments
+2. Body: {paymentMethod: 'e_wallet'; ...}",Returns 201 Created,E-wallet payment option,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-14,Verify payment with cash method,User authenticated,,"1. Send POST /api/payments
+2. Body: {paymentMethod: 'cash'; ...}",Returns 201 Created,Cash payment recorded (manual verification needed),,,Not Started,Not Implemented,,,
+,,TC-2.7.1-15,Fail payment with non-existent auctionId,UUID doesn't exist,,"1. Send POST /api/payments
+2. Body: {auctionId: 'nonexistent'; ...}",Returns 404 Not Found,Auction not found,"Expected value: 201 | Received array: [404, 400]",Fail,Implemented,Implemented,,,
+,,TC-2.7.1-16,Fail payment with non-existent registrationId,UUID doesn't exist,,"1. Send POST /api/payments
+2. Body: {registrationId: 'nonexistent'; ...}",Returns 404 Not Found,Registration not found,"Expected value: 201 | Received array: [404, 400]",Fail,Implemented,Implemented,,,
+,,TC-2.7.1-17,Verify response includes all fields,Payment created,,1. Send POST /api/payments,Returns 201 Created,Response has payment_id (Stripe session ID),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.1-18,Verify response includes payment_url,Payment created,,1. Send POST /api/payments,Returns 201 Created,Response has payment_url (Stripe checkout URL),,,Not Started,Not Implemented,,,
+,,TC-2.7.1-19,Verify response includes qr_code,Payment created (bank_transfer),,1. Send POST /api/payments,Returns 201 Created,QR code data URL for payment,,,Not Started,Not Implemented,,,
+,,TC-2.7.1-20,Verify Payment record created in database,Payment created,,"1. Send POST /api/payments
+2. Check prisma.payment",Record exists,Payment with status: pending; userId; auctionId; registrationId,,,Implemented,Implemented,,,
+,,TC-2.7.2-01,Verify payment verification via query param,Stripe session completed,,1. Send GET /api/payments/verify?session_id=cs_test_xxx,Returns 200 OK,Payment status retrieved and confirmed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Query param: session_id,,
+,,TC-2.7.2-02,Fail verify with missing session_id,No session_id param,,1. Send GET /api/payments/verify,Returns 400 Bad Request,session_id required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.2-03,Fail verify with invalid session_id,Session doesn't exist in Stripe,,1. Send GET /api/payments/verify?session_id=invalid,Returns 404 Not Found,Session not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.2-04,Verify response includes payment status,Session exists,,1. Send GET /api/payments/verify?session_id=cs_xxx,Returns 200 OK,status: 'paid' or 'unpaid',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.7.2-05,Verify incomplete payment returns unpaid,Stripe session not completed,,1. Send GET /api/payments/verify?session_id=incomplete,Returns 200 OK,status: 'unpaid'; payment_status: 'pending',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.8 Auction Cost Management,TC-2.8.1-01,Verify create auction costs with all fields,Auctioneer/Admin authenticated; Auction exists,,"1. Send POST /api/auction-costs/auction/:auctionId
+2. Body: {advertisingCost: 2000000; venueRentalCost: 5000000; appraisalCost: 10000000; assetViewingCost: 1000000}",Returns 201 Created,AuctionCost created in prisma.auctionCost,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.1-02,Verify upsert updates existing,AuctionCost already exists,,"1. Send POST /api/auction-costs/auction/:auctionId
+2. Body with updated values",Returns 200 OK,Existing record updated,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,Upsert behavior,,
+,,TC-2.8.1-03,Verify create with otherCosts array,Admin authenticated,,"1. Send POST /api/auction-costs/auction/:auctionId
+2. Body: {otherCosts: [{description: 'Security'; amount: 5000000}]}",Returns 201 Created,otherCosts JsonB stored correctly,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.1-04,Verify create with empty optional fields,Admin authenticated,,"1. Send POST /api/auction-costs/auction/:auctionId
+2. Body: {advertisingCost: 1000000} only",Returns 201 Created,Other costs default to 0 or null,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@IsOptional() fields,,
+,,TC-2.8.1-05,Fail create with negative cost,No preconditions,,"1. Send POST /api/auction-costs/auction/:auctionId
+2. Body: {advertisingCost: -1000000}",Returns 400 Bad Request,@Min(0) validation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.1-06,Fail create for non-existent auction,Auction doesn't exist,,1. Send POST /api/auction-costs/auction/:nonexistent,Returns 404 Not Found,Auction not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.1-07,Fail create without authentication,No token,,1. Send POST /api/auction-costs/auction/:auctionId,Returns 401 Unauthorized,Auth required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.1-08,Fail Bidder creating costs,Bidder authenticated,,1. Send POST /api/auction-costs/auction/:auctionId,Returns 403 Forbidden,Admin/Auctioneer only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.2-01,Verify get auction costs,AuctionCost exists,,1. Send GET /api/auction-costs/auction/:auctionId,Returns 200 OK,All cost fields returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.2-02,Verify get includes totalCost calculation,AuctionCost with multiple costs,,1. Send GET /api/auction-costs/auction/:auctionId,Returns 200 OK,totalCost sum of all costs,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.2-03,Return 404 for auction without costs,No AuctionCost record,,1. Send GET /api/auction-costs/auction/:auctionId,Returns 404 Not Found,Costs not found for auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.2-04,Fail get for non-existent auction,Auction doesn't exist,,1. Send GET /api/auction-costs/auction/:nonexistent,Returns 404 Not Found,Auction not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.3-01,Verify partial update single field,AuctionCost exists; Admin authenticated,,"1. Send PATCH /api/auction-costs/auction/:auctionId
+2. Body: {venueRentalCost: 6000000}",Returns 200 OK,Only venueRentalCost updated; others unchanged,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.3-02,Verify partial update multiple fields,AuctionCost exists,,"1. Send PATCH /api/auction-costs/auction/:auctionId
+2. Body: {advertisingCost: 3000000; appraisalCost: 12000000}",Returns 200 OK,Both fields updated,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.3-03,Fail promote non-existent user,No AuctionCost record,,1. Send PATCH /api/auction-costs/auction/:auctionId,Returns 404 Not Found,Costs not found for auction,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.3-04,Fail update with negative value,AuctionCost exists,,"1. Send PATCH /api/auction-costs/auction/:auctionId
+2. Body: {advertisingCost: -500000}",Returns 400 Bad Request,@Min(0) validation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.4-01,Verify Admin deletes auction costs,Admin authenticated; AuctionCost exists,,1. Send DELETE /api/auction-costs/auction/:auctionId,Returns 204 No Content,Record removed from prisma.auctionCost,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.4-02,Fail Auctioneer deletes costs,Auctioneer authenticated,,1. Send DELETE /api/auction-costs/auction/:auctionId,Returns 403 Forbidden,Admin/Super Admin only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.4-03,Fail Bidder deletes costs,Bidder authenticated,,1. Send DELETE /api/auction-costs/auction/:auctionId,Returns 403 Forbidden,Bidders cannot delete costs,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.4-04,Fail delete non-existent costs,No AuctionCost record,,1. Send DELETE /api/auction-costs/auction/:auctionId,Returns 404 Not Found,Costs not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.5-01,Verify add other cost item,AuctionCost exists; Admin authenticated,,"1. Send POST /api/auction-costs/auction/:auctionId/other-cost
+2. Body: {description: 'Security'; amount: 5000000}",Returns 201 Created,Item appended to otherCosts array,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.5-02,Verify add multiple other costs,Multiple calls to add other costs,,1. Send POST /api/auction-costs/auction/:auctionId/other-cost 3 times,Returns 201 Created each time,otherCosts array has 3 items,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.5-03,Fail add other cost without description,Admin authenticated,,"1. Send POST /api/auction-costs/auction/:auctionId/other-cost
+2. Body: {amount: 5000000}",Returns 400 Bad Request,@IsNotEmpty() for description,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.8.5-04,Fail add other cost with negative amount,Admin authenticated,,"1. Send POST /api/auction-costs/auction/:auctionId/other-cost
+2. Body: {description: 'Test'; amount: -100000}",Returns 400 Bad Request,@Min(0) for amount,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.9 System Configuration,TC-2.9.1-01,Verify Admin gets all system variables,Admin authenticated; SystemVariable records exist,,1. Send GET /api/system-variables,Returns 200 OK,List of all variables grouped by category,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.1-02,Verify empty variables when category has none,Variables in different categories,,1. Send GET /api/system-variables?category=auction,Returns 200 OK,Only 'auction' category variables,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.1-03,Fail Bidder accessing system variables,Bidder authenticated,,1. Send GET /api/system-variables,Returns 403 Forbidden,Admin/Super Admin only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.1-04,Fail Auctioneer accessing system variables,Auctioneer authenticated,,1. Send GET /api/system-variables,Returns 403 Forbidden,Admin only for system config,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.1-05,Verify empty list when no variables,No SystemVariable records,,1. Send GET /api/system-variables,Returns 200 OK with empty array,Empty array; not error,,,Not Started,Not Implemented,,,
+,,TC-2.9.2-01,Verify get specific system variable,Variable exists,,1. Send GET /api/system-variables/:category/:key,Returns 200 OK,Single variable with category; key; value; dataType,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.2-02,Return 404 for non-existent article,Variable doesn't exist,,1. Send GET /api/system-variables/invalid/nonexistent,Returns 404 Not Found,Variable not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@@unique([category; key]),,
+,,TC-2.9.2-03,Verify different dataType values,Variables with different dataTypes,,1. Send GET /api/system-variables/:category/:key for each type,Returns 200 OK,Correctly returns number; boolean; string; json types,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.3-01,Verify update system variable value,Admin authenticated; Variable exists,,"1. Send PATCH /api/system-variables/:category/:key
+2. Body: {value: 'new_value'}",Returns 200 OK,Value updated; cache cleared,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.3-02,Verify update clears cache,Variable updated,,"1. Send PATCH /api/system-variables/:category/:key
+2. Check cache",Returns 200 OK,Cache invalidated for this variable,,,Not Started,Not Implemented,,,
+,,TC-2.9.3-03,Fail update non-existent variable,Variable doesn't exist,,1. Send PATCH /api/system-variables/invalid/nonexistent,Returns 404 Not Found,Variable not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.3-04,Fail Bidder updating variable,Bidder authenticated,,1. Send PATCH /api/system-variables/:category/:key,Returns 403 Forbidden,Admin only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.4-01,Verify create new system variable,Admin authenticated,,"1. Send POST /api/system-variables
+2. Body: {category: 'auction'; key: 'max_bid'; value: '1000000000'; dataType: 'number'; description: 'Max bid amount'}",Returns 201 Created,New variable in prisma.systemVariable,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.4-02,Fail create duplicate variable,Variable with same category+key exists,,"1. Send POST /api/system-variables
+2. Body with existing category+key",Returns 409 Conflict,Unique constraint violation,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@@unique([category; key]),,
+,,TC-2.9.4-03,Verify create with all dataTypes,Admin authenticated,,1. Send POST for each dataType (number; boolean; string; json),Returns 201 Created each,All dataTypes supported,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.4-04,Fail create without required fields,Admin authenticated,,"1. Send POST /api/system-variables
+2. Body missing category",Returns 400 Bad Request,Validation error,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.5-01,Verify clear cache,Admin authenticated,,1. Send POST /api/system-variables/cache/clear,Returns 200 OK,All cached variables invalidated,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.5-02,Fail Bidder clearing cache,Bidder authenticated,,1. Send POST /api/system-variables/cache/clear,Returns 403 Forbidden,Admin only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.6-01,Verify get cache stats,Admin authenticated,,1. Send GET /api/system-variables/cache/stats,Returns 200 OK,hitCount; missCount; size returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.9.6-02,Fail Bidder accessing cache stats,Bidder authenticated,,1. Send GET /api/system-variables/cache/stats,Returns 403 Forbidden,Admin only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.10 Location,TC-2.10.1-01,Verify get auction by ID (public),Location records exist,,1. Send GET /api/locations,Returns 200 OK,Hierarchical location data returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,@Public() - no auth required,,
+,,TC-2.10.1-02,Verify include provinces (top-level locations),Province-level locations exist,,1. Send GET /api/locations,Returns 200 OK,Provinces with parentId: null,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-03,Verify nested structure includes districts,District-level locations exist,,1. Send GET /api/locations,Returns 200 OK,Districts with parentId pointing to province,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-04,Verify nested structure includes wards,Ward-level locations exist,,1. Send GET /api/locations,Returns 200 OK,Wards with parentId pointing to district,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-05,Verify empty response when no locations,No Location records,,1. Send GET /api/locations,Returns 200 OK with empty array,Empty array; not error,,,Not Started,Not Implemented,,,
+,,TC-2.10.1-06,"Verify location fields (id, name)",Location records exist,,1. Send GET /api/locations,Returns 200 OK,Each location has: id; name; parentId,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-07,Verify no authentication required,No token,,1. Send GET /api/locations,Returns 200 OK,Public endpoint accessible without auth,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-08,Verify provinces can be extracted from nested data,Database has locations,,1. Send GET /api/locations,Returns 200 OK with nested location data,Top-level items are provinces,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-09,Verify districts can be extracted by province,Database has locations with children,,"1. Send GET /api/locations
+2. Check province.children",Returns districts array,Districts found in province.children array,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.10.1-10,Verify wards can be extracted by district,Database has nested location hierarchy,,"1. Send GET /api/locations
+2. Check district.children",Returns wards array,Wards found in district.children array,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.11 Article,TC-2.11.1-01,Verify list all articles publicly,Article records exist,,1. Send GET /api/articles,Returns 200 OK,List from prisma.article.findMany,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[SECURITY GAP] No auth guards,,
+,,TC-2.11.1-02,Verify list articles with type filter,Articles with various ArticleType,,1. Send GET /api/articles?type=news,Returns 200 OK,Only 'news' type articles returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,ArticleQueryDto,,
+,,TC-2.11.1-03,Verify list articles with auction_notice type,type: announcement,,1. Send GET /api/articles?type=announcement,Returns 200 OK,Only announcements returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.1-04,Verify list articles with guide type,type: guide,,1. Send GET /api/articles?type=guide,Returns 200 OK,Only guides returned,,,Not Started,Not Implemented,,,
+,,TC-2.11.1-05,Verify list articles with q_and_a type,type: q_and_a,,1. Send GET /api/articles?type=q_and_a,Returns 200 OK,Only Q&A articles returned,,,Not Started,Not Implemented,,,
+,,TC-2.11.1-06,Verify list articles with pagination,Many articles exist,,1. Send GET /api/articles?page=1&limit=10,Returns 200 OK,First 10 articles,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.1-07,Verify empty list when no articles match,No Article records,,1. Send GET /api/articles,Returns 200 OK with empty array,Empty array; not error,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.2-01,Verify search by name,Article exists,,1. Send GET /api/articles/:id,Returns 200 OK,Full article with title; content; author; image; type,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.2-02,Fail get article with invalid UUID,Invalid format,,1. Send GET /api/articles/not-a-uuid,Returns 400 Bad Request,Invalid UUID format,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.2-03,Return 404 for non-existent ID,UUID format valid but doesn't exist,,1. Send GET /api/articles/550e8400-e29b-41d4-a716-446655440000,Returns 404 Not Found,Article not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.2-04,Verify article includes image JsonB,Article has image,,1. Send GET /api/articles/:id,Returns 200 OK,image field contains {url; publicId},Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.2-05,Verify article includes related articles,Article has ArticleRelation,,1. Send GET /api/articles/:id,Returns 200 OK,Related articles included,,,Not Started,Not Implemented,,,
+,,TC-2.11.3-01,Verify create article with all fields,Admin authenticated (assumed),,"1. Send POST /api/articles
+2. Body: {title; author; content; image: {url: '...'}; type: 'news'; description: '...'}",Returns 201 Created,Article in prisma.article,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[SECURITY GAP] Missing role guard,,
+,,TC-2.11.3-02,Fail create article without title,No preconditions,,"1. Send POST /api/articles
+2. Body missing title",Returns 400 Bad Request,title required (@IsString),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.3-03,Fail create article without author,No preconditions,,"1. Send POST /api/articles
+2. Body missing author",Returns 400 Bad Request,author required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.3-04,Fail create article without content,No preconditions,,"1. Send POST /api/articles
+2. Body missing content",Returns 400 Bad Request,content required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.3-05,Fail create article without type,No preconditions,,"1. Send POST /api/articles
+2. Body missing type",Returns 400 Bad Request,type required,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.3-06,Fail create article with invalid type enum,No preconditions,,"1. Send POST /api/articles 
+2. Body: {type: 'blog'}",Returns 400 Bad Request,@IsEnum(ArticleType),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,ArticleType: news; announcement; guide; q_and_a,,
+,,TC-2.11.3-07,Verify create article with type news,Admin authenticated,,"1. Send POST /api/articles 
+2. Body: {type: 'news'; ...}",Returns 201 Created,Article type: 'news',Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.3-08,Verify create article with type 'announcement',Admin authenticated,,"1. Send POST /api/articles 
+2. Body: {type: 'announcement'; ...}",Returns 201 Created,Article type: 'announcement',,,Not Started,Not Implemented,,,
+,,TC-2.11.3-09,Verify create article with type 'guide',Admin authenticated,,"1. Send POST /api/articles 
+2. Body: {type: 'guide'; ...}",Returns 201 Created,Article type: 'guide',,,Not Started,Not Implemented,,,
+,,TC-2.11.3-10,Verify create article with type 'q_and_a',Admin authenticated,,"1. Send POST /api/articles 
+2. Body: {type: 'q_and_a'; ...}",Returns 201 Created,Article type: 'q_and_a',,,Implemented,Implemented,,,
+,,TC-2.11.4-01,Verify update article type,Article exists; Admin authenticated,,"1. Send PUT /api/articles/:id 
+2. Body: {title: 'Updated Title'; ...}",Returns 200 OK,title updated in prisma.article,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.4-02,Verify update article content,Article exists,,"1. Send PUT /api/articles/:id 
+2. Body: {content: 'Updated content'; ...}",Returns 200 OK,content updated,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.4-03,Verify filter by assetType,Article exists,,"1. Send PUT /api/articles/:id 
+2. Body: {type: 'announcement'; ...}",Returns 200 OK,type changed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.4-04,Fail update non-existent article,UUID doesn't exist,,1. Send PUT /api/articles/:nonexistent,Returns 404 Not Found,Article not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.5-01,Verify update article relations,Article and related articles exist,,"1. Send PATCH /api/articles/:id/relations 
+2. Body: {relatedIds: ['uuid1'; 'uuid2']}",Returns 200 OK,ArticleRelation records created,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.5-02,Verify replace article relations,Article has existing relations,,"1. Send PATCH /api/articles/:id/relations
+2. Body: {relatedIds: ['newUuid']}",Returns 200 OK,Old relations removed; new created,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.5-03,Verify search with non-existent code returns valid response,Article has relations,,"1. Send PATCH /api/articles/:id/relations 
+2. Body: {relatedIds: []}",Returns 200 OK,All ArticleRelation records removed,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.5-04,Fail relation with self,Article exists,,"1. Send PATCH /api/articles/:id/relations 
+2. Body: {relatedIds: [':id']}",Returns 400 Bad Request,Cannot relate article to itself,,,Not Started,Not Implemented,,,
+,,TC-2.11.6-01,Verify get article by ID,Article exists; Admin authenticated (assumed),,1. Send DELETE /api/articles/:id,Returns 200 OK,Article removed from prisma.article,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,[SECURITY GAP] Missing role guard,,
+,,TC-2.11.6-02,Fail delete non-existent article,UUID doesn't exist,,1. Send DELETE /api/articles/:nonexistent,Returns 404 Not Found,Article not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.11.6-03,Verify delete removes related records,Article with ArticleRelation,,1. Send DELETE /api/articles/:id,Returns 200 OK,ArticleRelation records also deleted (cascade),Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.12 Contracts,TC-2.12.1-01,Verify get contract by ID (buyer),Contract exists; User is buyer,,1. Send GET /api/contracts/:id,Returns 200 OK,Full contract details returned,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,ContractAccessGuard,,
+,,TC-2.12.1-02,Verify seller can access contract,Contract exists; User is seller,,1. Send GET /api/contracts/:id,Returns 200 OK,Seller has access,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.1-03,Non-party cannot access contract,User not buyer or seller,,1. Send GET /api/contracts/:id,Returns 403 Forbidden,ContractAccessGuard blocks,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.1-04,Fail access non-existent contract,UUID doesn't exist,,1. Send GET /api/contracts/:nonexistent,Returns 404 Not Found,Contract not found,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.2-01,Verify export contract PDF Vietnamese,Contract exists; User is party,,1. Send GET /api/contracts/:id/pdf/vi,Returns 200 OK with PDF,PDF generated in Vietnamese,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.2-02,Verify export contract PDF English,Contract exists; User is party,,1. Send GET /api/contracts/:id/pdf/en,Returns 200 OK with PDF,PDF generated in English,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.2-03,Fail PDF export non-party user,User not buyer or seller,,1. Send GET /api/contracts/:id/pdf/vi,Returns 403 Forbidden,ContractAccessGuard blocks,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.2-04,Fail PDF export invalid language,Unsupported language,,1. Send GET /api/contracts/:id/pdf/de,Returns 400 Bad Request,Language not supported,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.3-01,Verify list user contracts,User has contracts,,1. Send GET /api/contracts,Returns 200 OK,List of contracts where user is buyer or seller,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.3-02,Verify empty list when no contracts,User has no contracts,,1. Send GET /api/contracts,Returns 200 OK with empty array,Empty array; not error,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.4-01,Verify update contract status,Admin authenticated; Contract exists,,"1. Send PATCH /api/contracts/:id 
+2. Body: {notes: 'Updated notes'}",Returns 200 OK,Notes updated,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,,TC-2.12.4-02,Fail Bidder updating contract,Bidder authenticated,,1. Send PATCH /api/contracts/:id,Returns 403 Forbidden,Admin/Auctioneer only,Test passed successfully. All assertions matched expected values.,Pass,Implemented,Implemented,,,
+,2.13 Email Notifications,TC-2.13.1-01,Verify auction result email sent to winner,Auction finalized with winner,,"1. Finalize auction 
+2. Check email service",Email sent to winner,Winner receives congratulations email,,,Not Started,Not Implemented,EmailService.sendAuctionResultEmail,,
+,,TC-2.13.1-02,Verify auction result email sent to losers,Auction finalized; Multiple participants,,"1. Finalize auction 
+2. Check email service",Emails sent to all losers,Non-winners receive participation email,,,Not Started,Not Implemented,,,
+,,TC-2.13.1-03,Verify bulk email sending,Multiple participants,,1. Finalize auction triggering bulk send,Bulk method called,sendBulkAuctionResultEmails used for efficiency,,,Not Started,Not Implemented,,,
+,,TC-2.13.1-04,Verify email contains auction details,Email sent,,1. Check email content,Email includes auctionCode; auctionName; winningAmount,,New,,,Not Implemented,,,
+,,TC-2.13.2-01,Verify verification email on registration,User registers,,1. Send POST /api/auth/register,Returns 201 Created,Verification email sent via Supabase,,,Not Started,Not Implemented,,,
+,,TC-2.13.2-02,Verify request password reset for existing email,User requests reset,,1. Send POST /api/auth/forgot-password,Returns 200 OK,Password reset email sent,,,Implemented,Implemented,,,
+,2.13 Email Notifications,TC-MN-2.13.1-05,Verify E2E Email Sequence: Registration to Finalization,"User ""Bidder A"" exists; Auction ""Land Plot X"" is Scheduled; Admin is available",,"1. Bidder A logs in and clicks ""Register"" for Auction ""Land Plot X"" 
+2. CHECK EMAIL INBOX of Bidder A","System displays ""Registration Pending Approval"". Email 1 received: ""Registration Received""",Verify Email 1 contains: correct User Name; Auction Code; Link to view status,,,Not Started,Not Implemented,Template: Reg_Pending,,
+,2.13 Email Notifications,TC-MN-2.13.1-06,Verify Email: Registration Approval,Pre-req: TC-2.13.1-05 completed; Admin is logged in,,"1. Admin clicks ""Approve Registration"" for Bidder A 
+2. CHECK EMAIL INBOX of Bidder A","System displays ""Approved"". Email 2 received: ""Registration Approved""","Verify Email 2 contains: ""Congratulations""; Instructions to pay deposit; Deposit Deadline",,,Not Started,Not Implemented,Template: Reg_Approved,,
+,2.13 Email Notifications,TC-MN-2.13.1-07,Verify Email: Deposit Confirmation,Pre-req: TC-2.13.1-06 completed; Bidder A is logged in,,"1. Bidder A submits deposit payment 
+2. Payment is confirmed successfully
+3. CHECK EMAIL INBOX of Bidder A","System displays ""Deposit Paid"". Email 3 received: ""Deposit Confirmation""","Verify Email 3 contains: Transaction ID; Amount Paid; ""You are eligible to bid"" message",,,Not Started,Not Implemented,Template: Deposit_Success,,
+,2.13 Email Notifications,TC-MN-2.13.1-08,Verify Email: Auction Win (Winner),Pre-req: Auction ended; Bidder A placed highest bid; Admin Finalizes auction,,"1. Admin clicks ""Finalize Auction""
+2. CHECK EMAIL INBOX of Bidder A","System shows ""Auction Finalized"". Email 4 received: ""Congratulations - You Won!""",Verify Email 4 contains: Winning Item Name; Winning Price; Link to Payment/Contract; Next Steps for signing,,,Not Started,Not Implemented,Template: Auct_Win,,
+,2.13 Email Notifications,TC-MN-2.13.1-09,Verify Email: Auction Loss (Loser),Pre-req: Auction ended; Bidder B placed losing bid; Admin Finalizes auction,,"1. Admin clicks ""Finalize Auction"" 
+2. CHECK EMAIL INBOX of Bidder B","System shows ""Auction Finalized"". Email 5 received: ""Auction Result Notification""","Verify Email 5 contains: ""Thank you for participating""; Info on Deposit Refund timing",,,Not Started,Not Implemented,Template: Auct_Loss,,
+,2.13 Email Notifications,TC-MN-2.13.1-10,Verify Email: Winner Payment Confirmation,"Pre-req: TC-2.13.1-08 completed (User Won); Auction is Finalized; User is on ""My Won Auctions"" page",,"1. Click ""Pay Remaining Balance"" button for the won auction 
+2. Complete the payment flow (e.g. enter card details/confirm transfer) 
+3. Wait for ""Payment Successful"" screen 
+4. CHECK EMAIL INBOX of Winner","UI displays ""Payment Successful"" and status updates to ""Paid"". Email received: ""Payment Confirmation & Contract Ready""","Verify Email contains: Total Winning Amount; Transaction Ref ID; Explicit text stating ""Payment Complete""; A distinct button/link to ""Sign Contract"" or ""View Contract""",,,Not Started,Not Implemented,Template: Winner_Payment_Success,,
+,2.6.9 Winner Payment Default Handling,TC-2.6.9-01,TC-2.6.9-01: Verify Admin disqualifies winner on payment default,,,Run test: test/integration/2.6-auction-finalization/2.6.4-winner-default.spec.ts,,,Test passed successfully. All assertions matched expected values.,Pass,Executed: 2025-12-29T10:06:37.705Z; Duration: 100ms,Implemented,,,
+,2.6.9 Winner Payment Default Handling,TC-2.6.9-02,TC-2.6.9-02: Verify second highest bidder becomes winner,,,Run test: test/integration/2.6-auction-finalization/2.6.4-winner-default.spec.ts,,,Test passed successfully. All assertions matched expected values.,Pass,Executed: 2025-12-29T10:06:37.705Z; Duration: 70ms,Implemented,,,
+,2.6.9 Winner Payment Default Handling,TC-2.6.9-03,TC-2.6.9-03: Verify deposit forfeiture on winner default,,,Run test: test/integration/2.6-auction-finalization/2.6.4-winner-default.spec.ts,,,Test passed successfully. All assertions matched expected values.,Pass,Executed: 2025-12-29T10:06:37.705Z; Duration: 64ms,Implemented,,,
+,2.6.9 Winner Payment Default Handling,TC-2.6.9-04,TC-2.6.9-04: Fail handle default for auction without winner,,,Run test: test/integration/2.6-auction-finalization/2.6.4-winner-default.spec.ts,,,Test passed successfully. All assertions matched expected values.,Pass,Executed: 2025-12-29T10:06:37.705Z; Duration: 65ms,Implemented,,,
+,2.6.9 Winner Payment Default Handling,TC-2.6.9-05,TC-2.6.9-05: Fail Bidder handling winner default,,,Run test: test/integration/2.6-auction-finalization/2.6.4-winner-default.spec.ts,,,Test passed successfully. All assertions matched expected values.,Pass,Executed: 2025-12-29T10:06:37.705Z; Duration: 66ms,Implemented,,,
+,2.6.9 Winner Payment Default Handling,TC-2.6.9-06,TC-2.6.9-06: Handle default when no second bidder exists,,,Run test: test/integration/2.6-auction-finalization/2.6.4-winner-default.spec.ts,,,Test passed successfully. All assertions matched expected values.,Pass,Executed: 2025-12-29T10:06:37.706Z; Duration: 64ms,Implemented,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,

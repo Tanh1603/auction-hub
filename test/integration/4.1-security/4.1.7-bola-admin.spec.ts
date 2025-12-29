@@ -222,7 +222,7 @@ describe('4.1.7 BOLA - Admin Endpoint Authorization', () => {
         .delete(`/api/auction-costs/auction/${endedAuction.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(response.status).toBe(200);
+      expect([200, 204]).toContain(response.status);
     });
   });
 

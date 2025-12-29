@@ -94,7 +94,7 @@ describe('2.3.1 List Auctions', () => {
   });
 
   describe('Public Listing', () => {
-    it('TC-2.2.1-01: Verify public list auctions (no auth)', async () => {
+    it('TC-2.3.1-01: Verify public list auctions (no auth)', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/auctions')
         .expect(200);
@@ -102,7 +102,7 @@ describe('2.3.1 List Auctions', () => {
       expect(Array.isArray(response.body.data || response.body)).toBe(true);
     });
 
-    it('TC-2.2.6-01: Verify pagination', async () => {
+    it('TC-2.3.1-04: Verify pagination', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/auctions?page=1&limit=10')
         .expect(200);

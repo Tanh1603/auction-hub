@@ -137,7 +137,7 @@ describe('2.4.3 Check-in', () => {
         .expect(404);
     });
 
-    it('TC-2.2.3-10: Fail duplicate check-in', async () => {
+    it('TC-2.4.3-05: Fail duplicate check-in', async () => {
       await prisma.auctionParticipant.update({
         where: { id: confirmedRegistration.id },
         data: { checkedInAt: new Date() },

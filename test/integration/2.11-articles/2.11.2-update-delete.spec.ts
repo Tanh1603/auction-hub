@@ -203,7 +203,7 @@ describe('2.11.4-6 Articles Update, Relations, Delete', () => {
       expect(relations[0].relatedArticleId).toBe(article3.id);
     });
 
-    it('TC-2.2.6-03: Verify clear all relations', async () => {
+    it('TC-2.11.5-03: Verify clear all relations', async () => {
       await prisma.articleRelation.createMany({
         data: [
           { articleId: article1.id, relatedArticleId: article2.id },
@@ -223,7 +223,7 @@ describe('2.11.4-6 Articles Update, Relations, Delete', () => {
       expect(relations.length).toBe(0);
     });
 
-    it('TC-2.2.6-04: Fail relation with self', async () => {
+    it('TC-2.11.5-04: Fail relation with self', async () => {
       const response = await request(app.getHttpServer())
         .patch(`/api/articles/${article1.id}/relations`)
         .set('Authorization', `Bearer ${adminToken}`)

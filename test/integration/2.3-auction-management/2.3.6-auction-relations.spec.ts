@@ -90,7 +90,7 @@ describe('2.3.6 Auction Relations', () => {
   });
 
   describe('Create Relations', () => {
-    it('TC-2.2.6-01: Verify update auction relations', async () => {
+    it('TC-2.3.6-01: Verify update auction relations', async () => {
       await request(app.getHttpServer())
         .patch(`/api/auctions/${auction1.id}/relations`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -103,7 +103,7 @@ describe('2.3.6 Auction Relations', () => {
       expect(relations.length).toBe(2);
     });
 
-    it('TC-2.2.6-02: Verify replace auction relations', async () => {
+    it('TC-2.3.6-02: Verify replace auction relations', async () => {
       await prisma.auctionRelation.create({
         data: { auctionId: auction1.id, relatedAuctionId: auction2.id },
       });
@@ -121,7 +121,7 @@ describe('2.3.6 Auction Relations', () => {
       expect(relations[0].relatedAuctionId).toBe(auction3.id);
     });
 
-    it('TC-2.2.6-03: Verify clear all auction relations', async () => {
+    it('TC-2.3.6-03: Verify clear all auction relations', async () => {
       await prisma.auctionRelation.createMany({
         data: [
           { auctionId: auction1.id, relatedAuctionId: auction2.id },
@@ -143,7 +143,7 @@ describe('2.3.6 Auction Relations', () => {
   });
 
   describe('Relation Failures', () => {
-    it('TC-2.2.6-04: Fail relation with self', async () => {
+    it('TC-2.3.6-04: Fail relation with self', async () => {
       const response = await request(app.getHttpServer())
         .patch(`/api/auctions/${auction1.id}/relations`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -152,7 +152,7 @@ describe('2.3.6 Auction Relations', () => {
       expect([400, 200]).toContain(response.status);
     });
 
-    it('TC-2.2.6-05: Fail relation with non-existent auction', async () => {
+    it('TC-2.3.6-05: Fail relation with non-existent auction', async () => {
       const response = await request(app.getHttpServer())
         .patch(`/api/auctions/${auction1.id}/relations`)
         .set('Authorization', `Bearer ${adminToken}`)

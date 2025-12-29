@@ -115,7 +115,7 @@ describe('2.3.3 Create Auction', () => {
       expect(response.body.message).toBeDefined();
     });
 
-    it('TC-2.2.2-05: Verify Auctioneer creates auction', async () => {
+    it('TC-2.3.2-05: Verify Auctioneer creates auction', async () => {
       const payload = await validPayload();
 
       await request(app.getHttpServer())
@@ -154,7 +154,7 @@ describe('2.3.3 Create Auction', () => {
         .expect(400);
     });
 
-    it('TC-2.2.3-10: Fail with duplicate code', async () => {
+    it('TC-2.3.3-10: Fail with duplicate code', async () => {
       const payload = await validPayload();
 
       await request(app.getHttpServer())
@@ -173,7 +173,7 @@ describe('2.3.3 Create Auction', () => {
       expect([400, 409]).toContain(response.status);
     });
 
-    it('TC-2.2.3-05: Fail with negative starting price', async () => {
+    it('TC-2.3.3-05: Fail with negative starting price', async () => {
       const basePayload = await validPayload();
       const payload = { ...basePayload, startingPrice: -1000 };
 
@@ -184,7 +184,7 @@ describe('2.3.3 Create Auction', () => {
         .expect(400);
     });
 
-    it('TC-2.2.3-06: Fail with auction end before start', async () => {
+    it('TC-2.3.3-06: Fail with auction end before start', async () => {
       const basePayload = await validPayload();
       const payload = {
         ...basePayload,

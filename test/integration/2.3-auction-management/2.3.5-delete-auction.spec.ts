@@ -86,7 +86,7 @@ describe('2.3.5 Delete Auction', () => {
   }
 
   describe('Successful Deletion', () => {
-    it('TC-2.2.5-01: Verify delete scheduled auction', async () => {
+    it('TC-2.3.5-01: Verify delete scheduled auction', async () => {
       const auction = await createTestAuction(`${TEST_PREFIX}-001`);
 
       await request(app.getHttpServer())
@@ -102,7 +102,7 @@ describe('2.3.5 Delete Auction', () => {
   });
 
   describe('Deletion Failures', () => {
-    it('TC-2.2.5-02: Fail delete auction with bids', async () => {
+    it('TC-2.3.5-02: Fail delete auction with bids', async () => {
       const auction = await createTestAuction(
         `${TEST_PREFIX}-002`,
         AuctionStatus.live
@@ -142,7 +142,7 @@ describe('2.3.5 Delete Auction', () => {
       expect([400, 409]).toContain(response.status);
     });
 
-    it('TC-2.2.5-03: Fail delete auction with participants', async () => {
+    it('TC-2.3.5-03: Fail delete auction with participants', async () => {
       const auction = await createTestAuction(`${TEST_PREFIX}-003`);
       const bidder = await createTestUser(prisma, {
         email: 'del_bidder2@test.com',
@@ -164,7 +164,7 @@ describe('2.3.5 Delete Auction', () => {
       expect([400, 409]).toContain(response.status);
     });
 
-    it('TC-2.2.5-04: Fail delete live auction', async () => {
+    it('TC-2.3.5-04: Fail delete live auction', async () => {
       const auction = await createTestAuction(
         `${TEST_PREFIX}-004`,
         AuctionStatus.live
@@ -177,7 +177,7 @@ describe('2.3.5 Delete Auction', () => {
       expect([400, 200]).toContain(response.status);
     });
 
-    it('TC-2.2.5-05: Fail delete non-existent auction', async () => {
+    it('TC-2.3.5-05: Fail delete non-existent auction', async () => {
       await request(app.getHttpServer())
         .delete('/api/auctions/550e8400-e29b-41d4-a716-446655440000')
         .set('Authorization', `Bearer ${adminToken}`)

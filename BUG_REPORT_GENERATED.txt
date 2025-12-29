@@ -1,0 +1,384 @@
+==================================================
+BUG REPORTS
+Project: @auction-hub/source
+Reported by: Automated Jest Reporter
+Generated: 2025-12-29T15:09:11.761Z
+Total Defects: 11
+==================================================
+
+QUICK REFERENCE TABLE:
+--------------------------------------------------------------------------------
+Defect ID  | Test Case ID     | Status | Severity
+--------------------------------------------------------------------------------
+BUG-001    | TC-2.7.1-15      | Open   | Critical (S1)
+BUG-002    | TC-2.7.1-16      | Open   | Critical (S1)
+BUG-003    | TC-5.2.3-03      | Open   | Critical (S1)
+BUG-004    | TC-5.2.3-04      | Open   | Critical (S1)
+BUG-005    | TC-2.6.2-08      | Open   | Critical (S1)
+BUG-006    | TC-4.1.2-03      | Open   | Critical (S1)
+BUG-007    | TC-2.3.5-03      | Open   | Critical (S1)
+BUG-008    | TC-2.5.2-02      | Open   | Critical (S1)
+BUG-009    | TC-2.5.2-08      | Open   | Critical (S1)
+BUG-010    | TC-2.6.2-09      | Open   | Critical (S1)
+BUG-011    | TC-2.3.3-05      | Open   | Critical (S1)
+--------------------------------------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.7.1-15: Fail payment with non-existent auctionId
+Bug ID: BUG-001
+§  Test Case ID: TC-2.7.1-15
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toContain(expected) // indexOf
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.7-payment/2.7.1-create-payment.spec.ts
+    2. Test case failed: "TC-2.7.1-15: Fail payment with non-existent auctionId"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toContain(expected) // indexOf
+    
+    Expected value: 201
+    Received array: [404, 400]
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.7-payment\2.7.1-create-payment.spec.ts:339:26)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.7.1-16: Fail payment with non-existent registrationId
+Bug ID: BUG-002
+§  Test Case ID: TC-2.7.1-16
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toContain(expected) // indexOf
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.7-payment/2.7.1-create-payment.spec.ts
+    2. Test case failed: "TC-2.7.1-16: Fail payment with non-existent registrationId"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toContain(expected) // indexOf
+    
+    Expected value: 201
+    Received array: [404, 400]
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.7-payment\2.7.1-create-payment.spec.ts:355:26)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-5.2.3-03: Cannot transition backwards (success → live)
+Bug ID: BUG-003
+§  Test Case ID: TC-5.2.3-03
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toContain(expected) // indexOf
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/5.2-integration/5.2.3-state-transitions.spec.ts
+    2. Test case failed: "TC-5.2.3-03: Cannot transition backwards (success → live)"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toContain(expected) // indexOf
+    
+    Expected value: 200
+    Received array: [400, 403]
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\5.2-integration\5.2.3-state-transitions.spec.ts:448:26)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-5.2.3-04: Cancelled is terminal state
+Bug ID: BUG-004
+§  Test Case ID: TC-5.2.3-04
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toContain(expected) // indexOf
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/5.2-integration/5.2.3-state-transitions.spec.ts
+    2. Test case failed: "TC-5.2.3-04: Cancelled is terminal state"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toContain(expected) // indexOf
+    
+    Expected value: 200
+    Received array: [400, 403]
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\5.2-integration\5.2.3-state-transitions.spec.ts:486:26)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.6.2-08: Fail finalize live auction
+Bug ID: BUG-005
+§  Test Case ID: TC-2.6.2-08
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expected 400 "Bad Request", got 200 "OK"
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.6-auction-finalization/2.6.2-finalize.spec.ts
+    2. Test case failed: "TC-2.6.2-08: Fail finalize live auction"
+§  Actual results:
+    Test failed with error:
+    Error: expected 400 "Bad Request", got 200 "OK"
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.6-auction-finalization\2.6.2-finalize.spec.ts:230:10)
+    ----
+        at Test._assertStatus (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:309:14)
+        at C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:365:13
+        at Test._assertFunction (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:342:13)
+        at Test.assert (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:195:23)
+        at localAssert (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:138:14)
+        at Server.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:152:11)
+        at Object.onceWrapper (node:events:632:28)
+        at Server.emit (node:events:530:35)
+        at emitCloseNT (node:net:2418:8)
+        at processTicksAndRejections (node:internal/process/task_queues:89:21)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-4.1.2-03: Cannot set status directly on auction update
+Bug ID: BUG-006
+§  Test Case ID: TC-4.1.2-03
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toBe(expected) // Object.is equality
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/4.1-security/4.1.2-mass-assignment.spec.ts
+    2. Test case failed: "TC-4.1.2-03: Cannot set status directly on auction update"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toBe(expected) // Object.is equality
+    
+    Expected: "scheduled"
+    Received: "success"
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\4.1-security\4.1.2-mass-assignment.spec.ts:172:31)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.3.5-03: Fail delete auction with participants
+Bug ID: BUG-007
+§  Test Case ID: TC-2.3.5-03
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toContain(expected) // indexOf
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.3-auction-management/2.3.5-delete-auction.spec.ts
+    2. Test case failed: "TC-2.3.5-03: Fail delete auction with participants"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toContain(expected) // indexOf
+    
+    Expected value: 200
+    Received array: [400, 409]
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.3-auction-management\2.3.5-delete-auction.spec.ts:164:26)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.5.2-02: Verify Admin denies bid with reason
+Bug ID: BUG-008
+§  Test Case ID: TC-2.5.2-02
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toBe(expected) // Object.is equality
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.5-bidding-system/2.5.2-bid-denial.spec.ts
+    2. Test case failed: "TC-2.5.2-02: Verify Admin denies bid with reason"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toBe(expected) // Object.is equality
+    
+    Expected: false
+    Received: true
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.5-bidding-system\2.5.2-bid-denial.spec.ts:164:33)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.5.2-08: Verify next highest bid promoted when winning denied
+Bug ID: BUG-009
+§  Test Case ID: TC-2.5.2-08
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expect(received).toBe(expected) // Object.is equality
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.5-bidding-system/2.5.2-bid-denial.spec.ts
+    2. Test case failed: "TC-2.5.2-08: Verify next highest bid promoted when winning denied"
+§  Actual results:
+    Test failed with error:
+    Error: expect(received).toBe(expected) // Object.is equality
+    
+    Expected: true
+    Received: false
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.5-bidding-system\2.5.2-bid-denial.spec.ts:268:45)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.6.2-09: Fail Bidder creates auction
+Bug ID: BUG-010
+§  Test Case ID: TC-2.6.2-09
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expected 403 "Forbidden", got 201 "Created"
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.3-auction-management/2.3.3-create-auction.spec.ts
+    2. Test case failed: "TC-2.6.2-09: Fail Bidder creates auction"
+§  Actual results:
+    Test failed with error:
+    Error: expected 403 "Forbidden", got 201 "Created"
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.3-auction-management\2.3.3-create-auction.spec.ts:136:10)
+    ----
+        at Test._assertStatus (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:309:14)
+        at C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:365:13
+        at Test._assertFunction (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:342:13)
+        at Test.assert (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:195:23)
+        at localAssert (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:138:14)
+        at Server.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:152:11)
+        at Object.onceWrapper (node:events:632:28)
+        at Server.emit (node:events:530:35)
+        at emitCloseNT (node:net:2418:8)
+        at processTicksAndRejections (node:internal/process/task_queues:89:21)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+
+--------------------------------------------------
+§  Bug Name: TC-2.3.3-05: Fail with negative starting price
+Bug ID: BUG-011
+§  Test Case ID: TC-2.3.3-05
+§  Date: 29-Dec-25
+§  Assigned to: Developer-TEAM1016
+§  Status: Open
+§  Summary/Description:
+    Error: expected 400 "Bad Request", got 201 "Created"
+§  Environments (OS/Browser): Windows 10.0.26200 (win32) / Node v22.15.1
+§  Step to reproduce:
+    1. Run test file: test/integration/2.3-auction-management/2.3.3-create-auction.spec.ts
+    2. Test case failed: "TC-2.3.3-05: Fail with negative starting price"
+§  Actual results:
+    Test failed with error:
+    Error: expected 400 "Bad Request", got 201 "Created"
+        at Object.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\test\integration\2.3-auction-management\2.3.3-create-auction.spec.ts:184:10)
+    ----
+        at Test._assertStatus (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:309:14)
+        at C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:365:13
+        at Test._assertFunction (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:342:13)
+        at Test.assert (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:195:23)
+        at localAssert (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:138:14)
+        at Server.<anonymous> (C:\Sem1_Year3_Projects\auction-hub\node_modules\supertest\lib\test.js:152:11)
+        at Object.onceWrapper (node:events:632:28)
+        at Server.emit (node:events:530:35)
+        at emitCloseNT (node:net:2418:8)
+        at processTicksAndRejections (node:internal/process/task_queues:89:21)
+§  Expected results:
+    Test assertion should pass (Expected value should match received value).
+§  Severity: Critical (S1)
+Priority: High (P1)
+§  Attachment:
+    - See TEST_RESULTS_OUTPUT.csv for evidence
+    - See DEFECT_REGISTRY.csv for RTM mapping
+    - See coverage/ folder for technical logs
+--------------------------------------------------
+

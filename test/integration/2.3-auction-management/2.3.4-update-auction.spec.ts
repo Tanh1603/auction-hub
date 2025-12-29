@@ -90,7 +90,7 @@ describe('2.3.4 Update Auction', () => {
   });
 
   describe('Successful Updates', () => {
-    it('TC-2.2.6-01: Verify update auction name', async () => {
+    it('TC-2.3.4-01: Verify update auction name', async () => {
       const response = await request(app.getHttpServer())
         .put(`/api/auctions/${scheduledAuction.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -103,7 +103,7 @@ describe('2.3.4 Update Auction', () => {
       expect(updated?.name).toBe('New Auction Name');
     });
 
-    it('TC-2.2.4-02: Verify update auction startingPrice', async () => {
+    it('TC-2.3.4-02: Verify update auction startingPrice', async () => {
       const response = await request(app.getHttpServer())
         .put(`/api/auctions/${scheduledAuction.id}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -116,7 +116,7 @@ describe('2.3.4 Update Auction', () => {
       expect(updated?.startingPrice.toString()).toBe('2000000000');
     });
 
-    it('TC-2.2.6-01: Verify update auction dates', async () => {
+    it('TC-2.3.4-03: Verify update auction dates', async () => {
       const newStartAt = createDate(8).toISOString();
       const newEndAt = createDate(8, 3).toISOString();
 
@@ -129,7 +129,7 @@ describe('2.3.4 Update Auction', () => {
   });
 
   describe('Update Failures', () => {
-    it('TC-2.2.4-04: Fail update live auction critical fields', async () => {
+    it('TC-2.3.4-04: Fail update live auction critical fields', async () => {
       await prisma.auction.update({
         where: { id: scheduledAuction.id },
         data: { status: AuctionStatus.live },
@@ -143,7 +143,7 @@ describe('2.3.4 Update Auction', () => {
       expect([400, 200]).toContain(response.status);
     });
 
-    it('TC-2.2.4-05: Fail update completed auction', async () => {
+    it('TC-2.3.4-05: Fail update completed auction', async () => {
       await prisma.auction.update({
         where: { id: scheduledAuction.id },
         data: { status: AuctionStatus.success },
@@ -157,7 +157,7 @@ describe('2.3.4 Update Auction', () => {
       expect([400, 200]).toContain(response.status);
     });
 
-    it('TC-2.2.4-06: Fail update non-existent auction', async () => {
+    it('TC-2.3.4-06: Fail update non-existent auction', async () => {
       await request(app.getHttpServer())
         .put('/api/auctions/550e8400-e29b-41d4-a716-446655440000')
         .set('Authorization', `Bearer ${adminToken}`)
