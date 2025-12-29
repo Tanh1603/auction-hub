@@ -19,6 +19,7 @@ import {
 import { AuctionCostService } from './auction-cost.service';
 import { CreateAuctionCostDto } from './dto/create-auction-cost.dto';
 import { UpdateAuctionCostDto } from './dto/update-auction-cost.dto';
+import { AddOtherCostDto } from './dto/add-other-cost.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -118,7 +119,7 @@ export class AuctionCostController {
   })
   addOtherCost(
     @Param('auctionId') auctionId: string,
-    @Body() body: { description: string; amount: number }
+    @Body() body: AddOtherCostDto
   ) {
     return this.costService.addOtherCost(
       auctionId,

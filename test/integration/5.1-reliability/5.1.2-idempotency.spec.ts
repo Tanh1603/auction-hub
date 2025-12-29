@@ -31,6 +31,7 @@ describe('5.1.2 Idempotency', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true })
     );
@@ -53,7 +54,7 @@ describe('5.1.2 Idempotency', () => {
   });
 
   describe('Registration Idempotency', () => {
-    it('TC-5.1.2-01: Duplicate registration returns conflict', async () => {
+    it('TC-2.4.1-05: Duplicate registration returns conflict', async () => {
       const location = await prisma.location.findFirst();
       const auction = await prisma.auction.create({
         data: {
@@ -69,9 +70,9 @@ describe('5.1.2 Idempotency', () => {
           auctionEndAt: createDate(7, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
@@ -104,7 +105,7 @@ describe('5.1.2 Idempotency', () => {
   });
 
   describe('Check-in Idempotency', () => {
-    it('TC-5.1.2-02: Duplicate check-in returns conflict', async () => {
+    it('TC-2.4.3-05: Duplicate check-in returns conflict', async () => {
       const location = await prisma.location.findFirst();
       const auction = await prisma.auction.create({
         data: {
@@ -120,9 +121,9 @@ describe('5.1.2 Idempotency', () => {
           auctionEndAt: createDate(0, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 60,
@@ -139,7 +140,7 @@ describe('5.1.2 Idempotency', () => {
           registeredAt: createDate(-7),
           confirmedAt: createDate(-5),
           depositPaidAt: createDate(-5),
-          depositAmount: new Decimal(100000000),
+          depositAmount: new Decimal(1000000),
         },
       });
 
@@ -160,7 +161,7 @@ describe('5.1.2 Idempotency', () => {
   });
 
   describe('Finalization Idempotency', () => {
-    it('TC-5.1.2-03: Duplicate finalization returns error', async () => {
+    it('TC-2.4.1-05: Duplicate finalization returns error', async () => {
       const admin = await createTestUser(prisma, {
         email: 'idemp_admin@test.com',
         role: UserRole.admin,
@@ -182,9 +183,9 @@ describe('5.1.2 Idempotency', () => {
           auctionEndAt: createDate(-10),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,

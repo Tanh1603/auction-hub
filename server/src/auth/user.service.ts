@@ -12,6 +12,7 @@ import {
   RegisterUserResponseDto,
 } from './dto/register-user.dto';
 import { PromoteUserDto } from './dto/promote-user.dto';
+import { CurrentUserData } from '../common/decorators/current-user.decorator';
 
 @Injectable()
 export class UserService {
@@ -77,12 +78,12 @@ export class UserService {
    * Step 3 Implementation: Promote user (admin only)
    */
   async promoteUser(
-    authorizationHeader: string,
+    adminUser: CurrentUserData,
     userIdToPromote: string,
     promoteData: PromoteUserDto
   ): Promise<{ message: string; user: any }> {
-    // Validate admin permissions
-    const adminUser = await this.validateAdminPermissions(authorizationHeader);
+    // Validate admin permissions (already validated by RolesGuard, but checking hierarchy rules)
+    // const adminUser = await this.validateAdminPermissions(authorizationHeader); // REMOVED
 
     // Find user to promote
     const userToPromote = await this.prisma.user.findUnique({
@@ -128,6 +129,21 @@ export class UserService {
       throw new NotFoundException(
         'User not found in system. Please register first.'
       );
+    }
+
+    return user;
+  }
+
+  /**
+   * Get user by ID (optimized for internally authenticated requests)
+   */
+  async getUserById(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
     return user;

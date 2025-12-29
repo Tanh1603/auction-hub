@@ -137,6 +137,11 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('JWT secret is not configured');
       }
 
+      // Debug log for test troubleshooting
+      console.log(
+        `[AuthGuard] JWT secret starts with: ${jwtSecret.substring(0, 10)}...`
+      );
+
       const payload = jwt.verify(token, jwtSecret, {
         algorithms: ['HS256'],
       }) as JwtPayload;
@@ -146,6 +151,12 @@ export class AuthGuard implements CanActivate {
         where: { id: payload.sub },
         select: { role: true, email: true, fullName: true },
       });
+
+      console.log(
+        `[AuthGuard] Looking for user ${payload.sub}: ${
+          localUser ? 'FOUND' : 'NOT FOUND'
+        }`
+      );
 
       if (!localUser) {
         throw new UnauthorizedException(

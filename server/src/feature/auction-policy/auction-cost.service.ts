@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuctionCostDto } from './dto/create-auction-cost.dto';
 import { UpdateAuctionCostDto } from './dto/update-auction-cost.dto';
@@ -15,7 +20,7 @@ export class AuctionCostService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly policyCalc: PolicyCalculationService,
+    private readonly policyCalc: PolicyCalculationService
   ) {}
 
   /**
@@ -42,15 +47,15 @@ export class AuctionCostService {
       });
 
       // Prepare other costs JSON
-      const otherCostsJson = dto.otherCosts && dto.otherCosts.length > 0
-        ? JSON.stringify(dto.otherCosts)
-        : null;
+      const otherCostsJson =
+        dto.otherCosts && dto.otherCosts.length > 0
+          ? JSON.stringify(dto.otherCosts)
+          : null;
 
       // Upsert auction costs
       const costs = await this.prisma.auctionCost.upsert({
         where: { auctionId },
         create: {
-          id: `cost_${auctionId}`,
           auctionId,
           advertisingCost: dto.advertisingCost ?? 0,
           venueRentalCost: dto.venueRentalCost ?? 0,
@@ -69,11 +74,16 @@ export class AuctionCostService {
         },
       });
 
-      this.logger.log(`Auction costs updated for auction ${auctionId}. Total: ${totalCosts}`);
+      this.logger.log(
+        `Auction costs updated for auction ${auctionId}. Total: ${totalCosts}`
+      );
 
       return this.formatCostResponse(costs);
     } catch (error) {
-      this.logger.error(`Failed to upsert auction costs for ${auctionId}`, error);
+      this.logger.error(
+        `Failed to upsert auction costs for ${auctionId}`,
+        error
+      );
       throw error;
     }
   }
@@ -118,11 +128,22 @@ export class AuctionCostService {
 
       // Merge updates with existing values
       const updatedData = {
-        advertisingCost: dto.advertisingCost ?? parseFloat(existing.advertisingCost.toString()),
-        venueRentalCost: dto.venueRentalCost ?? parseFloat(existing.venueRentalCost.toString()),
-        appraisalCost: dto.appraisalCost ?? parseFloat(existing.appraisalCost.toString()),
-        assetViewingCost: dto.assetViewingCost ?? parseFloat(existing.assetViewingCost.toString()),
-        otherCosts: dto.otherCosts ?? (existing.otherCosts ? JSON.parse(existing.otherCosts as string) : []),
+        advertisingCost:
+          dto.advertisingCost ??
+          parseFloat(existing.advertisingCost.toString()),
+        venueRentalCost:
+          dto.venueRentalCost ??
+          parseFloat(existing.venueRentalCost.toString()),
+        appraisalCost:
+          dto.appraisalCost ?? parseFloat(existing.appraisalCost.toString()),
+        assetViewingCost:
+          dto.assetViewingCost ??
+          parseFloat(existing.assetViewingCost.toString()),
+        otherCosts:
+          dto.otherCosts ??
+          (existing.otherCosts
+            ? JSON.parse(existing.otherCosts as string)
+            : []),
       };
 
       // Recalculate total
@@ -135,18 +156,24 @@ export class AuctionCostService {
           venueRentalCost: updatedData.venueRentalCost,
           appraisalCost: updatedData.appraisalCost,
           assetViewingCost: updatedData.assetViewingCost,
-          otherCosts: updatedData.otherCosts.length > 0
-            ? JSON.stringify(updatedData.otherCosts)
-            : null,
+          otherCosts:
+            updatedData.otherCosts.length > 0
+              ? JSON.stringify(updatedData.otherCosts)
+              : null,
           totalCosts,
         },
       });
 
-      this.logger.log(`Updated auction costs for ${auctionId}. New total: ${totalCosts}`);
+      this.logger.log(
+        `Updated auction costs for ${auctionId}. New total: ${totalCosts}`
+      );
 
       return this.formatCostResponse(updated);
     } catch (error) {
-      this.logger.error(`Failed to update auction costs for ${auctionId}`, error);
+      this.logger.error(
+        `Failed to update auction costs for ${auctionId}`,
+        error
+      );
       throw error;
     }
   }
@@ -172,7 +199,10 @@ export class AuctionCostService {
 
       return { message: 'Auction costs deleted successfully', auctionId };
     } catch (error) {
-      this.logger.error(`Failed to delete auction costs for ${auctionId}`, error);
+      this.logger.error(
+        `Failed to delete auction costs for ${auctionId}`,
+        error
+      );
       throw error;
     }
   }
@@ -215,7 +245,9 @@ export class AuctionCostService {
         },
       });
 
-      this.logger.log(`Added other cost to auction ${auctionId}: ${description} - ${amount}`);
+      this.logger.log(
+        `Added other cost to auction ${auctionId}: ${description} - ${amount}`
+      );
 
       return this.formatCostResponse(updated);
     } catch (error) {
@@ -235,7 +267,9 @@ export class AuctionCostService {
       venueRentalCost: parseFloat(costs.venueRentalCost.toString()),
       appraisalCost: parseFloat(costs.appraisalCost.toString()),
       assetViewingCost: parseFloat(costs.assetViewingCost.toString()),
-      otherCosts: costs.otherCosts ? JSON.parse(costs.otherCosts as string) : [],
+      otherCosts: costs.otherCosts
+        ? JSON.parse(costs.otherCosts as string)
+        : [],
       totalCosts: parseFloat(costs.totalCosts.toString()),
       createdAt: costs.createdAt,
       updatedAt: costs.updatedAt,

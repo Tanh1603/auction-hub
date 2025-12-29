@@ -36,9 +36,9 @@ export class AdminApprovalService {
       include: { auction: true },
       orderBy: { registeredAt: 'desc' },
     });
-    if (!registrations.length) {
-      throw new NotFoundException('No registrations found for this user');
-    }
+    // if (!registrations.length) {
+    //   throw new NotFoundException('No registrations found for this user');
+    // }
     return registrations.map((r) => this.toDto(r));
   }
 

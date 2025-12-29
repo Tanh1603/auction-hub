@@ -21,7 +21,9 @@ export class EmailTemplateService {
   private registerHelpers(): void {
     // Format currency helper
     Handlebars.registerHelper('formatCurrency', (amount: string | number) => {
+      if (amount === undefined || amount === null) return '0';
       const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+      if (isNaN(num)) return '0';
       return num.toLocaleString('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,

@@ -36,6 +36,7 @@ describe('5.1.1 Race Conditions', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true })
     );
@@ -83,9 +84,9 @@ describe('5.1.1 Race Conditions', () => {
         auctionEndAt: createDate(0, 4),
         viewTime: '9:00-17:00',
         saleFee: new Decimal(500000),
-        depositAmountRequired: new Decimal(100000000),
-        startingPrice: new Decimal(1000000000),
-        bidIncrement: new Decimal(50000000),
+        depositAmountRequired: new Decimal(1000000),
+        startingPrice: new Decimal(10000000),
+        bidIncrement: new Decimal(500000),
         assetDescription: 'Test',
         assetAddress: 'Test',
         validCheckInBeforeStartMinutes: 30,
@@ -105,7 +106,7 @@ describe('5.1.1 Race Conditions', () => {
           confirmedAt: createDate(-5),
           checkedInAt: createDate(0, -1),
           depositPaidAt: createDate(-5),
-          depositAmount: new Decimal(100000000),
+          depositAmount: new Decimal(1000000),
         },
       });
     }
@@ -113,7 +114,7 @@ describe('5.1.1 Race Conditions', () => {
 
   describe('Concurrent Bidding', () => {
     it('TC-5.1.1-01: Concurrent bids at same price - only one wins', async () => {
-      const bidAmount = 1000000000;
+      const bidAmount = 50000000;
 
       const results = await Promise.allSettled([
         request(app.getHttpServer())
@@ -153,7 +154,7 @@ describe('5.1.1 Race Conditions', () => {
           participantId: (await prisma.auctionParticipant.findFirst({
             where: { auctionId: liveAuction.id, userId: bidder1.id },
           }))!.id,
-          amount: new Decimal(1000000000),
+          amount: new Decimal(10000000),
           bidAt: new Date(),
           bidType: BidType.manual,
           isWinningBid: true,
@@ -165,11 +166,11 @@ describe('5.1.1 Race Conditions', () => {
         request(app.getHttpServer())
           .post('/api/manual-bid')
           .set('Authorization', `Bearer ${bidder2Token}`)
-          .send({ auctionId: liveAuction.id, amount: 1050000000 }),
+          .send({ auctionId: liveAuction.id, amount: 10500000 }),
         request(app.getHttpServer())
           .post('/api/manual-bid')
           .set('Authorization', `Bearer ${bidder3Token}`)
-          .send({ auctionId: liveAuction.id, amount: 1100000000 }),
+          .send({ auctionId: liveAuction.id, amount: 11000000 }),
       ]);
 
       // Highest bid should be winning
@@ -183,7 +184,7 @@ describe('5.1.1 Race Conditions', () => {
   });
 
   describe('Concurrent Registration', () => {
-    it('TC-5.1.1-03: Duplicate registration prevented under race', async () => {
+    it('TC-2.4.1-05: Duplicate registration prevented under race', async () => {
       const location = await prisma.location.findFirst();
       const newAuction = await prisma.auction.create({
         data: {
@@ -199,9 +200,9 @@ describe('5.1.1 Race Conditions', () => {
           auctionEndAt: createDate(7, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
