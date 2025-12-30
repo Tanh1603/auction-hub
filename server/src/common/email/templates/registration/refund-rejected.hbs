@@ -1,0 +1,26 @@
+{{> header icon="❌" title="Refund Request Rejected" subtitle="Your refund request could not be approved"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+
+  {{> badge type="error" icon="❌" text="REJECTED"}}
+
+  <p>We regret to inform you that your refund request for auction <strong>{{auctionCode}}</strong> has been rejected.</p>
+
+  {{#> details-box title="📋 Request Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+    <p><strong>Deposit Amount:</strong> <span class="amount-highlight">{{formatCurrency depositAmount}} VND</span></p>
+    <p><strong>Rejected On:</strong> {{formatDate rejectedAt}}</p>
+  {{/details-box}}
+
+  <h3>📝 Reason for Rejection</h3>
+  <div class="warning-box">
+    <p>{{rejectionReason}}</p>
+  </div>
+
+  <h3>❓ Questions?</h3>
+  <p>If you believe this decision was made in error, you may contact our support team to discuss your case. Please have your auction code ready when contacting us.</p>
+
+  {{> footer message="This decision was made in accordance with our auction terms and conditions."}}
+</div>

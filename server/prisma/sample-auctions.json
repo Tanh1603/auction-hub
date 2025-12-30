@@ -1,0 +1,189 @@
+{
+  "description": "Sample auctions for testing different scenarios. Dates use relative offsets from current date.",
+  "data": [
+    {
+      "code": "AUC001",
+      "name": "Căn hộ chung cư 80m2 - Quận 1",
+      "assetType": "secured_asset",
+      "status": "scheduled",
+      "dateOffsets": {
+        "saleStartAt": { "days": -2 },
+        "saleEndAt": { "days": 3 },
+        "depositEndAt": { "days": 2 },
+        "auctionStartAt": { "days": 5 },
+        "auctionEndAt": { "days": 5, "hours": 1 }
+      },
+      "viewTime": "Từ 8h-17h hàng ngày",
+      "saleFee": 500000,
+      "depositAmountRequired": 200000000,
+      "startingPrice": 2000000000,
+      "bidIncrement": 50000000,
+      "assetDescription": "Căn hộ chung cư cao cấp tại trung tâm thành phố, view đẹp, đầy đủ tiện nghi",
+      "assetAddress": "123 Nguyễn Huệ, Quận 1, TP.HCM",
+      "validCheckInBeforeStartMinutes": 30,
+      "validCheckInAfterStartMinutes": 15,
+      "assetWardId": 15,
+      "assetProvinceId": 7,
+      "images": [
+        { "url": "https://example.com/apartment1_main.jpg" },
+        { "url": "https://example.com/apartment1_living.jpg" },
+        { "url": "https://example.com/apartment1_bedroom.jpg" }
+      ],
+      "attachments": [
+        {
+          "url": "https://example.com/docs/apartment1_deed.pdf",
+          "type": "document"
+        },
+        {
+          "url": "https://example.com/docs/apartment1_inspection.pdf",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "code": "AUC002",
+      "name": "Xe ô tô Toyota Camry 2020",
+      "assetType": "other_asset",
+      "status": "live",
+      "dateOffsets": {
+        "saleStartAt": { "days": -10 },
+        "saleEndAt": { "days": -3 },
+        "depositEndAt": { "days": -3 },
+        "auctionStartAt": { "days": 0, "hours": -1 },
+        "auctionEndAt": { "days": 0, "hours": 1 }
+      },
+      "viewTime": "Từ 8h-17h tại showroom",
+      "saleFee": 200000,
+      "depositAmountRequired": 50000000,
+      "startingPrice": 500000000,
+      "bidIncrement": 10000000,
+      "assetDescription": "Xe Toyota Camry 2020, màu đen, máy 2.0L, đã đi 45,000km",
+      "assetAddress": "Showroom ABC, Quận 7, TP.HCM",
+      "validCheckInBeforeStartMinutes": 30,
+      "validCheckInAfterStartMinutes": 15,
+      "assetWardId": 57,
+      "assetProvinceId": 7,
+      "images": [
+        { "url": "https://example.com/camry_exterior.jpg" },
+        { "url": "https://example.com/camry_interior.jpg" }
+      ],
+      "attachments": [
+        {
+          "url": "https://example.com/docs/camry_registration.pdf",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "code": "AUC003",
+      "name": "Đất nền 500m2 - Quận 9",
+      "assetType": "land_use_rights",
+      "status": "success",
+      "dateOffsets": {
+        "saleStartAt": { "days": -20 },
+        "saleEndAt": { "days": -10 },
+        "depositEndAt": { "days": -10 },
+        "auctionStartAt": { "days": -5 },
+        "auctionEndAt": { "days": -5, "hours": 1 }
+      },
+      "viewTime": "Từ 8h-17h tại hiện trường",
+      "saleFee": 1000000,
+      "depositAmountRequired": 500000000,
+      "startingPrice": 5000000000,
+      "bidIncrement": 100000000,
+      "assetDescription": "Lô đất nền 500m2, mặt tiền đường lớn, thuận lợi xây dựng",
+      "assetAddress": "Đường Võ Văn Ngân, Quận 9, TP.HCM",
+      "validCheckInBeforeStartMinutes": 30,
+      "validCheckInAfterStartMinutes": 15,
+      "assetWardId": 54,
+      "assetProvinceId": 7,
+      "images": [
+        { "url": "https://example.com/land_overview.jpg" },
+        { "url": "https://example.com/land_frontage.jpg" }
+      ],
+      "attachments": [
+        {
+          "url": "https://example.com/docs/land_certificate.pdf",
+          "type": "document"
+        },
+        {
+          "url": "https://example.com/docs/land_survey.pdf",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "code": "AUC004",
+      "name": "Máy móc cũ - Nhà máy ABC",
+      "assetType": "state_asset",
+      "status": "failed",
+      "dateOffsets": {
+        "saleStartAt": { "days": -30 },
+        "saleEndAt": { "days": -20 },
+        "depositEndAt": { "days": -20 },
+        "auctionStartAt": { "days": -15 },
+        "auctionEndAt": { "days": -15, "hours": 1 }
+      },
+      "viewTime": "Từ 8h-17h tại nhà máy",
+      "saleFee": 300000,
+      "depositAmountRequired": 100000000,
+      "startingPrice": 1000000000,
+      "bidIncrement": 50000000,
+      "assetDescription": "Bộ máy móc sản xuất cũ, cần bảo dưỡng",
+      "assetAddress": "KCN Tân Thuận, Quận 7, TP.HCM",
+      "validCheckInBeforeStartMinutes": 30,
+      "validCheckInAfterStartMinutes": 15,
+      "assetWardId": 56,
+      "assetProvinceId": 7,
+      "images": [
+        { "url": "https://example.com/machinery1.jpg" },
+        { "url": "https://example.com/machinery2.jpg" }
+      ],
+      "attachments": [
+        {
+          "url": "https://example.com/docs/machinery_specs.pdf",
+          "type": "document"
+        }
+      ]
+    },
+    {
+      "code": "AUC005",
+      "name": "Villa 2 tầng 300m2 - Thủ Đức",
+      "assetType": "secured_asset",
+      "status": "scheduled",
+      "dateOffsets": {
+        "saleStartAt": { "days": 5 },
+        "saleEndAt": { "days": 15 },
+        "depositEndAt": { "days": 15 },
+        "auctionStartAt": { "days": 20 },
+        "auctionEndAt": { "days": 20, "hours": 2 }
+      },
+      "viewTime": "Cuối tuần từ 9h-16h",
+      "saleFee": 2000000,
+      "depositAmountRequired": 1000000000,
+      "startingPrice": 10000000000,
+      "bidIncrement": 200000000,
+      "assetDescription": "Villa cao cấp 2 tầng, sân vườn rộng, nội thất sang trọng",
+      "assetAddress": "KDC Riviera Point, TP. Thủ Đức",
+      "validCheckInBeforeStartMinutes": 45,
+      "validCheckInAfterStartMinutes": 30,
+      "assetWardId": 22,
+      "assetProvinceId": 7,
+      "images": [
+        { "url": "https://example.com/villa_exterior.jpg" },
+        { "url": "https://example.com/villa_living.jpg" },
+        { "url": "https://example.com/villa_garden.jpg" }
+      ],
+      "attachments": [
+        {
+          "url": "https://example.com/docs/villa_blueprint.pdf",
+          "type": "document"
+        },
+        {
+          "url": "https://example.com/docs/villa_valuation.pdf",
+          "type": "document"
+        }
+      ]
+    }
+  ]
+}

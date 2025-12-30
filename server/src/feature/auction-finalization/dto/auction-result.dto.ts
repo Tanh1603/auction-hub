@@ -1,0 +1,77 @@
+import { AuctionStatus, BidType } from '../../../../generated';
+
+export class AuctionResultDto {
+  auctionId: string;
+  auctionCode: string;
+  auctionName: string;
+  status: AuctionStatus;
+  startingPrice: string;
+  auctionStartAt: Date;
+  auctionEndAt: Date;
+  finalizedAt?: Date;
+
+  // Access level indicator for frontend
+  accessLevel?: string;
+
+  // Winning bid information
+  winningBid?: {
+    bidId: string;
+    amount: string;
+    bidAt: Date;
+    bidType: BidType;
+    winner: {
+      userId: string;
+      fullName: string;
+      email: string;
+    };
+  };
+
+  // Auction statistics
+  totalBids: number;
+  totalParticipants: number;
+
+  // Contract information (if created)
+  contract?: {
+    contractId: string;
+    status: string;
+    createdAt: Date;
+  };
+
+  // Evaluation details
+  evaluation?: {
+    meetsReservePrice: boolean;
+    hasMinimumParticipants: boolean;
+    hasValidBids: boolean;
+    bidIncrementCompliance: number; // Percentage (0-100)
+    autoEvaluated: boolean;
+    evaluatedAt: Date;
+  };
+
+  // Financial summary
+  financialSummary?: {
+    finalSalePrice: number;
+    startingPrice: number;
+    commissionFee: number;
+    dossierFee: number;
+    depositAmount: number;
+    totalAuctionCosts: number;
+    totalFeesToSeller: number;
+    netAmountToSeller: number;
+    calculationDetails?: any;
+    calculatedAt?: Date;
+  };
+
+  // Bid history
+  allBids?: ResultBidDto[];
+  userBids?: ResultBidDto[];
+}
+
+export class ResultBidDto {
+  bidId: string;
+  amount: string;
+  bidAt: Date;
+  bidType: BidType;
+  isWinningBid: boolean;
+  participantId?: string;
+  bidderName?: string;
+}

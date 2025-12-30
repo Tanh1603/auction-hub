@@ -1,0 +1,487 @@
+{
+  "description": "Test scenarios configuration matching production data style. Uses VNA codes from auction-completed.json and auction-upcoming.json",
+  "participants": {
+    "VNA0000345": [
+      {
+        "userRoleKey": "bidder",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna001_bidder1_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      },
+      {
+        "userRoleKey": "bidder2",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna001_bidder2_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      }
+    ],
+    "VNA0000346": [
+      {
+        "userRoleKey": "bidder",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna002_bidder1_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      },
+      {
+        "userRoleKey": "bidder2",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna002_bidder2_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      }
+    ],
+    "VNA0000347": [],
+    "VNA0000344": [
+      {
+        "userRoleKey": "bidder",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna004_bidder1_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      },
+      {
+        "userRoleKey": "bidder2",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna004_bidder2_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      }
+    ],
+    "VNA0000352": [
+      {
+        "userRoleKey": "bidder",
+        "status": "checked_in",
+        "dateOffsets": {
+          "registeredAt": {
+            "days": -10
+          },
+          "submittedAt": {
+            "days": -9
+          },
+          "documentsVerifiedAt": {
+            "days": -8
+          },
+          "depositPaidAt": {
+            "days": -7
+          },
+          "confirmedAt": {
+            "days": -6
+          },
+          "checkedInAt": {
+            "days": -5,
+            "hours": -1
+          }
+        },
+        "documents": [
+          {
+            "type": "identity_card",
+            "url": "https://example.com/docs/vna005_bidder1_id.pdf"
+          }
+        ],
+        "createDepositPayment": true
+      }
+    ]
+  },
+  "bids": {
+    "VNA0000345": [
+      {
+        "participantIndex": 0,
+        "amount": 171000000,
+        "minutesOffset": -50
+      },
+      {
+        "participantIndex": 1,
+        "amount": 172000000,
+        "minutesOffset": -45
+      }
+    ],
+    "VNA0000346": [
+      {
+        "participantIndex": 0,
+        "amount": 910000000,
+        "minutesOffset": -55
+      },
+      {
+        "participantIndex": 1,
+        "amount": 911000000,
+        "minutesOffset": -50
+      },
+      {
+        "participantIndex": 0,
+        "amount": 912000000,
+        "minutesOffset": -45
+      },
+      {
+        "participantIndex": 1,
+        "amount": 913000000,
+        "minutesOffset": -40
+      },
+      {
+        "participantIndex": 0,
+        "amount": 914000000,
+        "minutesOffset": -35
+      },
+      {
+        "participantIndex": 1,
+        "amount": 915000000,
+        "minutesOffset": -30
+      },
+      {
+        "participantIndex": 0,
+        "amount": 916000000,
+        "minutesOffset": -25
+      },
+      {
+        "participantIndex": 1,
+        "amount": 917000000,
+        "minutesOffset": -20
+      },
+      {
+        "participantIndex": 0,
+        "amount": 918000000,
+        "minutesOffset": -15
+      },
+      {
+        "participantIndex": 1,
+        "amount": 919000000,
+        "minutesOffset": -10
+      },
+      {
+        "participantIndex": 1,
+        "amount": 920000000,
+        "minutesOffset": -5
+      }
+    ],
+    "VNA0000344": [
+      {
+        "participantIndex": 0,
+        "amount": 851000000,
+        "minutesOffset": -30
+      },
+      {
+        "participantIndex": 1,
+        "amount": 852000000,
+        "minutesOffset": -25
+      }
+    ],
+    "VNA0000352": [
+      {
+        "participantIndex": 0,
+        "amount": 173000000,
+        "minutesOffset": -20
+      }
+    ]
+  },
+  "autoBidSettings": [],
+  "auctionCosts": {
+    "VNA0000345": {
+      "advertisingCost": 2000000,
+      "venueRentalCost": 1500000,
+      "appraisalCost": 5000000,
+      "assetViewingCost": 1000000,
+      "otherCosts": [
+        {
+          "description": "Photography and documentation",
+          "amount": 500000,
+          "documentUrl": "https://example.com/docs/vna001-photo.pdf"
+        }
+      ],
+      "totalCosts": 10000000,
+      "documents": [
+        "https://example.com/docs/vna001-costs.pdf"
+      ]
+    },
+    "VNA0000346": {
+      "advertisingCost": 3000000,
+      "venueRentalCost": 2000000,
+      "appraisalCost": 8000000,
+      "assetViewingCost": 1500000,
+      "otherCosts": [
+        {
+          "description": "Legal consultation",
+          "amount": 2000000,
+          "documentUrl": "https://example.com/docs/vna002-legal.pdf"
+        }
+      ],
+      "totalCosts": 16500000,
+      "documents": [
+        "https://example.com/docs/vna002-costs.pdf"
+      ]
+    },
+    "VNA0000344": {
+      "advertisingCost": 2500000,
+      "venueRentalCost": 1800000,
+      "appraisalCost": 6000000,
+      "assetViewingCost": 1200000,
+      "otherCosts": [],
+      "totalCosts": 11500000,
+      "documents": [
+        "https://example.com/docs/vna004-costs.pdf"
+      ]
+    }
+  },
+  "contracts": {
+    "VNA0000345": {
+      "winnerParticipantIndex": 1,
+      "status": "signed",
+      "signedAtOffset": {
+        "days": -3
+      },
+      "commissionFee": 1720000,
+      "dossierFee": 100000
+    },
+    "VNA0000346": {
+      "winnerParticipantIndex": 1,
+      "status": "signed",
+      "signedAtOffset": {
+        "days": -3
+      },
+      "commissionFee": 9200000,
+      "dossierFee": 100000
+    }
+  },
+  "auditLogs": [
+    {
+      "auctionCode": "VNA0000345",
+      "action": "AUCTION_CREATED",
+      "reason": "Phiên đấu giá mới được tạo - Quyền tổ chức vận hành căn tin tại Trường THPT Bình Hưng Hòa",
+      "newStatus": "scheduled"
+    },
+    {
+      "auctionCode": "VNA0000345",
+      "action": "STATUS_OVERRIDE",
+      "previousStatus": "scheduled",
+      "newStatus": "live",
+      "reason": "Bắt đầu phiên đấu giá theo lịch"
+    },
+    {
+      "auctionCode": "VNA0000345",
+      "action": "AUCTION_FINALIZED",
+      "previousStatus": "live",
+      "newStatus": "success",
+      "reason": "Hoàn thành đấu giá thành công - Giá trúng: 172,000,000 VND"
+    },
+    {
+      "auctionCode": "VNA0000345",
+      "action": "CONTRACT_CREATED",
+      "reason": "Tạo hợp đồng cho người thắng đấu giá"
+    },
+    {
+      "auctionCode": "VNA0000346",
+      "action": "AUCTION_CREATED",
+      "reason": "Phiên đấu giá mới được tạo - Quyền tổ chức vận hành căn tin tại Trường THPT Hoàng Hoa Thám",
+      "newStatus": "scheduled"
+    },
+    {
+      "auctionCode": "VNA0000346",
+      "action": "STATUS_OVERRIDE",
+      "previousStatus": "scheduled",
+      "newStatus": "live",
+      "reason": "Bắt đầu phiên đấu giá theo lịch"
+    },
+    {
+      "auctionCode": "VNA0000346",
+      "action": "AUCTION_FINALIZED",
+      "previousStatus": "live",
+      "newStatus": "success",
+      "reason": "Hoàn thành đấu giá thành công - Giá trúng: 920,000,000 VND"
+    },
+    {
+      "auctionCode": "VNA0000346",
+      "action": "CONTRACT_CREATED",
+      "reason": "Tạo hợp đồng cho người thắng đấu giá"
+    },
+    {
+      "auctionCode": "VNA0000347",
+      "action": "AUCTION_CREATED",
+      "reason": "Phiên đấu giá mới được tạo - Xe ô tô của Công ty Dịch vụ MobiFone Khu vực 9",
+      "newStatus": "scheduled"
+    },
+    {
+      "auctionCode": "VNA0000347",
+      "action": "AUCTION_FINALIZED",
+      "previousStatus": "live",
+      "newStatus": "failed",
+      "reason": "Không có người đặt giá - Phiên đấu giá thất bại"
+    },
+    {
+      "auctionCode": "VNA0000344",
+      "action": "AUCTION_CREATED",
+      "reason": "Phiên đấu giá mới được tạo - Quyền tổ chức vận hành tại Trường THPT Thủ Thiêm",
+      "newStatus": "scheduled"
+    },
+    {
+      "auctionCode": "VNA0000344",
+      "action": "AUCTION_FINALIZED",
+      "previousStatus": "live",
+      "newStatus": "success",
+      "reason": "Hoàn thành đấu giá thành công - Giá trúng: 852,000,000 VND"
+    },
+    {
+      "auctionCode": "VNA0000352",
+      "action": "AUCTION_CREATED",
+      "reason": "Phiên đấu giá mới được tạo - Quyền tổ chức khai thác căn tin tại Trường TH Giồng Ông Tố",
+      "newStatus": "scheduled"
+    },
+    {
+      "auctionCode": "VNA0000352",
+      "action": "AUCTION_FINALIZED",
+      "previousStatus": "live",
+      "newStatus": "success",
+      "reason": "Hoàn thành đấu giá thành công"
+    }
+  ]
+}

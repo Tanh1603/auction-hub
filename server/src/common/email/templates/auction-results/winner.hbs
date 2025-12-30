@@ -1,0 +1,29 @@
+{{> header icon="🎉" title="Congratulations!" subtitle="You are the winning bidder!"}}
+
+<div class="content">
+  <h2>Dear {{recipientName}},</h2>
+  
+  {{> badge type="success" icon="✅" text="WINNING BIDDER"}}
+  
+  <p>We're excited to inform you that you've won auction <strong>{{auctionCode}}</strong>!</p>
+
+  {{#> details-box title="📋 Auction Details"}}
+    <p><strong>Auction:</strong> {{auctionName}}</p>
+    <p><strong>Your Winning Bid:</strong> <span class="amount-highlight">{{formatCurrency winningAmount}} VND</span></p>
+    <p><strong>Total Bids Received:</strong> {{totalBids}}</p>
+    <p><strong>Auction Code:</strong> {{auctionCode}}</p>
+  {{/details-box}}
+
+  <h3>📞 Next Steps</h3>
+  <p>Our team will contact you within 24 hours to:</p>
+  <ul>
+    <li>Complete the necessary paperwork</li>
+    <li>Arrange payment details</li>
+    <li>Schedule property handover</li>
+    <li>Finalize the legal documentation</li>
+  </ul>
+
+  {{> button url="#" text="View Contract Details"}}
+
+  {{> footer message="Congratulations on your winning bid!"}}
+</div>
