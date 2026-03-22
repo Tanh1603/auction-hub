@@ -1,4 +1,29 @@
-# Auction Hub
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="60" alt="Nx Logo">
+</p>
+
+<h1 align="center">🔨 Auction Hub</h1>
+<p align="center">
+  <strong>A comprehensive Vietnamese auction platform implementing legal regulations for asset auctions</strong>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#getting-started">Getting Started</a> •
+  <a href="#documentation">Documentation</a> •
+  <a href="#testing">Testing</a> •
+  <a href="#deployment">Deployment</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS">
+  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
+  <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.io">
+  <img src="https://img.shields.io/badge/Stripe-008CDD?style=for-the-badge&logo=stripe&logoColor=white" alt="Stripe">
+</p>
 
 > **Documentation:** [System Architecture](./docs/ARCHITECTURE.md) | [API Documentation](./docs/API_DOCUMENTATION/README.md) | [Documentation Index](./docs/DOCUMENTATION_INDEX.md)
 
