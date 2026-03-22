@@ -26,5 +26,10 @@ This repository maintains structured technical documentation across several doma
 ## Quality Assurance
 - [Quality Assurance & Testing Plans](./QA_DOCUMENTATION/)
 
+## Project Management
+- [Project Charter](./Project%20management%20artifacts/Project%20charter.docx)
+- [Product Backlog](./Project%20management%20artifacts/Product%20backlog.xlsx)
+- [Definitions of Done (DoD)](./Project%20management%20artifacts/Definitions%20of%20Done%20(DoD)%20in%20Software%20Development.docx)
+
 ---
 *Note: Deprecated resources, such as the legacy Postman API Testing Guide, are stored in the [Depreciated docs](./Depreciated%20docs/) folder.*

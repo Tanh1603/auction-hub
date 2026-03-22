@@ -43,6 +43,14 @@ The system is built on a modern, scalable infrastructure stack:
 - **Real-Time Communication:** WebSockets
 - **Caching & Message Broker:** Redis
 
+## Project Management
+
+The development process is governed by structured project management artifacts to ensure delivery quality and scope compliance:
+
+- [Project Charter](./docs/Project%20management%20artifacts/Project%20charter.docx)
+- [Product Backlog](./docs/Project%20management%20artifacts/Product%20backlog.xlsx)
+- [Definitions of Done (DoD)](./docs/Project%20management%20artifacts/Definitions%20of%20Done%20(DoD)%20in%20Software%20Development.docx)
+
 ## System Architecture
 
 The following diagram illustrates the high-level request lifecycle and internal service communication.
