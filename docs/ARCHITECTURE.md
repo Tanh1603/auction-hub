@@ -50,8 +50,7 @@ flowchart TB
 
     CoreModules -->|Prisma ORM| Postgres
     AuctionWorker -->|Prisma ORM| Postgres
-
-    AuctionMod -->|Schedule (BullMQ)| Redis
+    AuctionMod -->|Schedule via BullMQ| Redis
     Redis -->|Consume Jobs| AuctionWorker
 ```
 
