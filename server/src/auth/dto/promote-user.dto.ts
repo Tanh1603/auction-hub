@@ -1,4 +1,4 @@
-import { IsString, IsEnum } from 'class-validator';
+import { IsString, IsEnum, IsOptional } from 'class-validator';
 import { UserRole } from '../../../generated';
 
 export class PromoteUserDto {
@@ -7,6 +7,7 @@ export class PromoteUserDto {
   })
   role: UserRole;
 
+  @IsOptional()
   @IsString()
   reason?: string;
 }

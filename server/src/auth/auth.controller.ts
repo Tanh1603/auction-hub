@@ -25,6 +25,10 @@ import { AuthGuard } from '../common/guards/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import {
+  CurrentUser,
+  CurrentUserData,
+} from '../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -124,8 +128,10 @@ export class AuthController {
 
   @Get('me')
   @HttpCode(HttpStatus.OK)
-  async getUserInfo(@Headers('authorization') authHeader: string) {
-    return this.userService.getCurrentUser(authHeader);
+  async getUserInfo(@CurrentUser() user: CurrentUserData) {
+    // AuthGuard has already validated token and fetched user from DB
+    // Just fetch full user data (excluding sensitive fields)
+    return this.userService.getUserById(user.id);
   }
 
   /**
@@ -136,10 +142,10 @@ export class AuthController {
   @Roles('admin', 'super_admin')
   @HttpCode(HttpStatus.OK)
   async promoteUser(
-    @Headers('authorization') authHeader: string,
+    @CurrentUser() adminUser: CurrentUserData,
     @Param('userId') userId: string,
     @Body() promoteData: PromoteUserDto
   ) {
-    return this.userService.promoteUser(authHeader, userId, promoteData);
+    return this.userService.promoteUser(adminUser, userId, promoteData);
   }
 }

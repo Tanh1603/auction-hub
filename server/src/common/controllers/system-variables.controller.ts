@@ -47,6 +47,38 @@ export class SystemVariablesController {
   }
 
   /**
+   * Clear system variables cache
+   */
+  @Post('cache/clear')
+  @Roles('admin', 'super_admin')
+  @ApiOperation({ summary: 'Clear system variables cache (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Cache cleared' })
+  async clearCache(@Query('category') category?: string) {
+    if (category) {
+      this.sysVars.clearCategoryCache(category);
+      return {
+        message: `Cache cleared for category: ${category}`,
+      };
+    }
+
+    this.sysVars.clearCache();
+    return {
+      message: 'All system variables cache cleared',
+    };
+  }
+
+  /**
+   * Get cache statistics
+   */
+  @Get('cache/stats')
+  @Roles('admin', 'super_admin')
+  @ApiOperation({ summary: 'Get cache statistics (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Cache stats retrieved' })
+  async getCacheStats() {
+    return this.sysVars.getCacheStats();
+  }
+
+  /**
    * Get a specific system variable
    * Admin only - system configuration is sensitive
    */
@@ -114,37 +146,5 @@ export class SystemVariablesController {
       message: 'System variable created successfully',
       variable: created,
     };
-  }
-
-  /**
-   * Clear system variables cache
-   */
-  @Post('cache/clear')
-  @Roles('admin', 'super_admin')
-  @ApiOperation({ summary: 'Clear system variables cache (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Cache cleared' })
-  async clearCache(@Query('category') category?: string) {
-    if (category) {
-      this.sysVars.clearCategoryCache(category);
-      return {
-        message: `Cache cleared for category: ${category}`,
-      };
-    }
-
-    this.sysVars.clearCache();
-    return {
-      message: 'All system variables cache cleared',
-    };
-  }
-
-  /**
-   * Get cache statistics
-   */
-  @Get('cache/stats')
-  @Roles('admin', 'super_admin')
-  @ApiOperation({ summary: 'Get cache statistics (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Cache stats retrieved' })
-  async getCacheStats() {
-    return this.sysVars.getCacheStats();
   }
 }

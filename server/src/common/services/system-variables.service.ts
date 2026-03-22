@@ -1,5 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '../../../generated';
 
 /**
  * System Variables Service
@@ -113,6 +119,20 @@ export class SystemVariablesService {
   ) {
     const fullKey = `${category}.${key}`;
 
+    // First check if the variable exists
+    const existing = await this.prisma.systemVariable.findUnique({
+      where: {
+        category_key: {
+          category,
+          key: fullKey,
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`System variable not found: ${fullKey}`);
+    }
+
     const updated = await this.prisma.systemVariable.update({
       where: {
         category_key: {
@@ -148,19 +168,32 @@ export class SystemVariablesService {
   ) {
     const fullKey = `${category}.${key}`;
 
-    const created = await this.prisma.systemVariable.create({
-      data: {
-        category,
-        key: fullKey,
-        value,
-        dataType,
-        description,
-      },
-    });
+    try {
+      const created = await this.prisma.systemVariable.create({
+        data: {
+          category,
+          key: fullKey,
+          value,
+          dataType,
+          description,
+        },
+      });
 
-    this.logger.log(`Created system variable: ${fullKey}`);
+      this.logger.log(`Created system variable: ${fullKey}`);
 
-    return created;
+      return created;
+    } catch (error) {
+      // Handle unique constraint violation (duplicate key)
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `System variable already exists: ${fullKey}`
+        );
+      }
+      throw error;
+    }
   }
 
   /**

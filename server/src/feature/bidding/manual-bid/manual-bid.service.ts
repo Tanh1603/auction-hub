@@ -89,6 +89,22 @@ export class ManualBidService {
       throw new ForbiddenException('You have withdrawn from this auction');
     }
 
+    // Check if user is banned (SECURITY: Must prevent banned users from bidding)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isBanned: true },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException(
+        'Your account has been banned. You cannot place bids.'
+      );
+    }
+
     // Convert bid amount to Decimal
     const bidAmount = new Decimal(dto.amount.toString());
 

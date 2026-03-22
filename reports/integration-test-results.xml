@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="21" failures="0" errors="0" time="78.4">
+  <testsuite name="2.1.1 User Registration" errors="0" failures="0" skipped="0" timestamp="2025-12-29T02:26:01" time="78.21" tests="21">
+    <testcase classname="2.1.1 User Registration Successful Registration TC-2.1.1-02: Verify successful individual user registration" name="2.1.1 User Registration Successful Registration TC-2.1.1-02: Verify successful individual user registration" time="5.074">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Successful Registration TC-2.1.1-02: Verify successful business user registration" name="2.1.1 User Registration Successful Registration TC-2.1.1-02: Verify successful business user registration" time="2.818">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Successful Registration TC-2.1.1-16: Verify registration with minimal required fields" name="2.1.1 User Registration Successful Registration TC-2.1.1-16: Verify registration with minimal required fields" time="2.86">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Successful Registration TC-2.1.1-19: Verify default role is BIDDER" name="2.1.1 User Registration Successful Registration TC-2.1.1-19: Verify default role is BIDDER" time="3.565">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Email Validation TC-2.2.4-06: Fail with missing email" name="2.1.1 User Registration Email Validation TC-2.2.4-06: Fail with missing email" time="0.026">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Email Validation TC-2.2.1-06: Fail with invalid email format" name="2.1.1 User Registration Email Validation TC-2.2.1-06: Fail with invalid email format" time="0.025">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Email Validation TC-2.3.3-10: Fail with duplicate email" name="2.1.1 User Registration Email Validation TC-2.3.3-10: Fail with duplicate email" time="2.974">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Email Validation TC-2.1.1-26: Verify case-insensitive email uniqueness" name="2.1.1 User Registration Email Validation TC-2.1.1-26: Verify case-insensitive email uniqueness" time="3.56">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Password Validation TC-2.2.4-06: Fail with missing password" name="2.1.1 User Registration Password Validation TC-2.2.4-06: Fail with missing password" time="0.028">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Password Validation TC-2.1.1-06: Fail with weak password (no uppercase)" name="2.1.1 User Registration Password Validation TC-2.1.1-06: Fail with weak password (no uppercase)" time="0.024">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Password Validation TC-2.1.1-08: Fail with weak password (no number)" name="2.1.1 User Registration Password Validation TC-2.1.1-08: Fail with weak password (no number)" time="0.018">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Password Validation TC-2.2.1-02: Fail with short password (&lt;8 chars)" name="2.1.1 User Registration Password Validation TC-2.2.1-02: Fail with short password (&lt;8 chars)" time="0.021">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Phone Validation TC-2.1.1-09: Fail with invalid phone format" name="2.1.1 User Registration Phone Validation TC-2.1.1-09: Fail with invalid phone format" time="0.019">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Phone Validation TC-2.1.1-13: Fail with duplicate phone" name="2.1.1 User Registration Phone Validation TC-2.1.1-13: Fail with duplicate phone" time="2.822">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Identity Number Validation TC-2.1.1-14: Fail with duplicate identity number" name="2.1.1 User Registration Identity Number Validation TC-2.1.1-14: Fail with duplicate identity number" time="2.813">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Identity Number Validation TC-2.1.1-10: Fail with invalid identity number format" name="2.1.1 User Registration Identity Number Validation TC-2.1.1-10: Fail with invalid identity number format" time="0.036">
+    </testcase>
+    <testcase classname="2.1.1 User Registration User Type Validation TC-2.2.4-06: Fail with missing user_type" name="2.1.1 User Registration User Type Validation TC-2.2.4-06: Fail with missing user_type" time="0.028">
+    </testcase>
+    <testcase classname="2.1.1 User Registration User Type Validation TC-2.1.1-15: Fail with invalid user_type enum" name="2.1.1 User Registration User Type Validation TC-2.1.1-15: Fail with invalid user_type enum" time="0.024">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Security TC-4.1.5-01: SQL Injection prevention in email" name="2.1.1 User Registration Security TC-4.1.5-01: SQL Injection prevention in email" time="0.035">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Security TC-4.1.6-02: XSS prevention in full_name" name="2.1.1 User Registration Security TC-4.1.6-02: XSS prevention in full_name" time="2.795">
+    </testcase>
+    <testcase classname="2.1.1 User Registration Security TC-4.1.2-01: Mass assignment prevention (role elevation)" name="2.1.1 User Registration Security TC-4.1.2-01: Mass assignment prevention (role elevation)" time="0.044">
+    </testcase>
+  </testsuite>
+</testsuites>

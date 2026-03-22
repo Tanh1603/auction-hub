@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '../../generated';
 import { CloudinaryResponse } from '../cloudinary/cloudinary-response';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -76,35 +80,24 @@ export class ArticleService {
   }
 
   async findOne(id: string) {
-    try {
-      const article = await this.prisma.article.findUniqueOrThrow({
-        where: { id },
-        include: {
-          relatedFrom: {
-            include: {
-              relatedArticle: true,
-            },
+    const article = await this.prisma.article.findUnique({
+      where: { id },
+      include: {
+        relatedFrom: {
+          include: {
+            relatedArticle: true,
           },
         },
-      });
+      },
+    });
 
-      // Lấy các quan hệ 2 chiều
-      // const relatedRelations = await this.prisma.articleRelation.findMany({
-      //   where: {
-      //     OR: [{ articleId: id }, { relatedArticleId: id }],
-      //   },
-      //   include: {
-      //     article: true,
-      //     relatedArticle: true,
-      //   },
-      // });
-
-      return {
-        data: this.toDto(article),
-      };
-    } catch (error) {
-      throw new BadRequestException(error);
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
     }
+
+    return {
+      data: this.toDto(article),
+    };
   }
 
   async create(createArticleDto: CreateArticleDto) {
@@ -144,16 +137,18 @@ export class ArticleService {
   }
 
   async update(id: string, updateArticleDto: UpdateArticleDto) {
+    // Check existence before try block so NotFoundException bubbles up
+    const existingArticle = await this.prisma.article.findUnique({
+      where: { id },
+    });
+
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+
+    const oldImage = existingArticle.image as unknown as CloudinaryResponse;
+
     try {
-      let oldImage: CloudinaryResponse;
-      const exisitingArticle = await this.prisma.article.findUniqueOrThrow({
-        where: { id },
-      });
-
-      if (exisitingArticle) {
-        oldImage = exisitingArticle.image as unknown as CloudinaryResponse;
-      }
-
       const article = await this.prisma.$transaction((db) => {
         return db.article.update({
           data: {
@@ -175,8 +170,8 @@ export class ArticleService {
         });
       });
 
-      // If Update success , delete old image
-      if (exisitingArticle) {
+      // If Update success, delete old image
+      if (oldImage?.publicId) {
         await this.cloudinary.deleteFile(oldImage.publicId);
       }
 
@@ -240,23 +235,27 @@ export class ArticleService {
   }
 
   async remove(id: string) {
-    let oldImageId: string;
+    // Check existence before try block so NotFoundException bubbles up
+    const existingArticle = await this.prisma.article.findUnique({
+      where: { id },
+    });
+
+    if (!existingArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+
+    const oldImageId = (existingArticle.image as unknown as CloudinaryResponse)
+      ?.publicId;
+
     try {
-      const exsitingArticle = await this.prisma.article.findUniqueOrThrow({
-        where: {
-          id,
-        },
-      });
-      if (exsitingArticle) {
-        oldImageId = (exsitingArticle.image as unknown as CloudinaryResponse)
-          .publicId;
-      }
       await this.prisma.article.delete({
         where: { id },
       });
+
       if (oldImageId) {
         await this.cloudinary.deleteFile(oldImageId);
       }
+
       return {
         message: 'Delete article successfully!',
       };

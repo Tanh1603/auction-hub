@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -51,7 +52,7 @@ export class AuctionController {
     type: ApiResponseError,
   })
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.auctionService.findOne(id);
   }
 
@@ -82,12 +83,15 @@ export class AuctionController {
     type: UpdateAuctionDto,
   })
   @Put(':id')
-  update(@Param('id') id: string, @Body() request: UpdateAuctionDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() request: UpdateAuctionDto
+  ) {
     return this.auctionService.update(id, request);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.auctionService.remove(id);
   }
 
@@ -104,7 +108,7 @@ export class AuctionController {
     type: UpdateAuctionRelationsDto,
   })
   async updateRelation(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateAuctionRelationsDto
   ) {
     return this.auctionService.updateRelations(id, request.relatedIds);

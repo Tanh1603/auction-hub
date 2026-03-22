@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuctionFinalizationService } from './auction-finalization.service';
 import { FinalizeAuctionDto } from './dto/finalize-auction.dto';
 import { OverrideAuctionStatusDto } from './dto/override-auction-status.dto';
@@ -39,6 +48,7 @@ export class AuctionFinalizationController {
    * POST /auction-finalization/finalize
    */
   @Post('finalize')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.AUCTIONEER, UserRole.SUPER_ADMIN)
   async finalizeAuction(
@@ -57,6 +67,7 @@ export class AuctionFinalizationController {
    * - Manual intervention for edge cases
    */
   @Post('override')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async overrideAuctionStatus(
@@ -143,6 +154,7 @@ export class AuctionFinalizationController {
    * - Admin/Auctioneer: To verify payment on behalf of winner
    */
   @Post('verify-winner-payment')
+  @HttpCode(HttpStatus.OK)
   async verifyWinnerPayment(
     @Body() dto: VerifyWinnerPaymentDto,
     @CurrentUser() user: CurrentUserData

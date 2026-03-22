@@ -29,6 +29,7 @@ describe('4.1.3 JWT Security', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true })
     );
@@ -50,7 +51,7 @@ describe('4.1.3 JWT Security', () => {
   });
 
   describe('Token Validation', () => {
-    it('TC-4.1.3-01: Reject expired JWT token', async () => {
+    it('TC-4.1.4-01: Reject expired JWT token', async () => {
       const expiredToken = createExpiredJWT(testUser);
 
       const response = await request(app.getHttpServer())
@@ -61,7 +62,7 @@ describe('4.1.3 JWT Security', () => {
       expect(response.body.message).toMatch(/expired|invalid|unauthorized/i);
     });
 
-    it('TC-4.1.3-02: Reject JWT with invalid signature', async () => {
+    it('TC-4.1.4-02: Reject JWT with invalid signature', async () => {
       const invalidToken = createInvalidJWT(testUser);
 
       await request(app.getHttpServer())
@@ -70,7 +71,7 @@ describe('4.1.3 JWT Security', () => {
         .expect(401);
     });
 
-    it('TC-4.1.3-03: Reject malformed JWT', async () => {
+    it('TC-4.1.4-01: Reject malformed JWT', async () => {
       await request(app.getHttpServer())
         .get('/api/auth/me')
         .set('Authorization', 'Bearer not.a.valid.jwt.token')
@@ -86,7 +87,7 @@ describe('4.1.3 JWT Security', () => {
         .expect(401);
     });
 
-    it('TC-4.1.3-05: Accept valid JWT token', async () => {
+    it('TC-2.2.1-09: Accept valid JWT token', async () => {
       const validToken = createTestJWT(testUser, UserRole.bidder);
 
       await request(app.getHttpServer())
@@ -97,7 +98,7 @@ describe('4.1.3 JWT Security', () => {
   });
 
   describe('Token Tampering', () => {
-    it('TC-4.1.3-06: Reject JWT with modified payload', async () => {
+    it('TC-4.1.4-02: Reject JWT with modified payload', async () => {
       const validToken = createTestJWT(testUser, UserRole.bidder);
 
       // Split token and modify payload
@@ -113,7 +114,7 @@ describe('4.1.3 JWT Security', () => {
         .expect(401);
     });
 
-    it('TC-4.1.3-07: Reject none algorithm token', async () => {
+    it('TC-4.1.4-01: Reject none algorithm token', async () => {
       // Create a token with "alg": "none" (known JWT vulnerability)
       const header = Buffer.from('{"alg":"none","typ":"JWT"}').toString(
         'base64url'

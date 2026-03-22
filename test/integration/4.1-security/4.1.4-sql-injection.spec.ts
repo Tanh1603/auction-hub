@@ -19,6 +19,7 @@ describe('4.1.4 SQL Injection Prevention', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true })
     );
@@ -31,7 +32,7 @@ describe('4.1.4 SQL Injection Prevention', () => {
   });
 
   describe('Search Parameter Injection', () => {
-    it('TC-4.1.4-01: SQL injection in search parameter is safe', async () => {
+    it('TC-4.1.5-02: SQL injection in search parameter is safe', async () => {
       const maliciousSearch = "'; DROP TABLE auctions; --";
 
       const response = await request(app.getHttpServer())
@@ -43,7 +44,7 @@ describe('4.1.4 SQL Injection Prevention', () => {
       expect(count).toBeGreaterThanOrEqual(0);
     });
 
-    it('TC-4.1.4-02: SQL injection in path parameter is safe', async () => {
+    it('TC-4.1.5-02: SQL injection in path parameter is safe', async () => {
       const maliciousId = "1' OR '1'='1";
 
       const response = await request(app.getHttpServer()).get(
@@ -54,7 +55,7 @@ describe('4.1.4 SQL Injection Prevention', () => {
       expect([400, 404]).toContain(response.status);
     });
 
-    it('TC-4.1.4-03: SQL injection in filter parameter is safe', async () => {
+    it('TC-4.1.5-03: SQL injection in filter parameter is safe', async () => {
       const maliciousFilter = "secured_asset' OR '1'='1";
 
       const response = await request(app.getHttpServer())
@@ -66,7 +67,7 @@ describe('4.1.4 SQL Injection Prevention', () => {
   });
 
   describe('Body Payload Injection', () => {
-    it('TC-4.1.4-04: SQL injection in registration email is safe', async () => {
+    it('TC-4.1.5-01: SQL injection in registration email is safe', async () => {
       const payload = {
         email: "test@test.com'; DROP TABLE users; --",
         password: 'SecurePass123!',

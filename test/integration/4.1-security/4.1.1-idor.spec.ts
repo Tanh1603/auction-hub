@@ -8,7 +8,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../../server/src/prisma/prisma.service';
 import { AppModule } from '../../../server/src/app/app.module';
-import { UserRole, AuctionStatus } from '../../../server/generated';
+import {
+  UserRole,
+  AuctionStatus,
+  BidType,
+  AssetType,
+  ContractStatus,
+} from '../../../server/generated';
 import {
   createTestJWT,
   createTestUser,
@@ -24,7 +30,7 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
   let user1: TestUser;
   let user2: TestUser;
   let user1Token: string;
-  let user2Token: string;
+  // let user2Token: string;
   const TEST_PREFIX = 'TEST-IDOR';
 
   beforeAll(async () => {
@@ -33,6 +39,7 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true })
     );
@@ -57,7 +64,7 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
       role: UserRole.bidder,
     });
     user1Token = createTestJWT(user1, UserRole.bidder);
-    user2Token = createTestJWT(user2, UserRole.bidder);
+    // user2Token = createTestJWT(user2, UserRole.bidder);
   });
 
   describe('User Data IDOR', () => {
@@ -89,7 +96,7 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
           code: `${TEST_PREFIX}-001`,
           name: 'IDOR Test Auction',
           propertyOwner: { name: 'Owner' },
-          assetType: 'secured_asset',
+          assetType: AssetType.secured_asset,
           status: AuctionStatus.scheduled,
           saleStartAt: createDate(-5),
           saleEndAt: createDate(10),
@@ -98,9 +105,9 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
           auctionEndAt: createDate(7, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
@@ -130,14 +137,14 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
   });
 
   describe('Contract IDOR', () => {
-    it('TC-4.1.1-04: Non-party cannot access contract', async () => {
+    it('TC-2.12.1-03: Non-party cannot access contract', async () => {
       const location = await prisma.location.findFirst();
       const auction = await prisma.auction.create({
         data: {
           code: `${TEST_PREFIX}-002`,
           name: 'Contract IDOR Test',
           propertyOwner: { name: 'Owner' },
-          assetType: 'secured_asset',
+          assetType: AssetType.secured_asset,
           status: AuctionStatus.success,
           saleStartAt: createDate(-20),
           saleEndAt: createDate(-10),
@@ -146,9 +153,9 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
           auctionEndAt: createDate(-10),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
@@ -163,13 +170,29 @@ describe('4.1.1 IDOR Vulnerabilities', () => {
         role: UserRole.auctioneer,
       });
 
+      const participant = await prisma.auctionParticipant.create({
+        data: { userId: user2.id, auctionId: auction.id },
+      });
+
+      const bid = await prisma.auctionBid.create({
+        data: {
+          auction: { connect: { id: auction.id } },
+          participant: { connect: { id: participant.id } },
+          amount: new Decimal(12000000),
+          bidType: BidType.manual,
+          bidAt: new Date(),
+        },
+      });
+
       const contract = await prisma.contract.create({
         data: {
-          auctionId: auction.id,
-          buyerUserId: user2.id,
-          sellerUserId: auctioneer.id,
-          price: new Decimal(1200000000),
-          status: 'draft',
+          auction: { connect: { id: auction.id } },
+          buyer: { connect: { id: user2.id } },
+          propertyOwner: { connect: { id: auctioneer.id } },
+          winningBid: { connect: { id: bid.id } },
+          creator: { connect: { id: auctioneer.id } },
+          price: new Decimal(12000000),
+          status: ContractStatus.draft,
         },
       });
 

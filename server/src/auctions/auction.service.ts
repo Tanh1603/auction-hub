@@ -204,6 +204,10 @@ export class AuctionService {
       },
     });
 
+    if (!auction) {
+      throw new NotFoundException(`Auction with ID ${id} not found`);
+    }
+
     return {
       data: this.toAuctionDetail(auction),
     };

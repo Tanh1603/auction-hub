@@ -33,6 +33,7 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, transform: true })
     );
@@ -66,7 +67,7 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
   // 4.1.5 BOLA (Broken Object Level Authorization)
   // ============================================
   describe('4.1.5 BOLA Prevention', () => {
-    it('TC-4.1.5-01: Cannot access other users profile details', async () => {
+    it('TC-4.1.1-02: Cannot access other users profile details', async () => {
       const response = await request(app.getHttpServer())
         .get(`/api/users/${bannedUser.id}/profile`)
         .set('Authorization', `Bearer ${user1Token}`);
@@ -74,7 +75,7 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
       expect([403, 404]).toContain(response.status);
     });
 
-    it('TC-4.1.5-02: Cannot access other users payment history', async () => {
+    it('TC-4.1.1-02: Cannot access other users payment history', async () => {
       const response = await request(app.getHttpServer())
         .get(`/api/users/${bannedUser.id}/payments`)
         .set('Authorization', `Bearer ${user1Token}`);
@@ -82,7 +83,7 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
       expect([403, 404]).toContain(response.status);
     });
 
-    it('TC-4.1.5-03: Cannot modify other users notification settings', async () => {
+    it('TC-4.1.1-02: Cannot modify other users notification settings', async () => {
       const response = await request(app.getHttpServer())
         .patch(`/api/users/${bannedUser.id}/notifications`)
         .set('Authorization', `Bearer ${user1Token}`)
@@ -96,7 +97,7 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
   // 4.1.6 Banned User Access Control
   // ============================================
   describe('4.1.6 Banned User Access', () => {
-    it('TC-4.1.6-01: Banned user cannot register for auction', async () => {
+    it('TC-2.5.1-25: Banned user cannot register for auction', async () => {
       const location = await prisma.location.findFirst();
       const auction = await prisma.auction.create({
         data: {
@@ -112,9 +113,9 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
           auctionEndAt: createDate(7, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
@@ -132,7 +133,7 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
       expect([403, 401]).toContain(response.status);
     });
 
-    it('TC-4.1.6-02: Banned user cannot place bids', async () => {
+    it('TC-4.1.8-01: Banned user cannot place bids', async () => {
       const location = await prisma.location.findFirst();
       const auction = await prisma.auction.create({
         data: {
@@ -148,9 +149,9 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
           auctionEndAt: createDate(0, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
@@ -163,12 +164,12 @@ describe('4.1.5-6 BOLA and Banned Access', () => {
       const response = await request(app.getHttpServer())
         .post('/api/manual-bid')
         .set('Authorization', `Bearer ${bannedToken}`)
-        .send({ auctionId: auction.id, amount: 1000000000 });
+        .send({ auctionId: auction.id, amount: 10000000 });
 
       expect([403, 401]).toContain(response.status);
     });
 
-    it('TC-4.1.6-03: Banned user can still access public endpoints', async () => {
+    it('TC-2.4.15-15: Banned user can still access public endpoints', async () => {
       // Auctions listing is public
       const response = await request(app.getHttpServer())
         .get('/api/auctions')

@@ -85,7 +85,7 @@ export class UserRegistrationController {
     },
     @CurrentUser() user: CurrentUserData
   ) {
-    return this.svc.create(dto, user, files.documents, files.media);
+    return this.svc.create(dto, user, files?.documents, files?.media);
   }
 
   @Post('withdraw')

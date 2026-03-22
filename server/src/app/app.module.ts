@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
 import { ArticleModule } from '../article/article.module';
 import { AuctionModule } from '../auctions/auction.module';
 import { AuthModule } from '../auth/auth.module';
@@ -21,11 +23,22 @@ import { QueueModule } from '../common/queue/queue.module';
 import { ContractModule } from '../contracts/contract.module';
 import { DashboardModule } from '../feature/dashboard/dashboard.module';
 
+// Load .env as early as possible before ConfigModule initializes
+// This works regardless of current working directory
+dotenv.config({ path: path.resolve(__dirname, '../..', '.env') });
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: 'server/.env',
+      // In test mode, env vars are already loaded by jest.setup.ts
+      // In production, we need to load from .env file
+      ignoreEnvFile: process.env.NODE_ENV === 'test',
+      // Fallback to loading from .env when not in test mode
+      envFilePath:
+        process.env.NODE_ENV === 'test'
+          ? undefined
+          : path.resolve(__dirname, '../..', '.env'),
     }),
     ScheduleModule.forRoot(), // Initialize scheduling globally (enables @Cron decorators)
     CommonModule,

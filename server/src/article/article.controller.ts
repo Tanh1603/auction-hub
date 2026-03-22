@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -11,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiBody, ApiOkResponse } from '@nestjs/swagger';
 import { ApiResponse, ApiResponseError } from '../common/dto/reponse.dto';
+import { Public } from '../common/decorators/public.decorator';
 import { ArticleService } from './article.service';
 import { ArticleDto } from './dto/article.dto';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -25,6 +27,7 @@ export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
   @Get()
+  @Public()
   @ApiOkResponse({
     type: ApiResponse<ArticleDto[]>,
   })
@@ -37,7 +40,7 @@ export class ArticleController {
   }
 
   @Get(':id')
-  @Get()
+  @Public()
   @ApiOkResponse({
     type: ApiResponse<ArticleDto>,
   })
@@ -45,7 +48,7 @@ export class ArticleController {
     description: 'Bad request',
     type: ApiResponseError,
   })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.articleService.findOne(id);
   }
 
@@ -75,7 +78,10 @@ export class ArticleController {
   @ApiBody({
     type: UpdateArticleDto,
   })
-  update(@Param('id') id: string, @Body() updateArticleDto: UpdateArticleDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateArticleDto: UpdateArticleDto
+  ) {
     return this.articleService.update(id, updateArticleDto);
   }
 
@@ -91,14 +97,14 @@ export class ArticleController {
     type: UpdateArticleRelationsDto,
   })
   updateRelation(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateArticleRelationsDto
   ) {
     return this.articleService.updateRelations(id, request.relatedIds);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.articleService.remove(id);
   }
 }

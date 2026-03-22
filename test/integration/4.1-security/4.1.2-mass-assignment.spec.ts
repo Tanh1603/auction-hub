@@ -32,6 +32,7 @@ describe('4.1.2 Mass Assignment', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -100,7 +101,7 @@ describe('4.1.2 Mass Assignment', () => {
       }
     });
 
-    it('TC-4.1.2-03: Cannot set id during registration', async () => {
+    it('TC-5.3.4-01: Cannot set id during registration', async () => {
       const maliciousId = '00000000-0000-0000-0000-000000000001';
       const payload = {
         email: generateTestEmail('mass3'),
@@ -123,7 +124,7 @@ describe('4.1.2 Mass Assignment', () => {
   });
 
   describe('Auction Update Mass Assignment', () => {
-    it('TC-4.1.2-04: Cannot set status directly on auction update', async () => {
+    it('TC-4.1.2-03: Cannot set status directly on auction update', async () => {
       const admin = await createTestUser(prisma, {
         email: 'mass_admin@test.com',
         role: UserRole.admin,
@@ -145,9 +146,9 @@ describe('4.1.2 Mass Assignment', () => {
           auctionEndAt: createDate(7, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,
@@ -193,9 +194,9 @@ describe('4.1.2 Mass Assignment', () => {
           auctionEndAt: createDate(7, 3),
           viewTime: '9:00-17:00',
           saleFee: new Decimal(500000),
-          depositAmountRequired: new Decimal(100000000),
-          startingPrice: new Decimal(1000000000),
-          bidIncrement: new Decimal(50000000),
+          depositAmountRequired: new Decimal(1000000),
+          startingPrice: new Decimal(10000000),
+          bidIncrement: new Decimal(500000),
           assetDescription: 'Test',
           assetAddress: 'Test',
           validCheckInBeforeStartMinutes: 30,

@@ -4,8 +4,8 @@
  * This script creates the mv_auction_analytics materialized view
  * and required indexes for the admin dashboard analytics feature.
  *
- * Usage: npx ts-node scripts/setup-analytics-view.ts
- *
+ * Usage: $env:DATABASE_URL="postgresql://user:password@localhost:5432/auction-hub"; npx tsx scripts/setup-analytics-view.ts
+ * 
  * This script is idempotent - safe to run multiple times.
  */
 

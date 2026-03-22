@@ -9,9 +9,130 @@
  */
 
 import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { TestingModule, Test } from '@nestjs/testing';
+import { AppModule } from '../../../server/src/app/app.module';
 import { PrismaService } from '../../../server/src/prisma/prisma.service';
 import { UserRole, UserType } from '../../../server/generated';
-import { Decimal } from '@prisma/client/runtime/library';
+
+// Load environment variables from server/.env
+dotenv.config({ path: path.resolve(__dirname, '../../../server/.env') });
+
+// ============================================
+// Test App Initialization
+// ============================================
+
+export interface TestAppContext {
+  app: INestApplication;
+  prisma: PrismaService;
+  moduleFixture: TestingModule;
+}
+
+/**
+ * Silent logger for tests - suppresses error logs to keep output clean.
+ * Expected errors during negative tests (e.g., ConflictException) won't clutter the console.
+ */
+const silentLogger = {
+  log: (message: string) => {
+    // Only log important startup messages
+    if (message.includes('Nest application successfully started')) {
+      console.log(`[Test] ${message}`);
+    }
+  },
+  error: () => {
+    // Suppress error logs during tests - they're expected in negative tests
+  },
+  warn: () => {
+    // Suppress warnings during tests
+  },
+  debug: () => {
+    // Suppress debug logs
+  },
+  verbose: () => {
+    // Suppress verbose logs
+  },
+};
+
+/**
+ * Initializes a NestJS test application with proper configuration.
+ * IMPORTANT: This sets the global 'api' prefix to match main.ts production config.
+ * Without this, routes like '/api/manual-bid' would return 404.
+ *
+ * Uses a silent logger to suppress expected error logs during negative tests.
+ */
+export async function initTestApp(): Promise<TestAppContext> {
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+
+  const app = moduleFixture.createNestApplication();
+
+  // Use silent logger to suppress expected errors during tests
+  app.useLogger(silentLogger);
+
+  // CRITICAL: Set global prefix to match main.ts
+  app.setGlobalPrefix('api');
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    })
+  );
+
+  await app.init();
+
+  const prisma = moduleFixture.get<PrismaService>(PrismaService);
+
+  return { app, prisma, moduleFixture };
+}
+
+/**
+ * Properly closes a test application and disconnects from database.
+ * IMPORTANT: Call this in afterAll() to prevent Jest from hanging.
+ *
+ * Usage:
+ * afterAll(async () => {
+ *   await closeTestApp(app, prisma);
+ * });
+ */
+export async function closeTestApp(
+  app: INestApplication,
+  prisma: PrismaService
+): Promise<void> {
+  try {
+    // Disconnect Prisma first to ensure no pending DB operations
+    await prisma.$disconnect();
+  } catch {
+    // Ignore disconnection errors
+  }
+
+  try {
+    // Then close the Nest application
+    await app.close();
+  } catch {
+    // Ignore close errors
+  }
+}
+
+// ============================================
+// Response Helpers
+// ============================================
+
+/**
+ * Extracts data from API response, handling both wrapped { data: {...} }
+ * and unwrapped direct response formats.
+ * Usage: const data = getResponseData(response);
+ */
+export function getResponseData<T = unknown>(response: {
+  body: { data?: T } & T;
+}): T {
+  return (response.body.data || response.body) as T;
+}
 
 // ============================================
 // Types
@@ -40,28 +161,47 @@ export interface CreateUserOptions {
 // JWT Helpers
 // ============================================
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  process.env.SUPABASE_JWT_SECRET ||
-  'test-jwt-secret';
+// CRITICAL: Use a getter function to read JWT secret at runtime
+// This ensures we pick up the value set by jest.setup.ts, not a cached value
+const FALLBACK_JWT_SECRET =
+  '0qvsYzg5IvGfwEL6Wox0jmh9My22gJhu+5iUjVXYwpZXcZf2rm0cqmJE4PxzQLnKFmcAjfOYINbY8zlme8UXpw==';
+
+function getJwtSecret(): string {
+  const secret = process.env.SUPABASE_JWT_SECRET || FALLBACK_JWT_SECRET;
+  return secret;
+}
 
 /**
  * Creates a valid JWT token for testing
+ * Mimics Supabase JWT structure with required claims for AuthGuard
  */
 export function createTestJWT(user: TestUser, role?: UserRole): string {
+  const userRole = role || user.role;
+  const jwtSecret = getJwtSecret();
+
   const payload = {
+    // Core claims
     sub: user.id,
     email: user.email,
-    role: role || user.role,
+    // Supabase requires 'aud' claim
+    aud: 'authenticated',
+    // Role for Supabase strategies (some check this)
+    role: 'authenticated',
+    // App metadata contains the actual app-level role
+    app_metadata: {
+      role: userRole,
+    },
+    // User metadata
     user_metadata: {
       full_name: user.fullName,
-      role: role || user.role,
+      role: userRole,
     },
+    // Standard JWT claims
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour
   };
 
-  return jwt.sign(payload, JWT_SECRET, { algorithm: 'HS256' });
+  return jwt.sign(payload, jwtSecret, { algorithm: 'HS256' });
 }
 
 /**
@@ -76,7 +216,7 @@ export function createExpiredJWT(user: TestUser): string {
     exp: Math.floor(Date.now() / 1000) - 3600, // Expired 1 hour ago
   };
 
-  return jwt.sign(payload, JWT_SECRET, { algorithm: 'HS256' });
+  return jwt.sign(payload, getJwtSecret(), { algorithm: 'HS256' });
 }
 
 /**
@@ -107,13 +247,14 @@ export async function createTestUser(
 ): Promise<TestUser> {
   const user = await prisma.user.create({
     data: {
+      id: crypto.randomUUID(),
       email: options.email,
       fullName: options.fullName || `Test User ${Date.now()}`,
       role: options.role || UserRole.bidder,
       userType: options.userType || UserType.individual,
       isBanned: options.isBanned || false,
       isVerified: options.isVerified !== false, // Default true
-      phone: `09${Math.floor(Math.random() * 100000000)
+      phoneNumber: `09${Math.floor(Math.random() * 100000000)
         .toString()
         .padStart(8, '0')}`,
       identityNumber: `0${Math.floor(Math.random() * 100000000000)
@@ -179,11 +320,89 @@ export function generateVietnamesePhone(): string {
 
 /**
  * Generates a valid CCCD number (12 digits)
+ * Format: [ProvinceCode 3 digits][Gender+Century 1 digit][YY 2 digits][Random 6 digits]
+ * Province codes must match the regex pattern in the DTO
  */
 export function generateCCCD(): string {
-  return `0${Math.floor(Math.random() * 100000000000)
+  // Valid province codes that match the regex pattern
+  const validProvinceCodes = [
+    '001',
+    '002',
+    '004',
+    '006',
+    '008',
+    '010',
+    '011',
+    '012',
+    '014',
+    '015',
+    '017',
+    '019',
+    '020',
+    '022',
+    '024',
+    '025',
+    '026',
+    '027',
+    '030',
+    '031',
+    '033',
+    '034',
+    '035',
+    '036',
+    '037',
+    '038',
+    '040',
+    '042',
+    '044',
+    '045',
+    '046',
+    '048',
+    '049',
+    '051',
+    '052',
+    '054',
+    '056',
+    '058',
+    '060',
+    '062',
+    '064',
+    '066',
+    '067',
+    '068',
+    '070',
+    '072',
+    '074',
+    '075',
+    '077',
+    '079',
+    '080',
+    '082',
+    '083',
+    '084',
+    '086',
+    '087',
+    '089',
+    '091',
+    '092',
+    '093',
+    '094',
+    '095',
+    '096',
+  ];
+  const provinceCode =
+    validProvinceCodes[Math.floor(Math.random() * validProvinceCodes.length)];
+  // Gender+century digit (0-3 for valid pattern)
+  const genderCentury = Math.floor(Math.random() * 4).toString();
+  // Year of birth (2 digits)
+  const yearOfBirth = Math.floor(Math.random() * 100)
     .toString()
-    .padStart(11, '0')}`;
+    .padStart(2, '0');
+  // Random 6 digits
+  const randomDigits = Math.floor(Math.random() * 1000000)
+    .toString()
+    .padStart(6, '0');
+  return `${provinceCode}${genderCentury}${yearOfBirth}${randomDigits}`;
 }
 
 // ============================================
@@ -209,16 +428,68 @@ export const validLoginPayload = (email: string) => ({
 // ============================================
 
 /**
- * Cleans up test users by email pattern
+ * Cleans up test users by email pattern and their dependent data
  */
 export async function cleanupTestUsers(prisma: PrismaService): Promise<void> {
-  await prisma.user.deleteMany({
+  const testEmailFilter = {
+    OR: [
+      { email: { contains: '@test.com' } },
+      { email: { contains: '_test_' } },
+    ],
+  };
+
+  // 1. Delete dependent records first (Child tables) to prevent foreign key violations
+
+  // Contracts where any related user matches the test pattern
+  await prisma.contract.deleteMany({
     where: {
       OR: [
-        { email: { contains: '@test.com' } },
-        { email: { contains: '_test_' } },
+        { buyer: testEmailFilter },
+        { propertyOwner: testEmailFilter },
+        { creator: testEmailFilter },
       ],
     },
+  });
+
+  // Bids where the participant or denier matches the test pattern
+  await prisma.auctionBid.deleteMany({
+    where: {
+      OR: [
+        { participant: { user: testEmailFilter } },
+        { denier: testEmailFilter },
+      ],
+    },
+  });
+
+  // Audit Logs performed by test users
+  await prisma.auctionAuditLog.deleteMany({
+    where: {
+      user: testEmailFilter,
+    },
+  });
+
+  // Participants (and cascaded AutoBidSettings)
+  // Covers where user is the participant, verifier, or confirmer
+  await prisma.auctionParticipant.deleteMany({
+    where: {
+      OR: [
+        { user: testEmailFilter },
+        { documentsVerifier: testEmailFilter },
+        { confirmer: testEmailFilter },
+      ],
+    },
+  });
+
+  // Payments
+  await prisma.payment.deleteMany({
+    where: {
+      user: testEmailFilter,
+    },
+  });
+
+  // 2. Finally, delete the users (Parent table)
+  await prisma.user.deleteMany({
+    where: testEmailFilter,
   });
 }
 
@@ -229,29 +500,40 @@ export async function cleanupTestData(
   prisma: PrismaService,
   codePrefix: string
 ): Promise<void> {
+  const auctions = await prisma.auction.findMany({
+    where: { code: { startsWith: codePrefix } },
+    select: { id: true },
+  });
+  const auctionIds = auctions.map((a) => a.id);
+
   await prisma.$transaction([
     prisma.auctionAuditLog.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: { auctionId: { in: auctionIds } },
     }),
     prisma.contract.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: { auctionId: { in: auctionIds } },
     }),
     prisma.payment.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: { auctionId: { in: auctionIds } },
     }),
     prisma.auctionBid.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: { auctionId: { in: auctionIds } },
     }),
     prisma.auctionParticipant.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: { auctionId: { in: auctionIds } },
     }),
     prisma.auctionCost.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: { auctionId: { in: auctionIds } },
     }),
     prisma.auctionRelation.deleteMany({
-      where: { auction: { code: { startsWith: codePrefix } } },
+      where: {
+        OR: [
+          { auctionId: { in: auctionIds } },
+          { relatedAuctionId: { in: auctionIds } },
+        ],
+      },
     }),
-    prisma.auction.deleteMany({ where: { code: { startsWith: codePrefix } } }),
+    prisma.auction.deleteMany({ where: { id: { in: auctionIds } } }),
   ]);
   await cleanupTestUsers(prisma);
 }
