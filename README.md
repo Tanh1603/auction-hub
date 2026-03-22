@@ -1,86 +1,98 @@
 # Auction Hub
 
-> **📚 Documentation:** [System Architecture](./SYSTEM_ARCHITECTURE.md) | [API Testing](./POSTMAN_API_TESTING_GUIDE.md) | [Documentation Index](./DOCUMENTATION_INDEX.md)
+> **Documentation:** [System Architecture](./docs/ARCHITECTURE.md) | [API Documentation](./docs/API_DOCUMENTATION/README.md) | [Documentation Index](./docs/DOCUMENTATION_INDEX.md)
 
 ---
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+## Project Overview
 
-A comprehensive online auction platform implementing Vietnamese legal regulations for asset auctions.
+The Auction Hub backend is a comprehensive, highly available online platform engineered to implement and enforce Vietnamese legal regulations for asset auctions. The system prioritizes security, compliance, and real-time data consistency to handle secure bidding and the complete asset auction lifecycle.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Core Technologies
 
-## Finish your CI setup
+The system is built on a modern, scalable infrastructure stack:
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/Eug3Vc3ucA)
+- **Framework:** NestJS
+- **Relational Database:** PostgreSQL
+- **NoSQL Database:** MongoDB
+- **Real-Time Communication:** WebSockets
+- **Caching & Message Broker:** Redis
 
+## System Architecture
 
-## Run tasks
+The following diagram illustrates the high-level request lifecycle and internal service communication.
 
-To run the dev server for your app, use:
+```mermaid
+graph TD
+    Client[Client] -->|HTTP / WebSockets| APIGateway[API Gateway / Controllers]
+    APIGateway --> AuctionService[Auction Service]
+    APIGateway --> BiddingService[Bidding Service]
+
+    AuctionService --> Database[(Database)]
+    BiddingService --> Database
+
+    AuctionService --> Redis[(Redis)]
+    BiddingService --> Redis
+
+    Redis -.->|Caching / Real-time Processing| BiddingService
+```
+
+## Environment Variables
+
+Create a `.env` file in the root directory using the following template to properly configure the backend services.
+
+```env
+# Application Configuration
+PORT=3000
+NODE_ENV=development
+
+# Database Configuration
+POSTGRES_URL=postgresql://username:password@localhost:5432/auction_hub
+MONGODB_URI=mongodb://localhost:27017/auction_hub
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Security Configuration
+JWT_SECRET=your_secure_jwt_secret_key
+JWT_EXP_H=1
+```
+
+## Setup Instructions
+
+Follow these steps to initialize the local development environment:
+
+### 1. Install Dependencies
+
+Use your preferred package manager to install the project dependencies:
+
+```sh
+npm install
+```
+
+### 2. Start Infrastructure Services
+
+Redis is already configured for caching and real-time processing via Docker. You only need to spin up the container infrastructure:
+
+```sh
+docker-compose up -d
+```
+
+### 3. Start the Application
+
+Run the development server for the Auction Hub:
 
 ```sh
 npx nx serve auction-hub
 ```
 
-To create a production bundle:
+## Team & Contact Information
 
-```sh
-npx nx build auction-hub
-```
-
-To see all available targets to run for a project, run:
-
-```sh
-npx nx show project auction-hub
-```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/nest:app demo
-```
-
-To generate a new library, use:
-
-```sh
-npx nx g @nx/node:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+| Full Name          | Role                            | Student ID | Email                  |
+| ------------------ | ------------------------------- | ---------- | ---------------------- |
+| Nguyễn Thiên An    | Team Leader / Backend Developer | 23520020   | 23520020@gm.uit.edu.vn |
+| Nguyễn Lê Tuấn Anh | Fullstack Developer             | 23520064   | 23520064@gm.uit.edu.vn |
+| Huỳnh Chí Hên      | Backend Developer               | 23520455   | 23520455@gm.uit.edu.vn |
+| Nguyễn Cao Vũ Phan | Frontend Developer              | 23521137   | 23521137@gm.uit.edu.vn |
+| Tạ Ngọc Ân         | Frontend Developer              | 23520030   | 23520030@gm.uit.edu.vn |

@@ -1,0 +1,172 @@
+DANH SÁCH CÁC CHỨC NĂNG,,,,,,,,,,,,,,,,
+Tên dự án:,Auction Hub,,,,,,,,,,,,,,,
+Người thực hiện,Claude AI (Function Point Analysis),,,,,,,,,,,,,,,
+Ngày phân tích:,2025-12-25,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+Stt,Tên chức năng chính,Tên chức năng con,Môi trường triển khai,,DANH SÁCH ĐỘ ĐO,,,,,,,,,,,SUBTOTAL
+,,,,Web,Mobile,C1,W1,C2,W2,C3,W3,C4,W4,C5,W5,=G7*H7+I7*J7+K7*L7+M7*N7+O7*P7
+1,User Management,Register User in System,x,x,1,6,,,1,3,,,,,,=G8*H8+I8*J8+K8*L8+M8*N8+O8*P8
+2,User Management,Get Current User Info,x,x,,,,,1,3,,,,,,=G9*H9+I9*J9+K9*L9+M9*N9+O9*P9
+3,User Management,Promote User Role,x,x,1,4,,,1,4,,,,,,=G10*H10+I10*J10+K10*L10+M10*N10+O10*P10
+4,User Management,Ban User,x,x,1,4,,,,,,,,,=G11*H11+I11*J11+K11*L11+M11*N11+O11*P11
+5,User Management,Verify User Identity (KYC),x,x,1,6,,,,,,,,,=G12*H12+I12*J12+K12*L12+M12*N12+O12*P12
+6,Authentication,Register Account,x,x,1,6,,,,,,,,,=G13*H13+I13*J13+K13*L13+M13*N13+O13*P13
+7,Authentication,Login,x,x,1,3,,,,,,,,,=G14*H14+I14*J14+K14*L14+M14*N14+O14*P14
+8,Authentication,Forgot Password,x,x,1,3,,,,,,,,,=G15*H15+I15*J15+K15*L15+M15*N15+O15*P15
+9,Authentication,Resend Verification Email,x,x,1,3,,,,,,,,,=G16*H16+I16*J16+K16*L16+M16*N16+O16*P16
+10,Authentication,Verify Email (POST),x,x,1,4,,,,,,,,,=G17*H17+I17*J17+K17*L17+M17*N17+O17*P17
+11,Authentication,Verify Email (Link Click),x,x,1,4,,,,,,,,,=G18*H18+I18*J18+K18*L18+M18*N18+O18*P18
+12,Auction Management,List All Auctions,x,x,,,1,4,1,4,,,,,,=G19*H19+I19*J19+K19*L19+M19*N19+O19*P19
+13,Auction Management,Get Auction Details,x,x,,,1,5,1,4,,,,,,=G20*H20+I20*J20+K20*L20+M20*N20+O20*P20
+14,Auction Management,Create Auction,x,x,1,6,,,,,,,,,=G21*H21+I21*J21+K21*L21+M21*N21+O21*P21
+15,Auction Management,Update Auction,x,x,1,6,,,,,,,,,=G22*H22+I22*J22+K22*L22+M22*N22+O22*P22
+16,Auction Management,Delete Auction,x,x,1,4,,,,,,,,,=G23*H23+I23*J23+K23*L23+M23*N23+O23*P23
+17,Auction Management,Update Auction Relations,x,x,1,4,,,,,,,,,=G24*H24+I24*J24+K24*L24+M24*N24+O24*P24
+18,Auction Management,Update Auction Resources,x,x,1,6,,,,,1,10,,=G25*H25+I25*J25+K25*L25+M25*N25+O25*P25
+19,Registration to Bid,Register for Auction (Bidder),x,x,1,6,,,,,,,1,10,=G26*H26+I26*J26+K26*L26+M26*N26+O26*P26
+20,Registration to Bid,Withdraw Registration,x,x,1,4,,,,,,,,,=G27*H27+I27*J27+K27*L27+M27*N27+O27*P27
+21,Registration to Bid,Check-in for Auction,x,x,1,6,,,,,,,,,=G28*H28+I28*J28+K28*L28+M28*N28+O28*P28
+22,Registration to Bid,Submit Deposit Payment,x,x,1,6,1,5,,,,,1,10,=G29*H29+I29*J29+K29*L29+M29*N29+O29*P29
+23,Registration to Bid,Verify Deposit Payment,x,x,1,6,,,,,,,1,10,=G30*H30+I30*J30+K30*L30+M30*N30+O30*P30
+24,Registration to Bid,View Own Registrations,x,x,,,1,4,1,3,,,,,,=G31*H31+I31*J31+K31*L31+M31*N31+O31*P31
+25,Registration to Bid,Get Registration for Auction,x,x,,,,,1,3,,,,,,=G32*H32+I32*J32+K32*L32+M32*N32+O32*P32
+26,Registration to Bid,List All Registrations (Admin),x,x,,,1,5,1,4,,,,,,=G33*H33+I33*J33+K33*L33+M33*N33+O33*P33
+27,Registration to Bid,Approve Registration (Legacy),x,x,1,4,,,,,,,,,=G34*H34+I34*J34+K34*L34+M34*N34+O34*P34
+28,Registration to Bid,Reject Registration,x,x,1,4,,,,,,,,,=G35*H35+I35*J35+K35*L35+M35*N35+O35*P35
+29,Registration to Bid,Verify Documents (Tier 1),x,x,1,6,,,,,,,,,=G36*H36+I36*J36+K36*L36+M36*N36+O36*P36
+30,Registration to Bid,Reject Documents,x,x,1,4,,,,,,,,,=G37*H37+I37*J37+K37*L37+M37*N37+O37*P37
+31,Registration to Bid,Final Approval (Tier 2),x,x,1,6,,,,,,,,,=G38*H38+I38*J38+K38*L38+M38*N38+O38*P38
+32,Registration to Bid,Request Refund,x,x,1,4,1,5,,,,,,,=G39*H39+I39*J39+K39*L39+M39*N39+O39*P39
+33,Registration to Bid,Manage Refunds (Admin),x,x,1,6,1,5,1,4,,,,,,=G40*H40+I40*J40+K40*L40+M40*N40+O40*P40
+34,Registration to Bid,Batch Process Refunds,x,x,1,6,1,5,,,,,,,=G41*H41+I41*J41+K41*L41+M41*N41+O41*P41
+35,Bidding System,Place Manual Bid,x,x,1,6,,,,,,,,1,10,=G42*H42+I42*J42+K42*L42+M42*N42+O42*P42
+36,Bidding System,Deny Bid,x,x,1,6,,,,,,,,,=G43*H43+I43*J43+K43*L43+M43*N43+O43*P43
+37,Bidding System,Join Auction Room (WebSocket),x,x,1,4,,,,,,,1,10,=G44*H44+I44*J44+K44*L44+M44*N44+O44*P44
+38,Bidding System,Leave Auction Room (WebSocket),x,x,1,3,,,,,,,,,=G45*H45+I45*J45+K45*L45+M45*N45+O45*P45
+39,Bidding System,Receive Auction State (WebSocket),x,x,,,,,1,6,,,,,,=G46*H46+I46*J46+K46*L46+M46*N46+O46*P46
+40,Bidding System,Receive New Bid Notification (WebSocket),x,x,,,,,1,4,,,,,,=G47*H47+I47*J47+K47*L47+M47*N47+O47*P47
+41,Bidding System,Receive Time Updates (WebSocket),x,x,,,,,1,3,,,,,,=G48*H48+I48*J48+K48*L48+M48*N48+O48*P48
+42,Bidding System,Receive Bid Denied Notification (WebSocket),x,x,,,,,1,4,,,,,,=G49*H49+I49*J49+K49*L49+M49*N49+O49*P49
+43,Bidding System,Receive Auction Update (WebSocket),x,x,,,,,1,4,,,,,,=G50*H50+I50*J50+K50*L50+M50*N50+O50*P50
+44,Auction Finalization,Evaluate Auction,x,x,,,,,1,6,,,,,,=G51*H51+I51*J51+K51*L51+M51*N51+O51*P51
+45,Auction Finalization,Finalize Auction,x,x,1,6,,,,,,,,,=G52*H52+I52*J52+K52*L52+M52*N52+O52*P52
+46,Auction Finalization,Override Auction Status,x,x,1,6,,,,,,,,,=G53*H53+I53*J53+K53*L53+M53*N53+O53*P53
+47,Auction Finalization,Get Auction Results,x,x,,,1,5,1,4,,,,,,=G54*H54+I54*J54+K54*L54+M54*N54+O54*P54
+48,Auction Finalization,Get Audit Logs,x,x,,,1,5,1,4,,,,,,=G55*H55+I55*J55+K55*L55+M55*N55+O55*P55
+49,Auction Finalization,Get Winner Payment Requirements,x,x,,,1,7,1,6,,,,,,=G56*H56+I56*J56+K56*L56+M56*N56+O56*P56
+50,Auction Finalization,Initiate Winner Payment,x,x,1,6,1,5,,,,,1,10,=G57*H57+I57*J57+K57*L57+M57*N57+O57*P57
+51,Auction Finalization,Verify Winner Payment,x,x,1,6,,,,,,,1,10,=G58*H58+I58*J58+K58*L58+M58*N58+O58*P58
+52,Payment,Create Payment Session,x,x,1,6,1,5,,,,,1,10,=G59*H59+I59*J59+K59*L59+M59*N59+O59*P59
+53,Payment,Verify Payment,x,x,1,6,,,,,,,1,10,=G60*H60+I60*J60+K60*L60+M60*N60+O60*P60
+54,Payment,Stripe Webhook Handler,x,x,1,6,,,,,,,1,10,=G61*H61+I61*J61+K61*L61+M61*N61+O61*P61
+55,Auction Cost Management,Create/Update Auction Costs,x,x,1,4,,,,,,,,,=G62*H62+I62*J62+K62*L62+M62*N62+O62*P62
+56,Auction Cost Management,Get Auction Costs,x,x,,,,,1,3,,,,,,=G63*H63+I63*J63+K63*L63+M63*N63+O63*P63
+57,Auction Cost Management,Update Specific Cost Fields,x,x,1,4,,,,,,,,,=G64*H64+I64*J64+K64*L64+M64*N64+O64*P64
+58,Auction Cost Management,Delete Auction Costs,x,x,1,3,,,,,,,,,=G65*H65+I65*J65+K65*L65+M65*N65+O65*P65
+59,Auction Cost Management,Add Other Cost Item,x,x,1,3,,,,,,,,,=G66*H66+I66*J66+K66*L66+M66*N66+O66*P66
+60,System Configuration,Get All System Variables,x,x,,,,,1,3,,,,,,=G67*H67+I67*J67+K67*L67+M67*N67+O67*P67
+61,System Configuration,Get System Variable,x,x,,,,,1,3,,,,,,=G68*H68+I68*J68+K68*L68+M68*N68+O68*P68
+62,System Configuration,Update System Variable,x,x,1,4,,,,,,,,,=G69*H69+I69*J69+K69*L69+M69*N69+O69*P69
+63,System Configuration,Create System Variable,x,x,1,4,,,,,,,,,=G70*H70+I70*J70+K70*L70+M70*N70+O70*P70
+64,System Configuration,Clear Cache,x,x,1,6,,,,,,,,,=G71*H71+I71*J71+K71*L71+M71*N71+O71*P71
+65,System Configuration,Get Cache Statistics,x,x,,,1,5,1,4,,,,,,=G72*H72+I72*J72+K72*L72+M72*N72+O72*P72
+66,Location Module,Get All Locations,x,x,,,,,1,3,,,,,,=G73*H73+I73*J73+K73*L73+M73*N73+O73*P73
+67,Article Module,List All Articles,x,x,,,1,4,1,4,,,,,,=G74*H74+I74*J74+K74*L74+M74*N74+O74*P74
+68,Article Module,Get Article Details,x,x,,,1,5,1,4,,,,,,=G75*H75+I75*J75+K75*L75+M75*N75+O75*P75
+69,Article Module,Create Article,x,x,1,6,,,,,,,,,=G76*H76+I76*J76+K76*L76+M76*N76+O76*P76
+70,Article Module,Update Article,x,x,1,4,,,,,,,,,=G77*H77+I77*J77+K77*L77+M77*N77+O77*P77
+71,Article Module,Update Article Relations,x,x,1,4,,,,,,,,,=G78*H78+I78*J78+K78*L78+M78*N78+O78*P78
+72,Article Module,Delete Article,x,x,1,4,,,,,,,,,=G79*H79+I79*J79+K79*L79+M79*N79+O79*P79
+73,Contract Management,List Contracts,x,x,,,1,4,1,4,,,,,,=G80*H80+I80*J80+K80*L80+M80*N80+O80*P80
+74,Contract Management,Get Contract Detail,x,x,,,1,5,1,4,,,,,,=G81*H81+I81*J81+K81*L81+M81*N81+O81*P81
+75,Contract Management,Create Contract,x,x,1,6,,,,,,,,,=G82*H82+I82*J82+K82*L82+M82*N82+O82*P82
+76,Contract Management,Update Contract,x,x,1,4,,,,,,,,,=G83*H83+I83*J83+K83*L83+M83*N83+O83*P83
+77,Contract Management,Sign Contract,x,x,1,6,,,,,,,,,=G84*H84+I84*J84+K84*L84+M84*N84+O84*P84
+78,Contract Management,Cancel Contract,x,x,1,4,,,,,,,,,=G85*H85+I85*J85+K85*L85+M85*N85+O85*P85
+79,Contract Management,Export Contract PDF (Vietnamese),x,x,,,1,7,,,,,,,=G86*H86+I86*J86+K86*L86+M86*N86+O86*P86
+80,Contract Management,Export Contract PDF (English),x,x,,,1,7,,,,,,,=G87*H87+I87*J87+K87*L87+M87*N87+O87*P87
+81,Dashboard Analytics,Get Dashboard Analytics,x,x,,,1,7,1,6,,,,,,=G88*H88+I88*J88+K88*L88+M88*N88+O88*P88
+82,Dashboard Analytics,Refresh Analytics View,x,x,1,4,,,,,,,,,=G89*H89+I89*J89+K89*L89+M89*N89+O89*P89
+83,Auction Policy,Validate Dossier Fee,x,x,,,,,1,4,,,,,,=G90*H90+I90*J90+K90*L90+M90*N90+O90*P90
+84,Auction Policy,Validate Deposit Percentage,x,x,,,,,1,4,,,,,,=G91*H91+I91*J91+K91*L91+M91*N91+O91*P91
+85,Auction Policy,Calculate Commission,x,x,,,,,1,6,,,,,,=G92*H92+I92*J92+K92*L92+M92*N92+O92*P92
+86,Auction Policy,Calculate Deposit,x,x,,,,,1,6,,,,,,=G93*H93+I93*J93+K93*L93+M93*N93+O93*P93
+87,Cloudinary Integration,Upload Files,x,x,1,6,,,,,,,1,10,=G94*H94+I94*J94+K94*L94+M94*N94+O94*P94
+88,Cloudinary Integration,Delete Files,x,x,1,4,,,,,,,1,10,=G95*H95+I95*J95+K95*L95+M95*N95+O95*P95
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+TABLE 1: WEIGHTED DOMAIN COUNT (Δ),,,,,,,,,,,,,,,,,,
+Component,Count Formula,Count,Weight Sum Formula,Weight Sum,,,,,,,,,,,,
+External Inputs (C1),=SUMPRODUCT((G7:G95<>"")*1),=SUMPRODUCT((G7:G95<>"")*1),=SUMPRODUCT(G7:G95,H7:H95),=SUMPRODUCT(G7:G95,H7:H95),,,,,,,,,,,,
+External Outputs (C2),=SUMPRODUCT((I7:I95<>"")*1),=SUMPRODUCT((I7:I95<>"")*1),=SUMPRODUCT(I7:I95,J7:J95),=SUMPRODUCT(I7:I95,J7:J95),,,,,,,,,,,,
+External Queries (C3),=SUMPRODUCT((K7:K95<>"")*1),=SUMPRODUCT((K7:K95<>"")*1),=SUMPRODUCT(K7:K95,L7:L95),=SUMPRODUCT(K7:K95,L7:L95),,,,,,,,,,,,
+Internal Logical Files (C4),=SUMPRODUCT((M7:M95<>"")*1),=SUMPRODUCT((M7:M95<>"")*1),=SUMPRODUCT(M7:M95,N7:N95),=SUMPRODUCT(M7:M95,N7:N95),,,,,,,,,,,,
+External Interface Files (C5),=SUMPRODUCT((O7:O95<>"")*1),=SUMPRODUCT((O7:O95<>"")*1),=SUMPRODUCT(O7:O95,P7:P95),=SUMPRODUCT(O7:O95,P7:P95),,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+UNADJUSTED FUNCTION POINTS (Δ),=SUM(D100:D104),=SUM(D100:D104),,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+INTERNAL LOGICAL FILES (ILF) - DETAILED BREAKDOWN,,COUNT,COMPLEXITY,WEIGHT,SUBTOTAL,,,,,,,,,,,,
+,User,1,Complex,15,=C110*E110,,,,,,,,,,,,
+,Auction,1,Complex,15,=C111*E111,,,,,,,,,,,,
+,AuctionParticipant,1,Complex,15,=C112*E112,,,,,,,,,,,,
+,AuctionBid,1,Average,10,=C113*E113,,,,,,,,,,,,
+,AutoBidSetting,1,Simple,7,=C114*E114,,,,,,,,,,,,
+,Contract,1,Average,10,=C115*E115,,,,,,,,,,,,
+,AuctionAuditLog,1,Average,10,=C116*E116,,,,,,,,,,,,
+,Payment,1,Average,10,=C117*E117,,,,,,,,,,,,
+,SystemVariable,1,Simple,7,=C118*E118,,,,,,,,,,,,
+,AuctionCost,1,Average,10,=C119*E119,,,,,,,,,,,,
+,Article,1,Average,10,=C120*E120,,,,,,,,,,,,
+,ArticleRelation,1,Simple,7,=C121*E121,,,,,,,,,,,,
+,AuctionRelation,1,Simple,7,=C122*E122,,,,,,,,,,,,
+,Location,1,Average,10,=C123*E123,,,,,,,,,,,,
+,DashboardAnalytics (Materialized View),1,Complex,15,=C124*E124,,,,,,,,,,,,
+,RefundTracking (within Participant),1,Complex,15,=C125*E125,,,,,,,,,,,,
+ILF TOTAL,=SUM(C110:C125),=SUM(C110:C125),,=SUM(F110:F125),=SUM(F110:F125),,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+EXTERNAL INTERFACE FILES (EIF) - DETAILED BREAKDOWN,,COUNT,COMPLEXITY,WEIGHT,SUBTOTAL,,,,,,,,,,,,
+,Stripe Payment API,1,Complex,10,=C129*E129,,,,,,,,,,,,
+,Cloudinary Media API,1,Complex,10,=C130*E130,,,,,,,,,,,,
+,PostgreSQL Database,1,Average,7,=C131*E131,,,,,,,,,,,,
+,Redis Cache,1,Average,7,=C132*E132,,,,,,,,,,,,
+,WebSocket (Socket.IO),1,Complex,10,=C133*E133,,,,,,,,,,,,
+,JWT Authentication,1,Simple,5,=C134*E134,,,,,,,,,,,,
+EIF TOTAL,=SUM(C129:C134),=SUM(C129:C134),,=SUM(F129:F134),=SUM(F129:F134),,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+VERIFICATION (Should match Table 1),,,,,,,,,,,,,,,,,,
+C4 from Table 1 vs ILF Detail,=D103,vs,=F126,Match?,=IF(D103=F126,"✓ MATCH","✗ MISMATCH"),,,,,,,,,,,,
+C5 from Table 1 vs EIF Detail,=D104,vs,=F135,Match?,=IF(D104=F135,"✓ MATCH","✗ MISMATCH"),,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+COMPLEXITY ADJUSTMENT FACTORS (Fi),,,,,,,,,,,,,,,,,,
+Factor,Description,Score (0-5),Justification,,,,,,,,,,,,,,
+F1,Backup/Recovery requirements,3,Docker volumes; audit logging; no explicit backup strategy,,,,,,,,,,,,,,
+F2,Data communications,5,WebSocket real-time; REST API; Stripe webhooks; Cloudinary API; Redis,,,,,,,,,,,,,,
+F3,Distributed processing,3,Docker Compose; BullMQ queues; Redis caching; scheduled tasks,,,,,,,,,,,,,,
+F4,Performance objectives,4,Materialized views; Redis caching; WebSocket; database indexing,,,,,,,,,,,,,,
+F5,Operational environment usage,3,Docker containerization; health checks; environment-based config,,,,,,,,,,,,,,
+F6,Online data entry,5,Online auction registration; bidding; payment; document upload forms,,,,,,,,,,,,,,
+F7,Transactional complexity,5,Multi-tier approval workflows; payment processing; concurrent bidding,,,,,,,,,,,,,,
+F8,Online file updates,4,Cloudinary file management; JSONB updates; multi-file upload,,,,,,,,,,,,,,
+F9,Complex processing logic,5,Commission calculations; deposit policies; auction finalization; refunds,,,,,,,,,,,,,,
+F10,Internal processing complexity,4,Two-tier approval; winner determination; contract generation; financials,,,,,,,,,,,,,,
+F11,Reusability of code,4,NestJS modules; shared decorators/guards; common DTOs; libs folder,,,,,,,,,,,,,,
+F12,Installation ease,3,Docker Compose; Prisma migrations; seed scripts; env templates,,,,,,,,,,,,,,
+F13,Multiple site installations,2,Single deployment; Docker portability; env-based configuration,,,,,,,,,,,,,,
+F14,Facilitation of change,4,Prisma schema; modular NestJS; feature folders; comprehensive docs,,,,,,,,,,,,,,
+Total Complexity Adjustment (ΣFi),=SUM(C145:C158),=SUM(C145:C158),,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+FINAL CALCULATION,,,,,,,,,,,,,,,,,,
+Unadjusted FP (Δ),=C106,=C106,,,,,,,,,,,,,,,
+Total Fi (ΣFi),=C159,=C159,,,,,,,,,,,,,,,
+Adjustment Factor,=0.65+0.01*C160,=0.65+0.01*C160,,,,,,,,,,,,,,,
+ADJUSTED FUNCTION POINTS (FP),=C161*C162,=C161*C162,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+SUMMARY TABLE,,,,,,,,,,,,,,,,,,
+Metric,Value,,,,,,,,,,,,,,,
+Unadjusted Function Points (Δ),=C161,,,,,,,,,,,,,,,
+Complexity Adjustment Factor (ΣFi),=C160,,,,,,,,,,,,,,,
+Adjustment Multiplier,=C162,,,,,,,,,,,,,,,
+Adjusted Function Points (FP),=C163,,,,,,,,,,,,,,,

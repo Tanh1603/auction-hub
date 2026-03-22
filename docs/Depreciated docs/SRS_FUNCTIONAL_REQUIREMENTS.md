@@ -25,6 +25,7 @@
    - 3.9 [System Configuration Module](#39-system-configuration-module--cấu-hình-hệ-thống)
    - 3.10 [Location Module](#310-location-module--địa-điểm)
    - 3.11 [Article Module](#311-article-module--bài-viết)
+   - 3.12 [Dashboard Analytics Module](#312-dashboard-analytics-module--bảng-điều-khiển-phân-tích)
 4. [Data Models Summary](#4-data-models-summary)
 5. [Appendix: API Endpoints Summary](#5-appendix-api-endpoints-summary)
 
@@ -653,6 +654,102 @@ Locations are stored in a hierarchical structure:
 
 ---
 
+### 3.12 Dashboard Analytics Module / Bảng điều khiển Phân tích
+
+**Actor:** Admin, Super Admin
+
+**Description:** Provides aggregated analytics data for the admin dashboard using a PostgreSQL materialized view (`mv_auction_analytics`) for high-performance data retrieval. Includes manual and automatic (cron-based) refresh mechanisms.
+
+#### Architecture Overview:
+
+The dashboard uses a **Materialized View** pattern for optimal performance:
+
+1. **Materialized View (`mv_auction_analytics`)**: Pre-computed aggregation of auction data including GMV, revenue, bid counts, and success rates
+2. **Concurrent Refresh**: Uses `REFRESH MATERIALIZED VIEW CONCURRENTLY` to allow reads during refresh
+3. **Automatic Refresh**: Hourly cron job ensures data freshness
+4. **Manual Refresh**: Admin can trigger immediate refresh after significant data changes
+
+#### Sub-Feature List:
+
+| ID     | Function Name (EN)          | Function Name (VI)            | Trigger/API Endpoint                | Actor              |
+| ------ | --------------------------- | ----------------------------- | ----------------------------------- | ------------------ |
+| 3.12.1 | Get Dashboard Analytics     | Xem phân tích bảng điều khiển | `GET /dashboard/analytics`          | Admin, Super Admin |
+| 3.12.2 | Refresh Analytics View      | Làm mới dữ liệu phân tích     | `POST /dashboard/analytics/refresh` | Admin, Super Admin |
+| 3.12.3 | Scheduled Analytics Refresh | Làm mới tự động theo lịch     | Cron Job (Hourly)                   | System             |
+
+#### Analytics Response Structure:
+
+```typescript
+{
+  summary: {
+    totalGmv: number;           // Total Gross Merchandise Value (VND)
+    totalRevenue: number;       // Platform revenue (VND)
+    avgBids: number;            // Average bids per auction
+    successRatePercentage: number; // Success rate %
+    totalAuctions: number;      // Total auctions in period
+    successfulAuctions: number; // Successful auctions count
+  },
+  timeSeries: Array<{
+    date: string;               // ISO 8601 timestamp
+    gmv: number;                // GMV for period
+    revenue: number;            // Revenue for period
+    auctionCount: number;       // Auctions ended in period
+  }>
+}
+```
+
+#### Filter Options:
+
+| Parameter    | Type   | Description                           | Example         |
+| ------------ | ------ | ------------------------------------- | --------------- |
+| `startDate`  | string | Start date filter (ISO 8601)          | `2024-01-01`    |
+| `endDate`    | string | End date filter (ISO 8601)            | `2024-12-31`    |
+| `assetType`  | enum   | Filter by asset type                  | `secured_asset` |
+| `provinceId` | number | Filter by province                    | `1`             |
+| `groupBy`    | enum   | Time series grouping (day/week/month) | `day`           |
+
+#### Materialized View Schema:
+
+The `mv_auction_analytics` view aggregates data from multiple tables:
+
+| Column              | Type      | Description                       |
+| ------------------- | --------- | --------------------------------- |
+| `id`                | UUID      | Unique auction identifier         |
+| `code`              | VARCHAR   | Auction code                      |
+| `status`            | VARCHAR   | Auction status                    |
+| `asset_type`        | VARCHAR   | Type of asset                     |
+| `asset_province_id` | INTEGER   | Province ID for filtering         |
+| `auction_end_at`    | TIMESTAMP | When the auction ended            |
+| `gmv`               | DECIMAL   | Final sale price (NULL if failed) |
+| `commission_fee`    | DECIMAL   | Platform commission earned        |
+| `dossier_fee`       | DECIMAL   | Dossier fees collected            |
+| `total_revenue`     | DECIMAL   | Commission + dossier fees         |
+| `bid_count`         | INTEGER   | Number of bids placed             |
+| `participant_count` | INTEGER   | Number of registered participants |
+
+#### Business Rules:
+
+- **Authorization:** Only users with `admin` or `super_admin` role can access dashboard endpoints
+- **Default Date Range:** If no date filters provided, returns all available data
+- **Concurrent Access:** View refresh uses CONCURRENTLY option to prevent blocking reads
+- **Refresh Frequency:** Automatic refresh runs every hour via `@Cron(CronExpression.EVERY_HOUR)`
+- **Triggered Refresh:** AuctionFinalizationService triggers refresh after auction closes
+- **Error Handling:** Returns helpful error message if materialized view is not initialized
+
+#### Cron Job Details:
+
+| Job Name                   | Schedule | Description                                                         |
+| -------------------------- | -------- | ------------------------------------------------------------------- |
+| **Analytics View Refresh** | Hourly   | Refreshes `mv_auction_analytics` to incorporate latest auction data |
+
+> **⚠️ PREREQUISITE:** The materialized view must be created before using the dashboard:
+>
+> ```bash
+> npx ts-node scripts/setup-analytics-view.ts
+> ```
+
+---
+
 ## 4. Data Models Summary
 
 ### 4.1 Core Entities
@@ -807,6 +904,13 @@ Locations are stored in a hierarchical structure:
 | PATCH  | `/articles/:id/relations` | Update article relations | Admin         |
 | DELETE | `/articles/:id`           | Delete article           | Admin         |
 
+### Dashboard Endpoints
+
+| Method | Endpoint                       | Description                   | Auth Required |
+| ------ | ------------------------------ | ----------------------------- | ------------- |
+| GET    | `/dashboard/analytics`         | Get aggregated analytics data | Admin         |
+| POST   | `/dashboard/analytics/refresh` | Refresh materialized view     | Admin         |
+
 ---
 
 ## Document History
@@ -815,6 +919,7 @@ Locations are stored in a hierarchical structure:
 | ------- | ---------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0     | 2025-12-03 | Reverse-Engineered from Codebase | Initial document creation                                                                                                                                                                                         |
 | 2.0     | 2025-12-06 | Reverse-Engineered from Codebase | Updated AuctionStatus enum (removed no_bid/cancelled, added awaiting_result/failed), updated propertyOwner to JSON, added Location/Article modules, added System Variables module, updated registration endpoints |
+| 3.0     | 2025-12-25 | Reverse-Engineered from Codebase | Added Dashboard Analytics Module (3.12) with PostgreSQL materialized view architecture, GET/POST endpoints, hourly cron job for automatic refresh, and filter options for date range, asset type, and province    |
 
 ---
 
